@@ -1,3 +1,6 @@
+
+# TODO: prepend with an underscore if this isn't intended to be used directly.
+#   why not just use a single class to provide all this functionality?
 SEABORN_PALETTES = dict(
     deep=["#4C72B0", "#DD8452", "#55A868", "#C44E52", "#8172B3", "#937860", "#DA8BC3", "#8C8C8C", "#CCB974", "#64B5CD"],
     deep6=["#4C72B0", "#55A868", "#C44E52", "#8172B3", "#CCB974", "#64B5CD"],
@@ -30,10 +33,15 @@ class SeabornPaletteNames:
 
     @staticmethod
     def get_seaborn_palette_names_list():
-        seaborne_palette_names = []
-        for key in SEABORN_PALETTES:
-            seaborne_palette_names.append(key)
-        return seaborne_palette_names
+        """
+        Gets the list of palette names.
+
+        Returns
+        -------
+        List[str]
+        """
+
+        return list(SEABORN_PALETTES.keys())
 
 
 class SeabornHexPalettes:
@@ -53,6 +61,18 @@ class SeabornHexPalettes:
 
     @staticmethod
     def get_palette_by_name(name):
+        """
+        Gets the palette list based on the same name.
+
+        Parameters
+        ----------
+        name : str
+
+        Returns
+        -------
+        List[str]
+        """
+
         return SEABORN_PALETTES[name]
 
 
@@ -62,14 +82,35 @@ class AllColorPalettes:
 
     @staticmethod
     def get_complete_color_palette_list():
-        complete_list = ["seaborn_deep",
-                         "seaborn_muted",
-                         "seaborn_pastel",
-                         "seaborn_bright",
-                         "seaborn_dark",
-                         "seaborn_colorblind"]
-        return complete_list
+        """
+        Gets the basic list of different color palettes.
+
+        Returns
+        -------
+        List[str]
+        """
+
+        return [
+            "seaborn_deep",
+            "seaborn_muted",
+            "seaborn_pastel",
+            "seaborn_bright",
+            "seaborn_dark",
+            "seaborn_colorblind"]
 
     @staticmethod
     def get_rgb_palette_by_name(name):
+        """
+        Gets the pallete list of colors by name.
+
+        Parameters
+        ----------
+        name : str
+
+        Returns
+        -------
+        List[str]
+        """
+
+        # TODO: what is this supposed to do?
         stop = 1

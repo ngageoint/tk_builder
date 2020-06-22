@@ -6,10 +6,22 @@ import numpy as np
 
 
 class PlotDemo(AbstractWidgetPanel):
+    """
+    Basic plot demo gui.
+    """
+
     button_panel = ButtonPanel          # type: ButtonPanel
     pyplot_panel = PyplotPanel      # type: PyplotPanel
 
     def __init__(self, master):
+        """
+
+        Parameters
+        ----------
+        master
+            The master widget.
+        """
+
         # set the master frame
         master_frame = tkinter.Frame(master)
         AbstractWidgetPanel.__init__(self, master_frame)
@@ -22,17 +34,41 @@ class PlotDemo(AbstractWidgetPanel):
 
         # set up event listeners
         self.button_panel.single_plot.on_left_mouse_click(self.callback_single_plot)
-        self.button_panel.multi_plot.on_left_mouse_click(self.callback_muli_plot)
+        self.button_panel.multi_plot.on_left_mouse_click(self.callback_multi_plot)
         self.button_panel.animated_plot.on_left_mouse_click(self.callback_animated_plot)
 
         self.pyplot_panel.set_y_margin_percent(5)
         self.pyplot_panel.variables.set_y_margins_per_frame = True
 
     def callback_single_plot(self, event):
+        """
+        A single plot callback.
+
+        Parameters
+        ----------
+        event
+
+        Returns
+        -------
+        None
+        """
+
         plot_data = self.mockup_animation_data_1()
         self.pyplot_panel.set_data(plot_data)
 
-    def callback_muli_plot(self, event):
+    def callback_multi_plot(self, event):
+        """
+        A multiplot callback.
+
+        Parameters
+        ----------
+        event
+
+        Returns
+        -------
+        None
+        """
+
         plot_data = self.mockup_animation_data_2()
         data_shape = np.shape(plot_data)
         x_axis_points = data_shape[0]
@@ -43,6 +79,18 @@ class PlotDemo(AbstractWidgetPanel):
         self.pyplot_panel.set_data(plot_data)
 
     def callback_animated_plot(self, event):
+        """
+        Animated callback plot.
+
+        Parameters
+        ----------
+        event
+
+        Returns
+        -------
+        None
+        """
+
         plot_data = self.mockup_animation_data_3()
         data_shape = np.shape(plot_data)
         x_axis_points = data_shape[0]
@@ -56,6 +104,14 @@ class PlotDemo(AbstractWidgetPanel):
 
     @staticmethod
     def mockup_animation_data_3():
+        """
+        Mock annimation.
+
+        Returns
+        -------
+        np.ndarray
+        """
+
         n_overplots = 10
         nx = 200
         n_times = 100
@@ -83,6 +139,14 @@ class PlotDemo(AbstractWidgetPanel):
 
     @staticmethod
     def mockup_animation_data_2():
+        """
+        Mock animation.
+
+        Returns
+        -------
+        np.ndarray
+        """
+
         n_overplots = 10
         nx = 200
 
@@ -99,6 +163,14 @@ class PlotDemo(AbstractWidgetPanel):
 
     @staticmethod
     def mockup_animation_data_1():
+        """
+        Mock animation.
+
+        Returns
+        -------
+        np.ndarray
+        """
+
         x = np.linspace(-5, 5, 200)
         y = np.sinc(x)
         return y
