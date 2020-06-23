@@ -5,10 +5,10 @@ class ImageReader:
     """
     Abstract image reader class
     """
-
-    fname = str
-    full_image_nx = int
-    full_image_ny = int
+    # TODO: use descriptors here
+    fname = ''  # type: str
+    full_image_nx = 0   # type: int
+    full_image_ny = 0   # type: int
 
     def __getitem__(self, key):
         raise NotImplementedError

@@ -1,18 +1,16 @@
 import PIL.Image
 from PIL import ImageTk
-from tk_builder.widgets import basic_widgets
-from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
-import tk_builder.utils.color_utils.color_utils as color_utils
 import platform
-import numpy
 import time
 import tkinter
 import tkinter.colorchooser as colorchooser
+from typing import Tuple, List,  Dict
 
-from numpy import ndarray
-from typing import Union, Tuple, List, Any
-import PIL.Image
-import numpy as np
+import numpy
+
+from tk_builder.widgets import basic_widgets
+from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
+from tk_builder.utils.color_utils import color_utils
 from tk_builder.image_readers.image_reader import ImageReader
 
 if platform.system() == "Linux":
@@ -21,6 +19,7 @@ else:
     from PIL import ImageGrab
 
 
+# TODO: what are these here for?
     # @property
     # def canvas_image_object(self):  # type: () -> AbstractCanvasImage
     #     return self._canvas_image_object
@@ -582,14 +581,10 @@ class ImageCanvas(basic_widgets.Canvas):
             x_dist = event.x - self.variables.tmp_anchor_point[0]
             y_dist = event.y - self.variables.tmp_anchor_point[1]
             t_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
-            new_x1 = min(t_coords[0] + x_dist,
-                         t_coords[2] + x_dist)
-            new_x2 = max(t_coords[0] + x_dist,
-                         t_coords[2] + x_dist)
-            new_y1 = min(t_coords[1] + y_dist,
-                         t_coords[3] + y_dist)
-            new_y2 = max(t_coords[1] + y_dist,
-                         t_coords[3] + y_dist)
+            new_x1 = min(t_coords[0] + x_dist, t_coords[2] + x_dist)
+            new_x2 = max(t_coords[0] + x_dist, t_coords[2] + x_dist)
+            new_y1 = min(t_coords[1] + y_dist, t_coords[3] + y_dist)
+            new_y2 = max(t_coords[1] + y_dist, t_coords[3] + y_dist)
             width = new_x2 - new_x1
             height = new_y2 - new_y1
 
@@ -706,11 +701,10 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         if self.variables.scale_dynamic_range:
-            dynamic_range = numpy_data.max() - numpy_data.min()
-            numpy_data = numpy_data - numpy_data.min()
-            numpy_data = numpy_data / dynamic_range
-            numpy_data = numpy_data * 255
-            numpy_data = numpy.asanyarray(numpy_data, dtype=numpy.int8)
+            min_data = numpy.min(numpy_data)
+            dynamic_range = numpy.max(numpy_data) - min_data
+            numpy_data = numpy.asanyarray(
+                255*(numpy_data - min_data)/dynamic_range, dtype=numpy.uint8)
         pil_image = PIL.Image.fromarray(numpy_data)
         self._set_image_from_pil_image(pil_image)
 
@@ -733,14 +727,13 @@ class ImageCanvas(basic_widgets.Canvas):
         self.config(width=width_npix, height=height_npix)
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
-        # type: (int, Tuple[float, float], bool) -> None
         """
         Modify an existing shape.
 
         Parameters
         ----------
         shape_id : int
-        new_coords : Tuple[float, float]
+        new_coords : Tuple|List
         update_pixel_coords : bool
 
         Returns
@@ -761,14 +754,13 @@ class ImageCanvas(basic_widgets.Canvas):
             self.set_shape_pixel_coords_from_canvas_coords(shape_id)
 
     def modify_existing_shape_using_image_coords(self, shape_id, image_coords):
-        # type: (int, Tuple[int, int]) -> None
         """
         Modify an existing shape.
 
         Parameters
         ----------
         shape_id : int
-        image_coords : Tuple[float, float]
+        image_coords : Tuple|List
 
         Returns
         -------
@@ -798,7 +790,8 @@ class ImageCanvas(basic_widgets.Canvas):
             event_y_pos = self.canvasy(event.y)
             coords = self.coords(self.variables.current_shape_id)
             new_coords = list(coords[0:-2]) + [event_x_pos, event_y_pos]
-            if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.ARROW or self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.LINE:
+            if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.ARROW or \
+                    self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.LINE:
                 self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         else:
             pass
@@ -843,7 +836,11 @@ class ImageCanvas(basic_widgets.Canvas):
             self.show_shape(self.variables.current_shape_id)
             event_x_pos = self.canvasx(event.x)
             event_y_pos = self.canvasy(event.y)
-            self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, (self.variables.current_shape_canvas_anchor_point_xy[0], self.variables.current_shape_canvas_anchor_point_xy[1], event_x_pos, event_y_pos))
+            self.modify_existing_shape_using_canvas_coords(
+                self.variables.current_shape_id,
+                (self.variables.current_shape_canvas_anchor_point_xy[0],
+                 self.variables.current_shape_canvas_anchor_point_xy[1],
+                 event_x_pos, event_y_pos))
 
     def event_drag_rect(self, event):
         """
@@ -858,11 +855,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if self.variables.current_shape_id:
-            self.show_shape(self.variables.current_shape_id)
-            event_x_pos = self.canvasx(event.x)
-            event_y_pos = self.canvasy(event.y)
-            self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, (self.variables.current_shape_canvas_anchor_point_xy[0], self.variables.current_shape_canvas_anchor_point_xy[1], event_x_pos, event_y_pos))
+        self.event_drag_line(event)  # identical actions for line.
 
     def event_click_line(self, event):
         """
@@ -919,7 +912,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         if self.variables.actively_drawing_shape:
             old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
-            new_coords = tuple(list(old_coords) + [event.x, event.y])
+            new_coords = list(old_coords) + [event.x, event.y]
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         # re-initialize shape if we're not actively drawing
         else:
@@ -928,13 +921,12 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.actively_drawing_shape = True
 
     def create_new_rect(self, coords, **options):
-        # type: (Tuple[int, int, int, int], Any) -> int
         """
         Create a new rectangle.
 
         Parameters
         ----------
-        coords : Tuple[int, int, int, int]
+        coords : Tuple|List
         options
             Optional Keyword arguments.
 
@@ -958,13 +950,12 @@ class ImageCanvas(basic_widgets.Canvas):
         return shape_id
 
     def create_new_polygon(self, coords, **options):
-        # type: (Tuple[int, int, int, int], Any) -> int
         """
         Create a new polygon.
 
         Parameters
         ----------
-        coords : Tuple[int, int, int, int]
+        coords : Tuple|List
         options
             Optional keyword arguments.
 
@@ -991,13 +982,12 @@ class ImageCanvas(basic_widgets.Canvas):
         return shape_id
 
     def create_new_arrow(self, coords, **options):
-        # type: (Tuple[int, int, int, int], Any) -> int
         """
         Create a new arrow.
 
         Parameters
         ----------
-        coords : Tuple[int, int, int, int]
+        coords : Tuple|List
         options
             Optional keyword arguments.
 
@@ -1024,13 +1014,12 @@ class ImageCanvas(basic_widgets.Canvas):
         return shape_id
 
     def create_new_line(self, coords, **options):
-        # type: (Tuple[int, int, int, int], Any) -> int
         """
         Create a new line.
 
         Parameters
         ----------
-        coords : Tuple[int, int, int, int]
+        coords : Tuple|List
         options
             Optional keyword arguments.
 
@@ -1055,13 +1044,12 @@ class ImageCanvas(basic_widgets.Canvas):
         return shape_id
 
     def create_new_point(self, coords, **options):
-        # type: (Tuple[int, int], Any) -> int
         """
         Create a new point.
 
         Parameters
         ----------
-        coords : Tuple[int, int]
+        coords : Tuple|List
         options
             Optional keyword arguments.
 
@@ -1116,7 +1104,7 @@ class ImageCanvas(basic_widgets.Canvas):
         Parameters
         ----------
         shape_id : int
-        coords : tuple
+        coords : Tuple|List
 
         Returns
         -------
@@ -1145,14 +1133,13 @@ class ImageCanvas(basic_widgets.Canvas):
             self._set_shape_property(shape_id, SHAPE_PROPERTIES.IMAGE_COORDS, image_coords)
 
     def set_shape_pixel_coords(self, shape_id, image_coords):
-        # type: (int, Tuple[float, float]) -> None
         """
         Set the pixel coordinates for the given shape.
 
         Parameters
         ----------
         shape_id : int
-        image_coords : Tuple[float, float]
+        image_coords : Tuple|List
 
         Returns
         -------
@@ -1178,7 +1165,6 @@ class ImageCanvas(basic_widgets.Canvas):
         return self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_coords)
 
     def get_shape_canvas_coords(self, shape_id):
-        # type: (int) -> Tuple[int, int, int, int]
         """
         Fetches the canvas coordinates for the shape.
 
@@ -1188,13 +1174,12 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-        Tuple[int, int, int, int]
+        Tuple
         """
 
         return self._get_shape_property(shape_id, SHAPE_PROPERTIES.CANVAS_COORDS)
 
     def get_shape_image_coords(self, shape_id):
-        # type: (int) -> Tuple[int, int, int, int]
         """
         Fetches the image coordinates for the shape.
 
@@ -1204,13 +1189,12 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-        Tuple[int, int, int, int]
+        Tuple
         """
 
         return self._get_shape_property(shape_id, SHAPE_PROPERTIES.IMAGE_COORDS)
 
     def image_coords_to_canvas_coords(self, shape_id):
-        # type: (int) -> Tuple[float, float]
         """
         Converts the image coordinates to the shapoe coordinates.
 
@@ -1220,7 +1204,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-        Tuple[float, float]
+        Tuple
         """
 
         image_coords = self.get_shape_image_coords(shape_id)
@@ -1241,27 +1225,27 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.get_shape_image_coords(rect_id)
+        tmp_image_coords = list(image_coords)
         if image_coords[0] > image_coords[2]:
-            tmp = image_coords[0]
-            image_coords[0] = image_coords[2]
-            image_coords[2] = tmp
+            tmp_image_coords[0] = image_coords[2]
+            tmp_image_coords[2] = image_coords[0]
         if image_coords[1] > image_coords[3]:
-            tmp = image_coords[1]
-            image_coords[1] = image_coords[3]
-            image_coords[3] = tmp
+            tmp_image_coords[1] = image_coords[3]
+            tmp_image_coords[3] = image_coords[1]
         if decimation is None:
-            decimation = self.variables.canvas_image_object.get_decimation_factor_from_full_image_rect(image_coords)
-        image_data_in_rect = self.variables.canvas_image_object.get_decimated_image_data_in_full_image_rect(image_coords, decimation)
+            decimation = self.variables.canvas_image_object.\
+                get_decimation_factor_from_full_image_rect(tmp_image_coords)
+        image_data_in_rect = self.variables.canvas_image_object.\
+            get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
         return image_data_in_rect
 
     def zoom_to_selection(self, canvas_rect, animate=False):
-        # type: (Tuple[int, int, int, int], bool) -> None
         """
         Zoom to the selection.
 
         Parameters
         ----------
-        canvas_rect : Tuple[int, int, int, int]
+        canvas_rect : Tuple|List
         animate : bool
 
         Returns
@@ -1326,7 +1310,7 @@ class ImageCanvas(basic_widgets.Canvas):
             #create frame sequence
             n_animations = self.variables.n_zoom_animations
             background_image = background_image / 2
-            background_image = np.asarray(background_image, dtype=np.uint8)
+            background_image = numpy.asarray(background_image, dtype=numpy.uint8)
             canvas_x1, canvas_y1, canvas_x2, canvas_y2 = new_canvas_rect
             display_x_ul = min(canvas_x1, canvas_x2)
             display_x_br = max(canvas_x1, canvas_x2)
@@ -1702,7 +1686,7 @@ class ImageCanvas(basic_widgets.Canvas):
         Parameters
         ----------
         shape_id : int
-        properties : dict
+        properties : Dict[str, str]
 
         Returns
         -------
@@ -1937,7 +1921,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-        List[int]
+        List
         """
         # TODO: fix this docstring
 
@@ -1946,13 +1930,12 @@ class ImageCanvas(basic_widgets.Canvas):
         return list(numpy.setdiff1d(all_shape_ids, tool_shape_ids))
 
     def get_tool_shape_ids(self):
-        # type: () -> Tuple[int, int]
         """
         Gets the shape ids for the zoom rectangle and select rectangle.
 
         Returns
         -------
-        Tuple[int, int]
+        Tuple
         """
 
         return self.variables.zoom_rect_id, self.variables.select_rect_id
@@ -1961,8 +1944,8 @@ class ImageCanvas(basic_widgets.Canvas):
 # TODO: use descriptors here
 class CanvasImage(object):
     image_reader = None                 # type: ImageReader
-    canvas_decimated_image = None       # type: ndarray
-    display_image = None                # type: ndarray
+    canvas_decimated_image = None       # type: numpy.ndarray
+    display_image = None                # type: numpy.ndarray
     decimation_factor = 1               # type: int
     display_rescaling_factor = 1                # type: float
     canvas_full_image_upper_left_yx = (0, 0)    # type: (int, int)
@@ -1987,13 +1970,12 @@ class CanvasImage(object):
         self.update_canvas_display_image_from_full_image()
 
     def get_decimated_image_data_in_full_image_rect(self, full_image_rect, decimation):
-        # type: (Tuple[int, int, int, int], int) -> numpy.ndarray
         """
         Get decimated data.
 
         Parameters
         ----------
-        full_image_rect : Tuple[int, int, int, int]
+        full_image_rect : Tuple|List
         decimation : int
 
         Returns
@@ -2035,7 +2017,7 @@ class CanvasImage(object):
                 decimated_image[:, :, drop_band] = zeros_image
         pil_image = PIL.Image.fromarray(decimated_image)
         display_image = pil_image.resize((new_nx, new_ny))
-        return np.array(display_image)
+        return numpy.array(display_image)
 
     def decimated_image_coords_to_display_image_coords(self, decimated_image_yx_cords):
         """
@@ -2109,13 +2091,12 @@ class CanvasImage(object):
         return scale_factor
 
     def get_decimated_image_data_in_canvas_rect(self, canvas_rect, decimation=None):
-        # type: (Tuple[int, int, int, int], int) -> numpy.ndarray
         """
         Gets the decimated image from the image rectangle.
 
         Parameters
         ----------
-        canvas_rect : Tuple[int, int, int, int]
+        canvas_rect : Tuple|List
         decimation : None|int
 
         Returns
@@ -2141,13 +2122,12 @@ class CanvasImage(object):
         self.update_canvas_display_image_from_full_image_rect(full_image_rect)
 
     def update_canvas_display_image_from_full_image_rect(self, full_image_rect):
-        # type: (Tuple[int, int, int, int]) -> None
         """
         Update the canvas to the given image rectangle.
 
         Parameters
         ----------
-        full_image_rect : Tuple[int, int, int, int]
+        full_image_rect : Tuple|List
 
         Returns
         -------
@@ -2160,13 +2140,12 @@ class CanvasImage(object):
         self.canvas_full_image_upper_left_yx = (full_image_rect[0], full_image_rect[1])
 
     def update_canvas_display_image_from_canvas_rect(self, canvas_rect):
-        # type: (Tuple[int, int, int, int]) -> None
         """
         Update the canvas to the given camvas rectangle.
 
         Parameters
         ----------
-        canvas_rect : Tuple[int, int, int, int]
+        canvas_rect : Tuple|List
 
         Returns
         -------
@@ -2186,7 +2165,7 @@ class CanvasImage(object):
 
         Parameters
         ----------
-        image_data : numpoy.ndarray
+        image_data : numpy.ndarray
 
         Returns
         -------
@@ -2206,13 +2185,12 @@ class CanvasImage(object):
             self.display_image = image_data
 
     def get_decimation_factor_from_full_image_rect(self, full_image_rect):
-        # type: (Tuple[int, int, int, int]) -> int
         """
         Get the decimation factor from the rectangle size.
 
         Parameters
         ----------
-        full_image_rect : Tuple[int, int, int, int]
+        full_image_rect : Tuple|List
 
         Returns
         -------
@@ -2230,13 +2208,12 @@ class CanvasImage(object):
         return decimation_factor
 
     def get_decimation_from_canvas_rect(self, canvas_rect):
-        # type: (Tuple[int, int, int, int]) -> int
         """
         Get the decimation factor from the canvas rectangle size.
 
         Parameters
         ----------
-        canvas_rect : Tuple[int, int, int, int]
+        canvas_rect : Tuple|List
 
         Returns
         -------
@@ -2247,13 +2224,12 @@ class CanvasImage(object):
         return self.get_decimation_factor_from_full_image_rect(full_image_rect)
 
     def set_decimation_from_full_image_rect(self, full_image_rect):
-        # type: (Tuple[int, int, int, int]) -> int
         """
         Sets the decimation from the image rectangle.
 
         Parameters
         ----------
-        full_image_rect : Tuple[int, int, int, int]
+        full_image_rect : Tuple|List
 
         Returns
         -------
@@ -2264,17 +2240,16 @@ class CanvasImage(object):
         self.decimation_factor = decimation_factor
 
     def canvas_coords_to_full_image_yx(self, canvas_coords):
-        # type: (List[int]) -> List[float]
         """
         Gets full coordinates in yx order from canvas coordinates.
 
         Parameters
         ----------
-        canvas_coords : List[float]
+        canvas_coords : Tuple|List
 
         Returns
         -------
-        List[float]
+        List
         """
 
         decimation_factor = self.decimation_factor
@@ -2289,17 +2264,16 @@ class CanvasImage(object):
         return out
 
     def canvas_rect_to_full_image_rect(self, canvas_rect):
-        # type: (Tuple[int, int, int, int]) -> Tuple[float, float, float, float]
         """
         Gets the full image coordinates from the canvas coordinates.
 
         Parameters
         ----------
-        canvas_rect : Tuple[int, int, int, int]
+        canvas_rect : Tuple|List
 
         Returns
         -------
-        Tuple[float, float, float, float]
+        Tuple
         """
 
         image_y1, image_x1 = self.canvas_coords_to_full_image_yx([canvas_rect[0], canvas_rect[1]])
@@ -2317,17 +2291,16 @@ class CanvasImage(object):
         return image_y1, image_x1, image_y2, image_x2
 
     def full_image_yx_to_canvas_coords(self, full_image_yx):
-        # type: (Union[Tuple[int, int], List[float]]) -> List[float]
         """
         Gets the canvas coordinates from full image coordinates in yx order.
 
         Parameters
         ----------
-        full_image_yx : Tuple[int,int]|List[float]
+        full_image_yx : Tuple|List
 
         Returns
         -------
-        List[float]
+        List
         """
 
         decimation_factor = self.decimation_factor
