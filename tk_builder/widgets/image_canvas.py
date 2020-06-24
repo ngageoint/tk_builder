@@ -4,10 +4,12 @@ import platform
 import time
 import tkinter
 import tkinter.colorchooser as colorchooser
-from typing import Tuple, List,  Dict
+from typing import Union, Tuple, List, Dict
 
 import numpy
 
+from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
+    IntegerTupleDescriptor, StringDescriptor, TypedDescriptor, FloatDescriptor
 from tk_builder.widgets import basic_widgets
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.utils.color_utils import color_utils
@@ -86,67 +88,527 @@ class ShapeTypeConstants:
     POLYGON = "polygon"
 
 
-# TODO: we should set up descriptors for usage like below
-class AppVariables:
+class CanvasImage(object):
+    """
+    The canvas image object.
+    """
+
+    image_reader = TypedDescriptor(
+        'image_reader', ImageReader,
+        docstring='The image reader object.')  # type: ImageReader
+    canvas_decimated_image = TypedDescriptor(
+        'canvas_decimated_image', numpy.ndarray,
+        docstring='The canvas decimated image data.')  # type: numpy.ndarray
+    display_image = TypedDescriptor(
+        'display_image', numpy.ndarray,
+        docstring='The display image data.')  # type: numpy.ndarray
+    decimation_factor = IntegerDescriptor(
+        'decimation_factor', default_value=1,
+        docstring='The decimation factor.')  # type: int
+    display_rescaling_factor = FloatDescriptor(
+        'display_rescaling_factor', default_value=1.0,
+        docstring='The display resclaing factor.')  # type: float
+    canvas_full_image_upper_left_yx = IntegerTupleDescriptor(
+        'canvas_full_image_upper_left_yx', length=2, default_value=(0, 0),
+        docstring='The upper left corner of the full image canvas in '
+                  'yx order.')  # type: tuple
+    canvas_ny = IntegerDescriptor(
+        'canvas_ny',
+        docstring='')  # type: int
+    canvas_nx = IntegerDescriptor(
+        'canvas_nx',
+        docstring='')  # type: int
+    scale_to_fit_canvas = BooleanDescriptor(
+        'scale_to_fit_canvas', default_value=True,
+        docstring='Scale the image to fit the canvas?')  # type: bool
+
+    def __init__(self, image_reader, canvas_nx, canvas_ny):
+        """
+
+        Parameters
+        ----------
+        image_reader : ImageReader
+        canvas_nx : int
+        canvas_ny : int
+        """
+
+        self.drop_bands = []  # type: List
+        self.image_reader = image_reader
+        self.canvas_nx = canvas_nx
+        self.canvas_ny = canvas_ny
+        self.update_canvas_display_image_from_full_image()
+
+    def get_decimated_image_data_in_full_image_rect(self, full_image_rect, decimation):
+        """
+        Get decimated data.
+
+        Parameters
+        ----------
+        full_image_rect : Tuple|List
+        decimation : int
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+
+        y_start = full_image_rect[0]
+        y_end = full_image_rect[2]
+        x_start = full_image_rect[1]
+        x_end = full_image_rect[3]
+
+        decimated_data = self.image_reader[y_start:y_end:decimation, x_start:x_end:decimation]
+        return decimated_data
+
+    def get_scaled_display_data(self, decimated_image):
+        """
+        Gets scaled data for display.
+
+        Parameters
+        ----------
+        decimated_image : numpy.ndarray
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+
+        scale_factor = self.compute_display_scale_factor(decimated_image)
+        new_nx = int(decimated_image.shape[1] * scale_factor)
+        new_ny = int(decimated_image.shape[0] * scale_factor)
+        if new_nx > self.canvas_nx:
+            new_nx = self.canvas_nx
+        if new_ny > self.canvas_ny:
+            new_ny = self.canvas_ny
+        if len(self.drop_bands) != 0:
+            zeros_image = numpy.zeros_like(decimated_image[:, :, 0])
+            for drop_band in self.drop_bands:
+                decimated_image[:, :, drop_band] = zeros_image
+        pil_image = PIL.Image.fromarray(decimated_image)
+        display_image = pil_image.resize((new_nx, new_ny))
+        return numpy.array(display_image)
+
+    def decimated_image_coords_to_display_image_coords(self, decimated_image_yx_cords):
+        """
+        Convert from decimated image coordinates to display coordinates.
+
+        Parameters
+        ----------
+        decimated_image_yx_cords : List[Tuple[float, float]]
+
+        Returns
+        -------
+        List[Tuple[float, float]]
+        """
+
+        scale_factor = self.compute_display_scale_factor(self.canvas_decimated_image)
+        return [(coord[0]*scale_factor, coord[1]*scale_factor) for coord in decimated_image_yx_cords]
+
+    def display_image_coords_to_decimated_image_coords(self, display_image_yx_coords):
+        """
+        Convert from display coordinates to decimated image coordinates.
+
+        Parameters
+        ----------
+        display_image_yx_coords : List[Tuple[float, float]]
+
+        Returns
+        -------
+        List[Tuple[float, float]]
+        """
+
+        scale_factor = self.compute_display_scale_factor(self.canvas_decimated_image)
+        return [(coord[0]/scale_factor, coord[1]/scale_factor) for coord in display_image_yx_coords]
+
+    @staticmethod
+    def display_image_coords_to_canvas_coords(display_image_yx_coords):
+        """
+        Converts display image coordinates to canvas coordinates. This is just a
+        axis switch operation.
+
+        Parameters
+        ----------
+        display_image_yx_coords : List[Tuple[float, float]]
+
+        Returns
+        -------
+        List[Tuple[float, float]]
+        """
+
+        return [(yx[1], yx[0]) for yx in display_image_yx_coords]
+
+    def compute_display_scale_factor(self, decimated_image):
+        """
+        Computes the nominal scale factor.
+
+        Parameters
+        ----------
+        decimated_image : numpy.ndarray
+
+        Returns
+        -------
+        float
+        """
+
+        # TODO: division may not work as expected in Python 2 (int versus float)
+        #   what is the intent here?
+        decimated_image_nx = decimated_image.shape[1]
+        decimated_image_ny = decimated_image.shape[0]
+        scale_factor_1 = self.canvas_nx/decimated_image_nx
+        scale_factor_2 = self.canvas_ny/decimated_image_ny
+        scale_factor = min(scale_factor_1, scale_factor_2)
+        return scale_factor
+
+    def get_decimated_image_data_in_canvas_rect(self, canvas_rect, decimation=None):
+        """
+        Gets the decimated image from the image rectangle.
+
+        Parameters
+        ----------
+        canvas_rect : Tuple|List
+        decimation : None|int
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+
+        full_image_rect = self.canvas_rect_to_full_image_rect(canvas_rect)
+        if decimation is None:
+            decimation = self.get_decimation_from_canvas_rect(canvas_rect)
+        return self.get_decimated_image_data_in_full_image_rect(full_image_rect, decimation)
+
+    def update_canvas_display_image_from_full_image(self):
+        """
+        Update the image in the canvas.
+
+        Returns
+        -------
+        None
+        """
+
+        full_image_rect = (0, 0, self.image_reader.full_image_ny, self.image_reader.full_image_nx)
+        self.update_canvas_display_image_from_full_image_rect(full_image_rect)
+
+    def update_canvas_display_image_from_full_image_rect(self, full_image_rect):
+        """
+        Update the canvas to the given image rectangle.
+
+        Parameters
+        ----------
+        full_image_rect : Tuple|List
+
+        Returns
+        -------
+        None
+        """
+
+        self.set_decimation_from_full_image_rect(full_image_rect)
+        decimated_image_data = self.get_decimated_image_data_in_full_image_rect(full_image_rect, self.decimation_factor)
+        self.update_canvas_display_from_numpy_array(decimated_image_data)
+        self.canvas_full_image_upper_left_yx = (full_image_rect[0], full_image_rect[1])
+
+    def update_canvas_display_image_from_canvas_rect(self, canvas_rect):
+        """
+        Update the canvas to the given camvas rectangle.
+
+        Parameters
+        ----------
+        canvas_rect : Tuple|List
+
+        Returns
+        -------
+        None
+        """
+
+        full_image_rect = self.canvas_rect_to_full_image_rect(canvas_rect)
+        full_image_rect = (int(round(full_image_rect[0])),
+                           int(round(full_image_rect[1])),
+                           int(round(full_image_rect[2])),
+                           int(round(full_image_rect[3])))
+        self.update_canvas_display_image_from_full_image_rect(full_image_rect)
+
+    def update_canvas_display_from_numpy_array(self, image_data):
+        """
+        Update the canvas from a numpy array.
+
+        Parameters
+        ----------
+        image_data : numpy.ndarray
+
+        Returns
+        -------
+        None
+        """
+
+        if len(self.drop_bands) > 0:
+            zeros_image = numpy.zeros_like(image_data[:, :, 0])
+            for drop_band in self.drop_bands:
+                image_data[:, :, drop_band] = zeros_image
+        self.canvas_decimated_image = image_data
+        if self.scale_to_fit_canvas:
+            scale_factor = self.compute_display_scale_factor(image_data)
+            self.display_rescaling_factor = scale_factor
+            self.display_image = self.get_scaled_display_data(image_data)
+        else:
+            self.display_image = image_data
+
+    def get_decimation_factor_from_full_image_rect(self, full_image_rect):
+        """
+        Get the decimation factor from the rectangle size.
+
+        Parameters
+        ----------
+        full_image_rect : Tuple|List
+
+        Returns
+        -------
+        int
+        """
+
+        ny = full_image_rect[2] - full_image_rect[0]
+        nx = full_image_rect[3] - full_image_rect[1]
+        decimation_y = ny / self.canvas_ny
+        decimation_x = nx / self.canvas_nx
+        decimation_factor = max(decimation_y, decimation_x)
+        decimation_factor = int(decimation_factor)
+        if decimation_factor < 1:
+            decimation_factor = 1
+        return decimation_factor
+
+    def get_decimation_from_canvas_rect(self, canvas_rect):
+        """
+        Get the decimation factor from the canvas rectangle size.
+
+        Parameters
+        ----------
+        canvas_rect : Tuple|List
+
+        Returns
+        -------
+        int
+        """
+
+        full_image_rect = self.canvas_rect_to_full_image_rect(canvas_rect)
+        return self.get_decimation_factor_from_full_image_rect(full_image_rect)
+
+    def set_decimation_from_full_image_rect(self, full_image_rect):
+        """
+        Sets the decimation from the image rectangle.
+
+        Parameters
+        ----------
+        full_image_rect : Tuple|List
+
+        Returns
+        -------
+        None
+        """
+
+        decimation_factor = self.get_decimation_factor_from_full_image_rect(full_image_rect)
+        self.decimation_factor = decimation_factor
+
+    def canvas_coords_to_full_image_yx(self, canvas_coords):
+        """
+        Gets full coordinates in yx order from canvas coordinates.
+
+        Parameters
+        ----------
+        canvas_coords : Tuple|List
+
+        Returns
+        -------
+        List
+        """
+
+        decimation_factor = self.decimation_factor
+        if self.scale_to_fit_canvas:
+            decimation_factor = decimation_factor/self.display_rescaling_factor
+        siz = int(len(canvas_coords)/2)
+        out = []
+        for i in range(siz):
+            out.extend(
+                (canvas_coords[2*i]*decimation_factor + self.canvas_full_image_upper_left_yx[1],
+                canvas_coords[2*i+1]*decimation_factor + self.canvas_full_image_upper_left_yx[0]))
+        return out
+
+    def canvas_rect_to_full_image_rect(self, canvas_rect):
+        """
+        Gets the full image coordinates from the canvas coordinates.
+
+        Parameters
+        ----------
+        canvas_rect : Tuple|List
+
+        Returns
+        -------
+        Tuple
+        """
+
+        image_y1, image_x1 = self.canvas_coords_to_full_image_yx([canvas_rect[0], canvas_rect[1]])
+        image_y2, image_x2 = self.canvas_coords_to_full_image_yx([canvas_rect[2], canvas_rect[3]])
+
+        if image_x1 < 0:
+            image_x1 = 0
+        if image_y1 < 0:
+            image_y1 = 0
+        if image_x2 > self.image_reader.full_image_nx:
+            image_x2 = self.image_reader.full_image_nx
+        if image_y2 > self.image_reader.full_image_ny:
+            image_y2 = self.image_reader.full_image_ny
+
+        return image_y1, image_x1, image_y2, image_x2
+
+    def full_image_yx_to_canvas_coords(self, full_image_yx):
+        """
+        Gets the canvas coordinates from full image coordinates in yx order.
+
+        Parameters
+        ----------
+        full_image_yx : Tuple|List
+
+        Returns
+        -------
+        List
+        """
+
+        decimation_factor = self.decimation_factor
+        if self.scale_to_fit_canvas:
+            decimation_factor = decimation_factor / self.display_rescaling_factor
+
+        siz = int(len(full_image_yx)/2)
+        out = []
+        for i in range(siz):
+            out.extend(
+                (float(full_image_yx[2*i+1] - self.canvas_full_image_upper_left_yx[1])/decimation_factor,
+                float(full_image_yx[2*i] - self.canvas_full_image_upper_left_yx[0])/decimation_factor))
+        return out
+
+
+class AppVariables(object):
+    """
+    The canvas image application variables.
+    """
+
+    canvas_height = IntegerDescriptor(
+        'canvas_height', default_value=200,
+        docstring='The default canvas height, in pixels.')  # type: int
+    canvas_width = IntegerDescriptor(
+        'canvas_width', default_value=300,
+        docstring='The default canvas width, in pixels.')  # type: int
+    rect_border_width = IntegerDescriptor(
+        'rect_border_width', default_value=2,
+        docstring='The (margin) rectangular border width, in pixels.')  # type: int
+    line_width = IntegerDescriptor(
+        'line_width', default_value=2,
+        docstring='The line width, in pixels.')  # type: int
+    point_size = IntegerDescriptor(
+        'point_size', default_value=3,
+        docstring='The point size, in pixels.')  # type: int
+    poly_border_width = IntegerDescriptor(
+        'poly_border_width', default_value=2,
+        docstring='The polygon border width, in pixels.')  # type: int
+    poly_fill = StringDescriptor(
+        'poly_fill',
+        docstring='The polygon fill color(named or hexidecimal string).')  # type: Union[None, str]
+    foreground_color = StringDescriptor(
+        'foreground_color', default_value='red',
+        docstring='The foreground color (named or hexidecimal string).')  # type: str
+    image_id = IntegerDescriptor(
+        'image_id',
+        docstring='The image id.')  # type: int
+    current_shape_id = IntegerDescriptor(
+        'current_shape_id',
+        docstring='The current shape id.')  # type: int
+    current_shape_canvas_anchor_point_xy = IntegerTupleDescriptor(
+        'current_shape_canvas_anchor_point_xy', length=2,
+        docstring='The current shape canvas anchor point, in xy order.')  # type: Union[None, tuple]
+    pan_anchor_point_xy = IntegerTupleDescriptor(
+        'pan_anchor_point_xy', length=2, default_value=(0, 0),
+        docstring='The pan anchor point, in xy order.')  # type: Union[None, tuple]
+    canvas_image_object = TypedDescriptor(
+        'canvas_image_object', CanvasImage,
+        docstring='The canvas image object.')  # type: CanvasImage
+    _tk_im = TypedDescriptor(
+        '_tk_im', ImageTk.PhotoImage,
+        docstring='The Tkinter Image.')  # type: ImageTk.PhotoImage
+    # zoom rectangle properties
+    zoom_rect_id = IntegerDescriptor(
+        'zoom_rect_id',
+        docstring='The zoom rectangle id.')  # type: int
+    zoom_rect_color = StringDescriptor(
+        'zoom_rect_color', default_value='cyan',
+        docstring='The zoom rectangle color (named or hexidecimal).')  # type: str
+    zoom_rect_border_width = IntegerDescriptor(
+        'zoom_rect_border_width', default_value=2,
+        docstring='The zoom rectangle border width, in pixels.')  # type: int
+    # selection rectangle properties
+    select_rect_id = IntegerDescriptor(
+        'select_rect_id',
+        docstring='The select rectangle id.')  # type: int
+    select_rect_color = StringDescriptor(
+        'select_rect_color', default_value='red',
+        docstring='The select rectangle color (named or hexidecimal).')  # type: str
+    select_rect_border_width = IntegerDescriptor(
+        'select_rect_border_width', default_value=2,
+        docstring='The select rectangle border width, in pixels.')  # type: int
+    # animation properties
+    animate_zoom = BooleanDescriptor(
+        'animate_zoom', default_value=True,
+        docstring='Specifies whether to animate zooming.')  # type: bool
+    n_zoom_animations = IntegerDescriptor(
+        'n_zoom_animations', default_value=5,
+        docstring='The number of zoom frames.')  # type: int
+    animate_pan = BooleanDescriptor(
+        'animate_pan', default_value=False,
+        docstring='Specifies whether to animate panning.')  # type: bool
+    animation_time_in_seconds = FloatDescriptor(
+        'animation_time_in_seconds', default_value=0.3,
+        docstring='The animation time in seconds.')  # type: float
+    # tool identifiers
+    active_tool = StringDescriptor(
+        'active_tool',
+        docstring='The active tool name.')  # type: str
+    current_tool = StringDescriptor(
+        'current_tool',
+        docstring='The current tool name.')  # type: str
+    # some configuration properties
+    vertex_selector_pixel_threshold = FloatDescriptor(
+        'vertex_selector_pixel_threshold', default_value=10.0,
+        docstring='The pixel threshold for vertex selection.')  # type: float
+    mouse_wheel_zoom_percent_per_event = FloatDescriptor(
+        'mouse_wheel_zoom_percent_per_event', default_value=1.5,
+        docstring='The percent to zoom in/out on mouse wheel detection.')  # type: float
+    highlight_n_colors_cycle = IntegerDescriptor(
+        'highlight_n_colors_cycle', default_value=10,
+        docstring='The length of highlight colors cycle.')  # type: int
+    zoom_on_wheel = BooleanDescriptor(
+        'zoom_on_wheel', default_value=True,
+        docstring='Zoom on the mouse wheel operation?')  # type: bool
+    rescale_image_to_fit_canvas = BooleanDescriptor(
+        'rescale_image_to_fit_canvas', default_value=True,
+        docstring='Rescale the image to fit the canvas?')  # type: bool
+    scale_dynamic_range = BooleanDescriptor(
+        'scale_dynamic_range', default_value=False,
+        docstring='Scale the dynamic range of the image?')  # type: bool
+    # some state properties
+    the_canvas_is_currently_zooming = BooleanDescriptor(
+        'the_canvas_is_currently_zooming', default_value=False,
+        docstring='Is the canvas object currently zooming?')  # type: bool
+    actively_drawing_shape = BooleanDescriptor(
+        'actively_drawing_shape', default_value=False,
+        docstring='Is the canvas object actively drawing a shape?')  # type: bool
+    tmp_closest_coord_index = IntegerDescriptor(
+        'tmp_closest_coord_index', default_value=0,
+        docstring='')  # type: int
+
     def __init__(self):
 
-        self.canvas_height = 200            # default width
-        self.canvas_width = 300             # default height
-
-        self.rect_border_width = 2
-        self.line_width = 2
-        self.point_size = 3
-        self.poly_border_width = 2
-        self.poly_fill = None
-
-        self.foreground_color = "red"
-
-        self.image_id = None  # type: int
-
-        self.current_shape_id = None
-        self.current_shape_canvas_anchor_point_xy = None
-        self.pan_anchor_point_xy = None
         self.shape_ids = []  # type: [int]
         self.shape_properties = {}
-        self.canvas_image_object = None  # type: CanvasImage
-        self.zoom_rect_id = None  # type: int
-        self.zoom_rect_color = "cyan"
-        self.zoom_rect_border_width = 2
-
-        self.animate_zoom = True
-        self.animate_pan = False
-        self.n_zoom_animations = 5
-        self.animation_time_in_seconds = 0.3
-
-        self.select_rect_id = None
-        self.select_rect_color = "red"
-        self.select_rect_border_width = 2
-        self.active_tool = None
-        self.current_tool = None
-
-        self.pan_anchor_point_xy = (0, 0)
-
-        self.vertex_selector_pixel_threshold = 10.0  # type: float
-
-        self.the_canvas_is_currently_zooming = False  # type: bool
-        self.mouse_wheel_zoom_percent_per_event = 1.5
-
-        self.actively_drawing_shape = False
-
         self.shape_drag_xy_limits = {}  # type: dict
-
-        self.highlight_color_palette = SeabornHexPalettes.blues
-        self.highlight_n_colors_cycle = 10
-
+        self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
         self.tmp_points = None  # type: [int]
-
-        self.tmp_closest_coord_index = 0  # type: int
-
-        self.zoom_on_wheel = True
-        self._tk_im = None  # type: ImageTk.PhotoImage
-        self.rescale_image_to_fit_canvas = True
-
-        self.scale_dynamic_range = False
 
 
 SHAPE_PROPERTIES = ShapePropertyConstants()
@@ -1939,378 +2401,3 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         return self.variables.zoom_rect_id, self.variables.select_rect_id
-
-
-# TODO: use descriptors here
-class CanvasImage(object):
-    image_reader = None                 # type: ImageReader
-    canvas_decimated_image = None       # type: numpy.ndarray
-    display_image = None                # type: numpy.ndarray
-    decimation_factor = 1               # type: int
-    display_rescaling_factor = 1                # type: float
-    canvas_full_image_upper_left_yx = (0, 0)    # type: (int, int)
-    canvas_ny = None                    # type: int
-    canvas_nx = None                    # type: int
-    scale_to_fit_canvas = True          # type: bool
-    drop_bands = []                     # type: []
-
-    def __init__(self, image_reader, canvas_nx, canvas_ny):
-        """
-
-        Parameters
-        ----------
-        image_reader : ImageReader
-        canvas_nx : int
-        canvas_ny : int
-        """
-
-        self.image_reader = image_reader
-        self.canvas_nx = canvas_nx
-        self.canvas_ny = canvas_ny
-        self.update_canvas_display_image_from_full_image()
-
-    def get_decimated_image_data_in_full_image_rect(self, full_image_rect, decimation):
-        """
-        Get decimated data.
-
-        Parameters
-        ----------
-        full_image_rect : Tuple|List
-        decimation : int
-
-        Returns
-        -------
-        numpy.ndarray
-        """
-
-        y_start = full_image_rect[0]
-        y_end = full_image_rect[2]
-        x_start = full_image_rect[1]
-        x_end = full_image_rect[3]
-
-        decimated_data = self.image_reader[y_start:y_end:decimation, x_start:x_end:decimation]
-        return decimated_data
-
-    def get_scaled_display_data(self, decimated_image):
-        """
-        Gets scaled data for display.
-
-        Parameters
-        ----------
-        decimated_image : numpy.ndarray
-
-        Returns
-        -------
-        numpy.ndarray
-        """
-
-        scale_factor = self.compute_display_scale_factor(decimated_image)
-        new_nx = int(decimated_image.shape[1] * scale_factor)
-        new_ny = int(decimated_image.shape[0] * scale_factor)
-        if new_nx > self.canvas_nx:
-            new_nx = self.canvas_nx
-        if new_ny > self.canvas_ny:
-            new_ny = self.canvas_ny
-        if len(self.drop_bands) != 0:
-            zeros_image = numpy.zeros_like(decimated_image[:, :, 0])
-            for drop_band in self.drop_bands:
-                decimated_image[:, :, drop_band] = zeros_image
-        pil_image = PIL.Image.fromarray(decimated_image)
-        display_image = pil_image.resize((new_nx, new_ny))
-        return numpy.array(display_image)
-
-    def decimated_image_coords_to_display_image_coords(self, decimated_image_yx_cords):
-        """
-        Convert from decimated image coordinates to display coordinates.
-
-        Parameters
-        ----------
-        decimated_image_yx_cords : List[Tuple[float, float]]
-
-        Returns
-        -------
-        List[Tuple[float, float]]
-        """
-
-        scale_factor = self.compute_display_scale_factor(self.canvas_decimated_image)
-        return [(coord[0]*scale_factor, coord[1]*scale_factor) for coord in decimated_image_yx_cords]
-
-    def display_image_coords_to_decimated_image_coords(self, display_image_yx_coords):
-        """
-        Convert from display coordinates to decimated image coordinates.
-
-        Parameters
-        ----------
-        display_image_yx_coords : List[Tuple[float, float]]
-
-        Returns
-        -------
-        List[Tuple[float, float]]
-        """
-
-        scale_factor = self.compute_display_scale_factor(self.canvas_decimated_image)
-        return [(coord[0]/scale_factor, coord[1]/scale_factor) for coord in display_image_yx_coords]
-
-    @staticmethod
-    def display_image_coords_to_canvas_coords(display_image_yx_coords):
-        """
-        Converts display image coordinates to canvas coordinates. This is just a
-        axis switch operation.
-
-        Parameters
-        ----------
-        display_image_yx_coords : List[Tuple[float, float]]
-
-        Returns
-        -------
-        List[Tuple[float, float]]
-        """
-
-        return [(yx[1], yx[0]) for yx in display_image_yx_coords]
-
-    def compute_display_scale_factor(self, decimated_image):
-        """
-        Computes the nominal scale factor.
-
-        Parameters
-        ----------
-        decimated_image : numpy.ndarray
-
-        Returns
-        -------
-        float
-        """
-
-        # TODO: division may not work as expected in Python 2 (int versus float)
-        #   what is the intent here?
-        decimated_image_nx = decimated_image.shape[1]
-        decimated_image_ny = decimated_image.shape[0]
-        scale_factor_1 = self.canvas_nx/decimated_image_nx
-        scale_factor_2 = self.canvas_ny/decimated_image_ny
-        scale_factor = min(scale_factor_1, scale_factor_2)
-        return scale_factor
-
-    def get_decimated_image_data_in_canvas_rect(self, canvas_rect, decimation=None):
-        """
-        Gets the decimated image from the image rectangle.
-
-        Parameters
-        ----------
-        canvas_rect : Tuple|List
-        decimation : None|int
-
-        Returns
-        -------
-        numpy.ndarray
-        """
-
-        full_image_rect = self.canvas_rect_to_full_image_rect(canvas_rect)
-        if decimation is None:
-            decimation = self.get_decimation_from_canvas_rect(canvas_rect)
-        return self.get_decimated_image_data_in_full_image_rect(full_image_rect, decimation)
-
-    def update_canvas_display_image_from_full_image(self):
-        """
-        Update the image in the canvas.
-
-        Returns
-        -------
-        None
-        """
-
-        full_image_rect = (0, 0, self.image_reader.full_image_ny, self.image_reader.full_image_nx)
-        self.update_canvas_display_image_from_full_image_rect(full_image_rect)
-
-    def update_canvas_display_image_from_full_image_rect(self, full_image_rect):
-        """
-        Update the canvas to the given image rectangle.
-
-        Parameters
-        ----------
-        full_image_rect : Tuple|List
-
-        Returns
-        -------
-        None
-        """
-
-        self.set_decimation_from_full_image_rect(full_image_rect)
-        decimated_image_data = self.get_decimated_image_data_in_full_image_rect(full_image_rect, self.decimation_factor)
-        self.update_canvas_display_from_numpy_array(decimated_image_data)
-        self.canvas_full_image_upper_left_yx = (full_image_rect[0], full_image_rect[1])
-
-    def update_canvas_display_image_from_canvas_rect(self, canvas_rect):
-        """
-        Update the canvas to the given camvas rectangle.
-
-        Parameters
-        ----------
-        canvas_rect : Tuple|List
-
-        Returns
-        -------
-        None
-        """
-
-        full_image_rect = self.canvas_rect_to_full_image_rect(canvas_rect)
-        full_image_rect = (int(round(full_image_rect[0])),
-                           int(round(full_image_rect[1])),
-                           int(round(full_image_rect[2])),
-                           int(round(full_image_rect[3])))
-        self.update_canvas_display_image_from_full_image_rect(full_image_rect)
-
-    def update_canvas_display_from_numpy_array(self, image_data):
-        """
-        Update the canvas from a numpy array.
-
-        Parameters
-        ----------
-        image_data : numpy.ndarray
-
-        Returns
-        -------
-        None
-        """
-
-        if self.drop_bands != []:
-            zeros_image = numpy.zeros_like(image_data[:, :, 0])
-            for drop_band in self.drop_bands:
-                image_data[:, :, drop_band] = zeros_image
-        self.canvas_decimated_image = image_data
-        if self.scale_to_fit_canvas:
-            scale_factor = self.compute_display_scale_factor(image_data)
-            self.display_rescaling_factor = scale_factor
-            self.display_image = self.get_scaled_display_data(image_data)
-        else:
-            self.display_image = image_data
-
-    def get_decimation_factor_from_full_image_rect(self, full_image_rect):
-        """
-        Get the decimation factor from the rectangle size.
-
-        Parameters
-        ----------
-        full_image_rect : Tuple|List
-
-        Returns
-        -------
-        int
-        """
-
-        ny = full_image_rect[2] - full_image_rect[0]
-        nx = full_image_rect[3] - full_image_rect[1]
-        decimation_y = ny / self.canvas_ny
-        decimation_x = nx / self.canvas_nx
-        decimation_factor = max(decimation_y, decimation_x)
-        decimation_factor = int(decimation_factor)
-        if decimation_factor < 1:
-            decimation_factor = 1
-        return decimation_factor
-
-    def get_decimation_from_canvas_rect(self, canvas_rect):
-        """
-        Get the decimation factor from the canvas rectangle size.
-
-        Parameters
-        ----------
-        canvas_rect : Tuple|List
-
-        Returns
-        -------
-        int
-        """
-
-        full_image_rect = self.canvas_rect_to_full_image_rect(canvas_rect)
-        return self.get_decimation_factor_from_full_image_rect(full_image_rect)
-
-    def set_decimation_from_full_image_rect(self, full_image_rect):
-        """
-        Sets the decimation from the image rectangle.
-
-        Parameters
-        ----------
-        full_image_rect : Tuple|List
-
-        Returns
-        -------
-        None
-        """
-
-        decimation_factor = self.get_decimation_factor_from_full_image_rect(full_image_rect)
-        self.decimation_factor = decimation_factor
-
-    def canvas_coords_to_full_image_yx(self, canvas_coords):
-        """
-        Gets full coordinates in yx order from canvas coordinates.
-
-        Parameters
-        ----------
-        canvas_coords : Tuple|List
-
-        Returns
-        -------
-        List
-        """
-
-        decimation_factor = self.decimation_factor
-        if self.scale_to_fit_canvas:
-            decimation_factor = decimation_factor/self.display_rescaling_factor
-        siz = int(len(canvas_coords)/2)
-        out = []
-        for i in range(siz):
-            out.extend(
-                (canvas_coords[2*i]*decimation_factor + self.canvas_full_image_upper_left_yx[1],
-                canvas_coords[2*i+1]*decimation_factor + self.canvas_full_image_upper_left_yx[0]))
-        return out
-
-    def canvas_rect_to_full_image_rect(self, canvas_rect):
-        """
-        Gets the full image coordinates from the canvas coordinates.
-
-        Parameters
-        ----------
-        canvas_rect : Tuple|List
-
-        Returns
-        -------
-        Tuple
-        """
-
-        image_y1, image_x1 = self.canvas_coords_to_full_image_yx([canvas_rect[0], canvas_rect[1]])
-        image_y2, image_x2 = self.canvas_coords_to_full_image_yx([canvas_rect[2], canvas_rect[3]])
-
-        if image_x1 < 0:
-            image_x1 = 0
-        if image_y1 < 0:
-            image_y1 = 0
-        if image_x2 > self.image_reader.full_image_nx:
-            image_x2 = self.image_reader.full_image_nx
-        if image_y2 > self.image_reader.full_image_ny:
-            image_y2 = self.image_reader.full_image_ny
-
-        return image_y1, image_x1, image_y2, image_x2
-
-    def full_image_yx_to_canvas_coords(self, full_image_yx):
-        """
-        Gets the canvas coordinates from full image coordinates in yx order.
-
-        Parameters
-        ----------
-        full_image_yx : Tuple|List
-
-        Returns
-        -------
-        List
-        """
-
-        decimation_factor = self.decimation_factor
-        if self.scale_to_fit_canvas:
-            decimation_factor = decimation_factor / self.display_rescaling_factor
-
-        siz = int(len(full_image_yx)/2)
-        out = []
-        for i in range(siz):
-            out.extend(
-                (float(full_image_yx[2*i+1] - self.canvas_full_image_upper_left_yx[1])/decimation_factor,
-                float(full_image_yx[2*i] - self.canvas_full_image_upper_left_yx[0])/decimation_factor))
-        return out
