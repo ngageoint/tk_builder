@@ -3,6 +3,9 @@ from tk_builder.widgets import basic_widgets
 
 
 class BandSelection(AbstractWidgetPanel):
+    """
+    Band selection tool for RGB display.
+    """
 
     red_selection = basic_widgets.Combobox      # type: basic_widgets.Combobox
     green_selection = basic_widgets.Combobox    # type: basic_widgets.Combobox
@@ -10,6 +13,13 @@ class BandSelection(AbstractWidgetPanel):
     alpha_selection = basic_widgets.Combobox    # type: basic_widgets.Combobox
 
     def __init__(self, parent):
+        """
+
+        Parameters
+        ----------
+        parent
+            The parent widget.
+        """
         AbstractWidgetPanel.__init__(self, parent)
 
         widget_list = ["red", "red_selection",

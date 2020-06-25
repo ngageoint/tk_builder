@@ -37,6 +37,7 @@ setup(name=parameters['__title__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
       install_requires=install_requires,
+      extras_require={'geotiff':['gdal', ], },
       zip_safe=True,
       test_suite="tests",
       tests_require=tests_require,

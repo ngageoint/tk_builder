@@ -14,11 +14,15 @@ gdal_to_numpy_data_types = {
     "CInt16": numpy.complex64,
     "CInt32": numpy.complex64,
     "CFloat32": numpy.complex64,
-    "CFloat64": numpy.complex64
+    "CFloat64": numpy.complex64  # TODO: is this numpy.complex128?
 }
 
 
 class GeotiffImageReader(ImageReader):
+    """
+    Prototype geotiff reader.
+    """
+
     fname = None
     full_image_nx = int
     full_image_ny = int
@@ -29,9 +33,14 @@ class GeotiffImageReader(ImageReader):
 
     _dset = None
 
-    def __init__(self,
-                 fname,          # type: str
-                 ):
+    def __init__(self, fname):
+        """
+
+        Parameters
+        ----------
+        fname : str
+        """
+
         self._dset = gdal.Open(fname, gdal.GA_ReadOnly)
         self.full_image_ny = self._dset.RasterYSize
         self.full_image_nx = self._dset.RasterXSize
@@ -43,16 +52,42 @@ class GeotiffImageReader(ImageReader):
             self.display_bands = [0]
 
     def get_numpy_data_type(self):
+        """
+        Get dataset type mapped to a numpy type.
+
+        Returns
+        -------
+        numpy.dtype
+        """
+
         gdal_data_type = gdal.GetDataTypeName(self._dset.GetRasterBand(1).DataType)
         return gdal_to_numpy_data_types[gdal_data_type]
 
-    def read_full_image_data_from_disk(self):  # type: (...) -> ndarray
+    def read_full_image_data_from_disk(self):
+        """
+        Reads the full array for the dataset.
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+
         bands = range(self.n_bands)
         return self.read_full_display_image_data_from_disk(bands)
 
-    def read_full_display_image_data_from_disk(self,
-                                               bands,  # type: []
-                                               ):  # type: (...) -> ndarray
+    def read_full_display_image_data_from_disk(self, bands):
+        """
+        Read the data corresponding to the given bands for the dataset.
+
+        Parameters
+        ----------
+        bands : List[int]
+
+        Returns
+        -------
+        numpy.ndarray
+        """
+
         n_bands = len(bands)
         image_data = numpy.zeros((self.full_image_ny, self.full_image_nx, n_bands),
                                   dtype=self.numpy_data_type)

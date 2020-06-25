@@ -3,46 +3,382 @@ import tkinter
 
 
 class WidgetEvents(tkinter.Misc):
+    """
+    A base class intended for simplifying the association of callback functions with
+    the possible GUI events.
+    """
+
     def __init__(self):
         pass
 
-    # events
-    def on_left_mouse_click(self, event):
-        self.bind("<Button-1>", event)
+    def event_binding(self, event_string, callback, *args, **kwargs):
+        """
+        Register the given callback string with the given callback function. This
+        is largely intended to permit a reusable pattern for callbacks with additional
+        arguments.
 
-    def on_left_mouse_press(self, event):
-        self.bind("<ButtonPress-1>", event)
+        Parameters
+        ----------
+        event_string : str
+            The tkinter event string.
+        callback : callable
+            The callback function.
+        args
+            Optional args (after event) for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
 
-    def on_left_mouse_motion(self, event):
-        self.bind("<B1-Motion>", event)
+        Returns
+        -------
+        None
+        """
 
-    def on_left_mouse_release(self, event):
-        self.bind("<ButtonRelease-1>", event)
-
-    def on_right_mouse_click(self, event):
-        self.bind("<Button-3>", event)
-
-    def on_right_mouse_press(self, event):
-        self.bind("<ButtonPress-3>", event)
-
-    def on_right_mouse_motion(self, event):
-        self.bind("<B3-Motion>", event)
-
-    def on_mouse_motion(self, event):
-        self.bind("<Motion>", event)
-
-    def on_mouse_wheel(self, event):
-        if platform.system() == "Linux":
-            self.bind("<Button-4>", event)
-            self.bind("<Button-5>", event)
+        if len(args) > 0 or len(kwargs) > 0:
+            self.bind(event_string, lambda event: callback(event, *args, **kwargs))
         else:
-            self.bind("<MouseWheel>", event)
+            self.bind(event_string, callback)
 
-    def on_enter_or_return_key(self, event):
-        self.bind('<Return>', event)
+    # specific events
+    def on_left_mouse_click(self, callback, *args, **kwargs):
+        """
+        The left mouse click event callback registration.
 
-    def on_left_mouse_click_with_args(self, event_w_args, args):
-        self.bind("<Button-1>", lambda event, arg=args: event_w_args(arg))
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
 
-    def on_right_mouse_click_with_args(self, event_w_args, args):
-        self.bind("<Button-3>", lambda event, arg=args: event_w_args(arg))
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Button-1>', callback, *args, **kwargs)
+
+    def on_right_mouse_click(self, callback, *args, **kwargs):
+        """
+        The right mouse click event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Button-3>', callback, *args, **kwargs)
+
+    def on_left_mouse_double_click(self, callback, *args, **kwargs):
+        """
+        The left mouse double click event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Double-Button-1>', callback, *args, **kwargs)
+
+    def on_right_mouse_double_click(self, callback, *args, **kwargs):
+        """
+        The right mouse double click event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Double-Button-3>', callback, *args, **kwargs)
+
+    def on_left_mouse_press(self, callback, *args, **kwargs):
+        """
+        The left mouse button press event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<ButtonPress-1>', callback, *args, **kwargs)
+
+    def on_right_mouse_press(self, callback, *args, **kwargs):
+        """
+        The right mouse press event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)
+
+    def on_left_mouse_release(self, callback, *args, **kwargs):
+        """
+        The left mouse release event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<ButtonRelease-1>', callback, *args, **kwargs)
+
+    def on_right_mouse_release(self, callback, *args, **kwargs):
+        """
+        The right mouse release event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)
+
+    def on_mouse_motion(self, callback, *args, **kwargs):
+        """
+        The mouse motion event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Motion>', callback, *args, **kwargs)
+
+    def on_left_mouse_motion(self, callback, *args, **kwargs):
+        """
+        The mouse motion with left button held down event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<B1-Motion>', callback, *args, **kwargs)
+
+    def on_right_mouse_motion(self, callback, *args, **kwargs):
+        """
+        The mouse motion with right button held down event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<B3-Motion>', callback, *args, **kwargs)
+
+    def on_mouse_wheel(self, callback, *args, **kwargs):
+        """
+        The mouse wheel event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        if platform.system() == "Linux":
+            self.event_binding('<Button-4>', callback, *args, **kwargs)
+            self.event_binding('<Button-5>', callback, *args, **kwargs)
+        else:
+            self.event_binding('<MouseWheel>', callback, *args, **kwargs)
+
+    def on_mouse_enter(self, callback, *args, **kwargs):
+        """
+        The mouse entered the widget (or a child) event registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Enter>', callback, *args, **kwargs)
+
+    def on_mouse_leave(self, callback, *args, **kwargs):
+        """
+        The mouse left the widget event registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Leave>', callback, *args, **kwargs)
+
+    def on_focus_in(self, callback, *args, **kwargs):
+        """
+        The keyboard entered the widget (or a child) event registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<FocusIn>', callback, *args, **kwargs)
+
+    def on_focus_out(self, callback, *args, **kwargs):
+        """
+        The keyboard left the widget (or a child) event registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<FocusOut>', callback, *args, **kwargs)
+
+    def on_enter_or_return_key(self, callback, *args, **kwargs):
+        """
+        The enter/return key press event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        self.event_binding('<Enter>', callback, *args, **kwargs)
