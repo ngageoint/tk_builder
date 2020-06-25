@@ -1176,8 +1176,8 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Parameters
         ----------
-        width_npix : int
-        height_npix : int
+        width_npix : int|float
+        height_npix : int|float
 
         Returns
         -------
