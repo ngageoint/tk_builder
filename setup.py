@@ -23,9 +23,9 @@ with open(os.path.join(here, 'tk_builder', '__about__.py'), 'r') as f:
 install_requires = ['numpy>=1.9.0', 'matplotlib', 'pillow']
 tests_require = []
 if sys.version_info[0] < 3:
-    tests_require.append('unittest2')
     # unittest2 only for Python2.7, we rely on subTest usage
-    install_requires.append('typing')
+    tests_require.append('unittest2')
+    install_requires.extend(['typing', 'future'])
 
 setup(name=parameters['__title__'],
       version=parameters['__version__'],
