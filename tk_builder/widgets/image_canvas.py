@@ -396,8 +396,8 @@ class CanvasImage(object):
         out = []
         for i in range(siz):
             out.extend(
-                (canvas_coords[2*i]*decimation_factor + self.canvas_full_image_upper_left_yx[1],
-                canvas_coords[2*i+1]*decimation_factor + self.canvas_full_image_upper_left_yx[0]))
+                (canvas_coords[2*i+1]*decimation_factor + self.canvas_full_image_upper_left_yx[0],
+                 canvas_coords[2 * i] * decimation_factor + self.canvas_full_image_upper_left_yx[1]))
         return out
 
     def canvas_rect_to_full_image_rect(self, canvas_rect):
@@ -448,8 +448,8 @@ class CanvasImage(object):
         out = []
         for i in range(siz):
             out.extend(
-                (float(full_image_yx[2*i+1] - self.canvas_full_image_upper_left_yx[1])/decimation_factor,
-                float(full_image_yx[2*i] - self.canvas_full_image_upper_left_yx[0])/decimation_factor))
+                (float(full_image_yx[2*i+1] - self.canvas_full_image_upper_left_yx[1]) / decimation_factor,
+                 float(full_image_yx[2 * i] - self.canvas_full_image_upper_left_yx[0]) / decimation_factor))
         return out
 
 
@@ -1785,7 +1785,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.update()
         self.redraw_all_shapes()
         self.variables.the_canvas_is_currently_zooming = False
-
 
     def update_current_image(self):
         """

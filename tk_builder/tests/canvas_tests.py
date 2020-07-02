@@ -1,11 +1,11 @@
 import unittest
 
 from tk_builder.widgets.image_canvas import ImageCanvas
-from tk_builder.tests.test_utils import mouse_simulator
 from tk_builder.tests.test_utils import image_canvas_utils
 import numpy as np
 
 # TODO: ERROR - this test looks broken?
+
 
 class ImageCanvasTests(unittest.TestCase):
     canvas_nx = 2027
