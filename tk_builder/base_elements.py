@@ -262,7 +262,7 @@ def _verify_int_tuple(val, default, name, instance, length=None):
     except Exception:
         raise
 
-    if _validate_tuple_length(len(temp), length, name, instance):
+    if _validate_tuple_length(len(temp), length, name, instance) is False:
         raise ValueError('The length of value cannot be validated appropriately')
     return tuple(temp)
 

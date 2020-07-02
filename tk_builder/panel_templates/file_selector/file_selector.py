@@ -75,7 +75,7 @@ class FileSelector(AbstractWidgetPanel):
 
         Returns
         -------
-        None
+        str
         """
 
         self.fname = askopenfilename(initialdir=self.initialdir, filetypes=self.fname_filters)

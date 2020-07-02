@@ -21,38 +21,6 @@ else:
     from PIL import ImageGrab
 
 
-# TODO: what are these here for?
-    # @property
-    # def canvas_image_object(self):  # type: () -> AbstractCanvasImage
-    #     return self._canvas_image_object
-    #
-    # @canvas_image_object.setter
-    # def canvas_image_object(self, value):
-    #     if value is None:
-    #         self._canvas_image_object = None
-    #         return
-    #
-    #     if not isinstance(value, AbstractCanvasImage):
-    #         raise TypeError('Requires instance of AbstractCanvasImage, got {}'.format(type(value)))
-    #     self._canvas_image_object = value
-
-
-# class SpecificAppVariables(AppVariables):
-#     @property
-#     def canvas_image_object(self):  # type: () -> object
-#         return self._canvas_image_object
-#
-#     @canvas_image_object.setter
-#     def canvas_image_object(self, value):
-#         if value is None:
-#             self._canvas_image_object = None
-#             return
-#
-#         if not isinstance(value, object):
-#             raise TypeError('Requires instance of AbstractCanvasImage, got {}'.format(type(value)))
-#         self._canvas_image_object = value
-
-
 class ToolConstants:
     ZOOM_IN_TOOL = "zoom in"
     ZOOM_OUT_TOOL = "zoom out"
@@ -1458,8 +1426,8 @@ class ImageCanvas(basic_widgets.Canvas):
         int
         """
 
-        if 'outline' not in options:
-            options['outline'] = self.variables.foreground_color
+        if 'fill' not in options:
+            options['fill'] = self.variables.foreground_color
         if 'width' not in options:
             options['width'] = self.variables.line_width
         if 'arrow' not in options:
@@ -1469,7 +1437,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.variables.shape_ids.append(shape_id)
         self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.ARROW)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['outline'])
+        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['fill'])
         self.set_shape_canvas_coords(shape_id, coords)
         self.set_shape_pixel_coords_from_canvas_coords(shape_id)
         self.variables.current_shape_id = shape_id
@@ -1701,9 +1669,10 @@ class ImageCanvas(basic_widgets.Canvas):
             get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
         return image_data_in_rect
 
+
     def zoom_to_selection(self, canvas_rect, animate=False):
         """
-        Zoom to the selection.
+        Zoom to the selection using canvas coordinates.
 
         Parameters
         ----------
@@ -1718,9 +1687,23 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.the_canvas_is_currently_zooming = True
         # fill up empty canvas space due to inconsistent ratios between the canvas rect and the canvas dimensions
         image_coords = self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_rect)
+        self.zoom_to_full_image_selection(image_coords, animate=animate)
 
-        zoomed_image_height = image_coords[2] - image_coords[0]
-        zoomed_image_width = image_coords[3] - image_coords[1]
+    def zoom_to_full_image_selection(self, image_rect, animate=False):
+        """
+        Zoom to the selection using image coordinates.
+
+        Parameters
+        ----------
+        image_rect_rect : Tuple|List
+        animate : bool
+
+        Returns
+        -------
+        None
+        """
+        zoomed_image_height = image_rect[2] - image_rect[0]
+        zoomed_image_width = image_rect[3] - image_rect[1]
 
         canvas_height_width_ratio = self.variables.canvas_height / self.variables.canvas_width
         zoomed_image_height_width_ratio = zoomed_image_height / zoomed_image_width
@@ -1729,38 +1712,40 @@ class ImageCanvas(basic_widgets.Canvas):
         new_image_height = zoomed_image_width * canvas_height_width_ratio
 
         if zoomed_image_height_width_ratio > canvas_height_width_ratio:
-            image_zoom_point_center = (image_coords[3] + image_coords[1]) / 2
-            image_coords[1] = image_zoom_point_center - new_image_width/2
-            image_coords[3] = image_zoom_point_center + new_image_width/2
+            image_zoom_point_center = (image_rect[3] + image_rect[1]) / 2
+            image_rect[1] = image_zoom_point_center - new_image_width / 2
+            image_rect[3] = image_zoom_point_center + new_image_width / 2
         else:
-            image_zoom_point_center = (image_coords[2] + image_coords[0]) / 2
-            image_coords[0] = image_zoom_point_center - new_image_height / 2
-            image_coords[2] = image_zoom_point_center + new_image_height / 2
+            image_zoom_point_center = (image_rect[2] + image_rect[0]) / 2
+            image_rect[0] = image_zoom_point_center - new_image_height / 2
+            image_rect[2] = image_zoom_point_center + new_image_height / 2
 
         # keep the rect within the image bounds
-        image_y_ul = max(image_coords[0], 0)
-        image_x_ul = max(image_coords[1], 0)
-        image_y_br = min(image_coords[2], self.variables.canvas_image_object.image_reader.full_image_ny)
-        image_x_br = min(image_coords[3], self.variables.canvas_image_object.image_reader.full_image_nx)
+        image_y_ul = max(image_rect[0], 0)
+        image_x_ul = max(image_rect[1], 0)
+        image_y_br = min(image_rect[2], self.variables.canvas_image_object.image_reader.full_image_ny)
+        image_x_br = min(image_rect[3], self.variables.canvas_image_object.image_reader.full_image_nx)
 
         # re-adjust if we ran off one of the edges
         if image_x_ul == 0:
-            image_coords[3] = new_image_width
+            image_rect[3] = new_image_width
         if image_x_br == self.variables.canvas_image_object.image_reader.full_image_nx:
-            image_coords[1] = self.variables.canvas_image_object.image_reader.full_image_nx - new_image_width
+            image_rect[1] = self.variables.canvas_image_object.image_reader.full_image_nx - new_image_width
         if image_y_ul == 0:
-            image_coords[2] = new_image_height
+            image_rect[2] = new_image_height
         if image_y_br == self.variables.canvas_image_object.image_reader.full_image_ny:
-            image_coords[0] = self.variables.canvas_image_object.image_reader.full_image_ny - new_image_height
+            image_rect[0] = self.variables.canvas_image_object.image_reader.full_image_ny - new_image_height
 
         # keep the rect within the image bounds
-        image_y_ul = max(image_coords[0], 0)
-        image_x_ul = max(image_coords[1], 0)
-        image_y_br = min(image_coords[2], self.variables.canvas_image_object.image_reader.full_image_ny)
-        image_x_br = min(image_coords[3], self.variables.canvas_image_object.image_reader.full_image_nx)
+        image_y_ul = max(image_rect[0], 0)
+        image_x_ul = max(image_rect[1], 0)
+        image_y_br = min(image_rect[2], self.variables.canvas_image_object.image_reader.full_image_ny)
+        image_x_br = min(image_rect[3], self.variables.canvas_image_object.image_reader.full_image_nx)
 
-        new_canvas_rect = self.variables.canvas_image_object.full_image_yx_to_canvas_coords((image_y_ul, image_x_ul, image_y_br, image_x_br))
-        new_canvas_rect = (int(new_canvas_rect[0]), int(new_canvas_rect[1]), int(new_canvas_rect[2]), int(new_canvas_rect[3]))
+        new_canvas_rect = self.variables.canvas_image_object.full_image_yx_to_canvas_coords(
+            (image_y_ul, image_x_ul, image_y_br, image_x_br))
+        new_canvas_rect = (
+        int(new_canvas_rect[0]), int(new_canvas_rect[1]), int(new_canvas_rect[2]), int(new_canvas_rect[3]))
 
         background_image = self.variables.canvas_image_object.display_image
         self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(new_canvas_rect)
@@ -1769,7 +1754,7 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             new_image = PIL.Image.fromarray(self.variables.canvas_image_object.canvas_decimated_image)
         if animate is True:
-            #create frame sequence
+            # create frame sequence
             n_animations = self.variables.n_zoom_animations
             background_image = background_image / 2
             background_image = numpy.asarray(background_image, dtype=numpy.uint8)
@@ -1783,10 +1768,10 @@ class ImageCanvas(basic_widgets.Canvas):
             pil_background_image = PIL.Image.fromarray(background_image)
             frame_sequence = []
             for i in range(n_animations):
-                new_x_ul = int(display_x_ul * (1 - i/(n_animations-1)))
-                new_y_ul = int(display_y_ul * (1 - i/(n_animations-1)))
-                new_size_x = int((display_x_br - display_x_ul) + x_diff * (i/(n_animations-1)))
-                new_size_y = int((display_y_br - display_y_ul) + y_diff * (i/(n_animations-1)))
+                new_x_ul = int(display_x_ul * (1 - i / (n_animations - 1)))
+                new_y_ul = int(display_y_ul * (1 - i / (n_animations - 1)))
+                new_size_x = int((display_x_br - display_x_ul) + x_diff * (i / (n_animations - 1)))
+                new_size_y = int((display_y_br - display_y_ul) + y_diff * (i / (n_animations - 1)))
                 resized_zoom_image = new_image.resize((new_size_x, new_size_y))
                 animation_image = pil_background_image.copy()
                 animation_image.paste(resized_zoom_image, (new_x_ul, new_y_ul))
@@ -1800,6 +1785,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.update()
         self.redraw_all_shapes()
         self.variables.the_canvas_is_currently_zooming = False
+
 
     def update_current_image(self):
         """
@@ -2394,10 +2380,8 @@ class ImageCanvas(basic_widgets.Canvas):
     def get_tool_shape_ids(self):
         """
         Gets the shape ids for the zoom rectangle and select rectangle.
-
-        Returns
-        -------
-        Tuple
         """
 
-        return self.variables.zoom_rect_id, self.variables.select_rect_id
+        tool_shape_ids = [self.variables.zoom_rect_id,
+                          self.variables.select_rect_id]
+        return tool_shape_ids
