@@ -616,7 +616,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.active_tool = None
         self.variables.current_shape_id = None
 
-
     def set_image_reader(self, image_reader):
         """
         Set the image reader.
@@ -1668,7 +1667,6 @@ class ImageCanvas(basic_widgets.Canvas):
         image_data_in_rect = self.variables.canvas_image_object.\
             get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
         return image_data_in_rect
-
 
     def zoom_to_selection(self, canvas_rect, animate=False):
         """
