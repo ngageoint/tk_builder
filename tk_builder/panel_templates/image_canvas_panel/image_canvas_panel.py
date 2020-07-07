@@ -15,9 +15,9 @@ class AppVariables:
         self.right_margin = 0
         self.n_x_axis_ticks = 5
         self.n_y_axis_ticks = 5
-        self.image_x_start = 0
+        self.image_x_start = None
         self.image_x_end = None
-        self.image_y_start = 0
+        self.image_y_start = None
         self.image_y_end = None
         self.x_axis_n_decimals = 2
         self.canvas_width = None
@@ -60,8 +60,14 @@ class ImageCanvasPanel(LabelFrame):
         None
         """
         self.canvas.set_image_reader(image_reader)
-        self.variables.image_x_end = self.canvas.variables.canvas_image_object.image_reader.full_image_nx
-        self.variables.image_y_end = self.canvas.variables.canvas_image_object.image_reader.full_image_ny
+        if self.variables.image_x_start is None:
+            self.variables.image_x_start = 0
+        if self.variables.image_y_start is None:
+            self.variables.image_y_start = 0
+        if self.variables.image_x_end is None:
+            self.variables.image_x_end = self.canvas.variables.canvas_image_object.image_reader.full_image_nx
+        if self.variables.image_y_end is None:
+            self.variables.image_y_end = self.canvas.variables.canvas_image_object.image_reader.full_image_ny
 
     @property
     def top_margin_pixels(self):
@@ -191,7 +197,6 @@ class ImageCanvasPanel(LabelFrame):
 
     def update_outer_canvas(self):
         self.outer_canvas.delete("all")
-        self.canvas.update_current_image()
         self.set_canvas_size(self.variables.canvas_width, self.variables.canvas_height)
         self.canvas.update_current_image()
         display_image_size = numpy.shape(self.canvas.variables.canvas_image_object.display_image)

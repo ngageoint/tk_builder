@@ -65,6 +65,14 @@ class CanvasResize(AbstractWidgetPanel):
         master_frame.pack()
         self.pack()
 
+        self.control_panel.x_slider.config
+
+        # callbacks
+        self.control_panel.x_slider.on_left_mouse_motion(self.callback_x_slider_update)
+
+    def callback_x_slider_update(self, event):
+        print(self.control_panel.x_slider.get())
+
     def exit(self):
         self.quit()
 
