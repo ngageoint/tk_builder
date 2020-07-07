@@ -1349,6 +1349,12 @@ class ImageCanvas(basic_widgets.Canvas):
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
             self.variables.actively_drawing_shape = True
 
+    def create_text(self, *args, **kw):
+        """Create text with coordinates x1,y1."""
+        shape_id = self._create('text', args, kw)
+        self.variables.shape_ids.append(shape_id)
+        return shape_id
+
     def create_new_rect(self, coords, **options):
         """
         Create a new rectangle.
@@ -2165,6 +2171,7 @@ class ImageCanvas(basic_widgets.Canvas):
         image_x_ul = image_coords[1]
         image_y_br = image_coords[2]
         image_x_br = image_coords[3]
+        # TODO: fix this, it just snaps back to the original position if the x or y coords are less than zero
         if image_y_ul < 0:
             new_canvas_y_ul = 0
             new_canvas_y_br = self.variables.canvas_height
