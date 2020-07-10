@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Union
 import tkinter
+from tk_builder.widgets.widget_elements.widget_descriptors import LabelDesctriptor
 
 NO_TEXT_UPDATE_WIDGETS = ['ttk::scale']
 
@@ -98,20 +99,16 @@ class AbstractWidgetPanel(tkinter.LabelFrame):
         for i, widget in enumerate(basic_widget_list):
             if i in transitions:
                 row_num += 1
-            old_widget = None
-            if not hasattr(self, widget):
-                old_widget = widget
-                widget = widget + "_" + str(i)
-                setattr(self, widget, tkinter.Label(self.rows[row_num]))
-            else:
-                setattr(self, widget, getattr(self, widget)(self.rows[row_num]))
-            getattr(self, widget).pack(side="left", padx=5, pady=5)
-            if getattr(self, widget).widgetName in NO_TEXT_UPDATE_WIDGETS:
+            if type(widget) == str:
+                widget = LabelDesctriptor(widget)
+            setattr(self, widget.name, widget.the_type(self.rows[row_num]))
+            getattr(self, widget.name).pack(side="left", padx=5, pady=5)
+            if getattr(self, widget.name).widgetName in NO_TEXT_UPDATE_WIDGETS:
+            #if widget.widgetName in NO_TEXT_UPDATE_WIDGETS:
                 pass
             else:
-                getattr(self, widget).config(text=widget.replace("_", " "))
-            if old_widget is not None:
-                getattr(self, widget).config(text=widget.replace("_", " ")[0:-2])
+                getattr(self, widget.name).set_text(widget.name.replace("_", " "))
+                #widget.set_text(widget.widgetName.replace("_", " "))
             self._widget_list.append(widget)
 
     def set_text_formatting(self, formatting_list):
@@ -122,11 +119,6 @@ class AbstractWidgetPanel(tkinter.LabelFrame):
             spacing_npix_y = spacing_npix_x
         for widget in self._widget_list:
             getattr(self, widget).pack(side="left", padx=spacing_npix_x, pady=spacing_npix_y)
-
-    def set_label_text(self,
-                       label,               # type: str
-                       ):
-        self.config(text=label)
 
     def unpress_all_buttons(self):
         for i, widget_and_name in enumerate(self._widget_list):

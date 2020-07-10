@@ -9,7 +9,6 @@ class CheckButton(tkinter.Checkbutton, WidgetEvents):
         tkinter.Checkbutton.__init__(self, master=master, cnf=cnf, var=self.value, **kw)
         self.value.set(False)
 
-    # event_handling
     def set_text(self, text):
         self.config(text=text)
 

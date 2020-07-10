@@ -1,6 +1,7 @@
 import tkinter
 from tk_builder.widgets.widget_wrappers.labelFrame import LabelFrame
 from tk_builder.widgets.image_canvas import ImageCanvas
+from tkinter.tix import Balloon
 import numpy
 
 
@@ -22,6 +23,7 @@ class AppVariables:
         self.x_axis_n_decimals = 2
         self.canvas_width = None
         self.canvas_height = None
+        self.tooltip = None
 
 
 class ImageCanvasPanel(LabelFrame):
@@ -36,10 +38,17 @@ class ImageCanvasPanel(LabelFrame):
         self.outer_canvas.pack()
         self.canvas.pack()
 
+        #self.variables.tooltip = Balloon(master, bg="white", title="Help")
+
         self.canvas.on_mouse_wheel(self.callback_handle_mouse_wheel)
         self.canvas.on_left_mouse_release(self.callback_handle_left_mouse_release)
+        #self.canvas.on_mouse_motion(self.callback_tooltip)
+
+    def callback_tooltip(self, event):
+        print("something")
 
     def callback_handle_mouse_wheel(self, event):
+        self.set_canvas_size(self.variables.canvas_width, self.variables.canvas_height)
         self.canvas.callback_mouse_zoom(event)
         self.update_outer_canvas()
 
