@@ -1,10 +1,14 @@
 import numpy as np
 from typing import Union
 import tkinter
-from tk_builder.widgets.widget_elements.widget_descriptors import LabelDesctriptor
+from tk_builder.widgets.widget_elements.widget_descriptors import LabelDescriptor
 from tk_builder.widgets import basic_widgets
 
-NO_TEXT_UPDATE_WIDGETS = ['ttk::scale']
+NO_TEXT_UPDATE_WIDGETS = ['ttk::scale',
+                          'ttk::combobox',
+                          'entry',
+                          'spinbox',
+                          ]
 
 
 class AbstractWidgetPanel(basic_widgets.LabelFrame):
@@ -138,7 +142,9 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
             if i in transitions:
                 row_num += 1
             if type(widget) == str:
-                widget = LabelDesctriptor(widget)
+                widget = LabelDescriptor(widget)
+            widget_name = widget.name
+            # widget_text = widget.default_text
             widget_text = widget.name
             widget = widget.the_type(self.rows[row_num])
             widget_type = widget.widgetName
@@ -148,6 +154,7 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
             else:
                 widget.set_text(widget_text.replace("_", " "))
             self._widget_list.append(widget)
+            setattr(self, widget_name, widget)
 
     def set_text_formatting(self, formatting_list):
         pass
@@ -159,34 +166,22 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
             getattr(self, widget).pack(side="left", padx=spacing_npix_x, pady=spacing_npix_y)
 
     def unpress_all_buttons(self):
-        for i, widget_and_name in enumerate(self._widget_list):
-            widget = widget_and_name
-            if type(("", "")) == type(widget_and_name):
-                widget = widget_and_name[0]
-            if getattr(self, widget).widgetName == "button":
-                getattr(self, widget).config(relief="raised")
+        for widget in self._widget_list:
+            if widget.widgetName == "button":
+                widget.config(relief="raised")
 
     def press_all_buttons(self):
-        for i, widget_and_name in enumerate(self._widget_list):
-            widget = widget_and_name
-            if type(("", "")) == type(widget_and_name):
-                widget = widget_and_name[0]
-            if getattr(self, widget).widgetName == "button":
-                getattr(self, widget).config(relief="sunken")
+        for widget in self._widget_list:
+            if widget.widgetName == "button":
+                widget.config(relief="sunken")
 
     def activate_all_buttons(self):
-        for i, widget_and_name in enumerate(self._widget_list):
-            widget = widget_and_name
-            if type(("", "")) == type(widget_and_name):
-                widget = widget_and_name[0]
-            getattr(self, widget).config(state="normal")
+        for widget in self._widget_list:
+            widget.config(state="normal")
 
     def disable_all_buttons(self):
-        for i, widget_and_name in enumerate(self._widget_list):
-            widget = widget_and_name
-            if type(("", "")) == type(widget_and_name):
-                widget = widget_and_name[0]
-            getattr(self, widget).config(state="disabled")
+        for widget in self._widget_list:
+            widget.config(state="disabled")
 
     def set_active_button(self,
                           button,

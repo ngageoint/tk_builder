@@ -7,10 +7,10 @@ from tk_builder.sandbox.panel_example.sub_panel_2.sub_panel_2 import Panel2
 
 
 class MainPanelButtons:
-    button_1 = widget_descriptors.ButtonDescriptor("button1")  # type: basic_widgets.Button
+    button_1 = widget_descriptors.ButtonDescriptor("button", default_text="this is a button!")  # type: basic_widgets.Button
     button_2 = widget_descriptors.ButtonDescriptor("button2")   # type: basic_widgets.Button
-    panel_1 = widget_descriptors.PanelDescriptor("inner_panel", Panel1)
-    panel_2 = widget_descriptors.PanelDescriptor("panel 2", Panel2)
+    panel_1 = widget_descriptors.PanelDescriptor("panel_1", Panel1)     # type: Panel1
+    panel_2 = widget_descriptors.PanelDescriptor("panel 2", Panel2)     # type: Panel2
 
 
 class OuterPanel(AbstractWidgetPanel):
@@ -28,7 +28,8 @@ class OuterPanel(AbstractWidgetPanel):
 
         master_frame.pack()
         self.pack()
-        # self.button.set_text("stuff")
+
+        self.panel_1.press_all_buttons()
 
 
 def main():

@@ -1,159 +1,196 @@
-import logging
 from tk_builder.base_elements import TypedDescriptor
 from tk_builder.widgets import basic_widgets
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tkinter import ttk
 
 
-class ButtonDescriptor(TypedDescriptor):
+class BaseWidgetDescriptor(TypedDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Button
+    def __init__(self, name, the_type, default_text=None, default_value=None, docstring=None):
         self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+        self.default_text = default_text
+        super(BaseWidgetDescriptor, self).__init__(name, the_type, docstring=docstring)
 
 
-class CanvasDescriptor(TypedDescriptor):
+class ButtonDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Canvas
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(ButtonDescriptor, self).__init__(name,
+                                               basic_widgets.Button,
+                                               default_text=default_text,
+                                               default_value=default_value,
+                                               docstring=docstring)
 
 
-class ComboboxDescriptor(TypedDescriptor):
+class CanvasDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Combobox
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(CanvasDescriptor, self).__init__(name,
+                                               basic_widgets.Canvas,
+                                               default_text=default_text,
+                                               default_value=default_value,
+                                               docstring=docstring)
 
 
-class ScaleDescriptor(TypedDescriptor):
+class ComboboxDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Scale
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(ComboboxDescriptor, self).__init__(name,
+                                                 basic_widgets.Combobox,
+                                                 default_text=default_text,
+                                                 default_value=default_value,
+                                                 docstring=docstring)
 
 
-class LabelDesctriptor(TypedDescriptor):
+class ScaleDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Label
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(ScaleDescriptor, self).__init__(name,
+                                              basic_widgets.Scale,
+                                              default_text=default_text,
+                                              default_value=default_value,
+                                              docstring=docstring)
 
 
-class LabelFrameDescriptor(TypedDescriptor):
+class LabelDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.LabelFrame
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(LabelDescriptor, self).__init__(name,
+                                              basic_widgets.Label,
+                                              default_text=default_text,
+                                              default_value=default_value,
+                                              docstring=docstring)
 
 
-class PanelDescriptor(TypedDescriptor):
+class LabelFrameDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, the_type, default_value=None, docstring=None):
-        self.the_type = the_type
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(LabelFrameDescriptor, self).__init__(name,
+                                                   basic_widgets.LabelFrame,
+                                                   default_text=default_text,
+                                                   default_value=default_value,
+                                                   docstring=docstring)
 
 
-class EntryDescriptor(TypedDescriptor):
+class PanelDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Entry
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, the_type, default_text=None, default_value=None, docstring=None):
+        super(PanelDescriptor, self).__init__(name,
+                                              the_type=the_type,
+                                              default_text=default_text,
+                                              default_value=default_value,
+                                              docstring=docstring)
 
 
-class TextDescriptor(TypedDescriptor):
+class EntryDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Text
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(EntryDescriptor, self).__init__(name,
+                                              basic_widgets.Entry,
+                                              default_text=default_text,
+                                              default_value=default_value,
+                                              docstring=docstring)
 
 
-class SpinboxDescriptor(TypedDescriptor):
+class TextDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.Spinbox
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(TextDescriptor, self).__init__(name,
+                                                basic_widgets.Text,
+                                                default_text=default_text,
+                                                default_value=default_value,
+                                                docstring=docstring)
 
 
-class RadioButtonDescriptor(TypedDescriptor):
+class SpinboxDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.RadioButton
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(SpinboxDescriptor, self).__init__(name,
+                                               basic_widgets.Spinbox,
+                                               default_text=default_text,
+                                               default_value=default_value,
+                                               docstring=docstring)
 
 
-class CheckButtonDescriptor(TypedDescriptor):
+class RadioButtonDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = basic_widgets.CheckButton
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(RadioButtonDescriptor, self).__init__(name,
+                                                    basic_widgets.RadioButton,
+                                                    default_text=default_text,
+                                                    default_value=default_value,
+                                                    docstring=docstring)
 
 
-class ImageCanvasPanelDescriptor(TypedDescriptor):
+class CheckButtonDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = ImageCanvasPanel
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(CheckButtonDescriptor, self).__init__(name,
+                                                    basic_widgets.CheckButton,
+                                                    default_text=default_text,
+                                                    default_value=default_value,
+                                                    docstring=docstring)
 
 
-class TreeviewDescriptor(TypedDescriptor):
+class ImageCanvasPanelDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a specified type.
     """
 
-    def __init__(self, name, default_value=None, docstring=None):
-        self.the_type = ttk.Treeview
-        self._default_value = default_value
-        super(TypedDescriptor, self).__init__(name, docstring=docstring)
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(ImageCanvasPanelDescriptor, self).__init__(name,
+                                                         ImageCanvasPanel,
+                                                         default_text=default_text,
+                                                         default_value=default_value,
+                                                         docstring=docstring)
+
+
+class TreeviewDescriptor(BaseWidgetDescriptor):
+    """
+    A descriptor for a specified type.
+    """
+
+    def __init__(self, name, default_text=None, default_value=None, docstring=None):
+        super(TreeviewDescriptor, self).__init__(name,
+                                                 basic_widgets.Treeview,
+                                                 default_text=default_text,
+                                                 default_value=default_value,
+                                                 docstring=docstring)
