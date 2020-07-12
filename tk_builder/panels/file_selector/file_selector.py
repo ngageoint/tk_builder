@@ -1,7 +1,7 @@
 import os
 import tkinter
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 from tk_builder.widgets import basic_widgets
 
 

@@ -1,8 +1,8 @@
 import os
 import tkinter
 from tkinter import Menu
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 
 from tk_builder.image_readers.geotiff_reader import GeotiffImageReader
 from tkinter import filedialog

@@ -6,8 +6,8 @@ import numpy as np
 
 import tkinter
 from tk_builder.widgets import basic_widgets
-from tk_builder.panel_templates.pyplot_panel.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.pyplot_panel.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 
 SCALE_Y_AXIS_PER_FRAME_TRUE = "scale y axis per frame"
 SCALE_Y_AXIS_PER_FRAME_FALSE = "don't scale y axis per frame"

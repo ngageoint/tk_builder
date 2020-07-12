@@ -1,7 +1,7 @@
 import tkinter
-from tk_builder.panel_templates.pyplot_panel.pyplot_panel import PyplotPanel
+from tk_builder.panels.pyplot_panel.pyplot_panel import PyplotPanel
 from tk_builder.example_apps.plot_demo.panels.plot_demo_button_panel import ButtonPanel
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
 import numpy as np
 
 

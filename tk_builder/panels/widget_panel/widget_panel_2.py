@@ -1,11 +1,13 @@
 import numpy as np
 from typing import Union
 import tkinter
+from tk_builder.widgets.widget_elements.widget_descriptors import LabelDesctriptor
+from tk_builder.widgets import basic_widgets
 
 NO_TEXT_UPDATE_WIDGETS = ['ttk::scale']
 
 
-class AbstractWidgetPanel(tkinter.LabelFrame):
+class AbstractWidgetPanel(basic_widgets.LabelFrame):
     def __init__(self, parent):
         self.parent = parent
         tkinter.LabelFrame.__init__(self, parent)
@@ -71,8 +73,45 @@ class AbstractWidgetPanel(tkinter.LabelFrame):
                 row_height = row_heights[row_num]
                 getattr(self, widget).config(height=row_height)
 
+    # def init_w_basic_widget_list(self,
+    #                              basic_widget_list,         # type: []
+    #                              n_rows,                    # type: int
+    #                              n_widgets_per_row_list,    # type: [int]
+    #                              ):
+    #     """
+    #     This is a convenience method to initialize a basic widget panel.  To use this first make a subclass
+    #     This should also be the master method to initialize a panel.  Other convenience methods can be made
+    #     to perform the button/widget location initialization, but all of those methods should perform their
+    #     ordering then reference this method to actually perform the initialization.
+    #     :param basic_widget_list:
+    #     :param n_rows:
+    #     :param n_widgets_per_row_list:
+    #     :return:
+    #     """
+    #     self.rows = [tkinter.Frame(self) for i in range(n_rows)]
+    #     for row in self.rows:
+    #         row.config(borderwidth=2)
+    #         row.pack()
+    #
+    #     # find transition points
+    #     transitions = np.cumsum(n_widgets_per_row_list)
+    #     self._widget_list = []
+    #     row_num = 0
+    #     for i, widget in enumerate(basic_widget_list):
+    #         if i in transitions:
+    #             row_num += 1
+    #         if type(widget) == str:
+    #             widget = LabelDesctriptor(widget)
+    #         setattr(self, widget.name, widget.the_type(self.rows[row_num]))
+    #         getattr(self, widget.name).pack(side="left", padx=5, pady=5)
+    #         if getattr(self, widget.name).widgetName in NO_TEXT_UPDATE_WIDGETS:
+    #             pass
+    #         else:
+    #             getattr(self, widget.name).set_text(widget.name.replace("_", " "))
+    #         self._widget_list.append(widget)
+
     def init_w_basic_widget_list(self,
-                                 basic_widget_list,         # type: [Typed]
+                                 basic_widget_list,         # type: []
                                  n_rows,                    # type: int
                                  n_widgets_per_row_list,    # type: [int]
                                  ):
@@ -98,20 +137,16 @@ class AbstractWidgetPanel(tkinter.LabelFrame):
         for i, widget in enumerate(basic_widget_list):
             if i in transitions:
                 row_num += 1
-            old_widget = None
-            if not hasattr(self, widget):
-                old_widget = widget
-                widget = widget + "_" + str(i)
-                setattr(self, widget, tkinter.Label(self.rows[row_num]))
-            else:
-                setattr(self, widget, getattr(self, widget)(self.rows[row_num]))
-            getattr(self, widget).pack(side="left", padx=5, pady=5)
-            if getattr(self, widget).widgetName in NO_TEXT_UPDATE_WIDGETS:
+            if type(widget) == str:
+                widget = LabelDesctriptor(widget)
+            widget_text = widget.name
+            widget = widget.the_type(self.rows[row_num])
+            widget_type = widget.widgetName
+            widget.pack(side="left", padx=5, pady=5)
+            if widget_type in NO_TEXT_UPDATE_WIDGETS:
                 pass
             else:
-                getattr(self, widget).config(text=widget.replace("_", " "))
-            if old_widget is not None:
-                getattr(self, widget).config(text=widget.replace("_", " ")[0:-2])
+                widget.set_text(widget_text.replace("_", " "))
             self._widget_list.append(widget)
 
     def set_text_formatting(self, formatting_list):
@@ -122,11 +157,6 @@ class AbstractWidgetPanel(tkinter.LabelFrame):
             spacing_npix_y = spacing_npix_x
         for widget in self._widget_list:
             getattr(self, widget).pack(side="left", padx=spacing_npix_x, pady=spacing_npix_y)
-
-    def set_label_text(self,
-                       label,               # type: str
-                       ):
-        self.config(text=label)
 
     def unpress_all_buttons(self):
         for i, widget_and_name in enumerate(self._widget_list):
