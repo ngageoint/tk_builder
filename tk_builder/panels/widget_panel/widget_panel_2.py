@@ -1,40 +1,31 @@
 import numpy as np
-from typing import Union
+from typing import Union, List
 import tkinter
+from tkinter import ttk
 from tk_builder.widgets.widget_elements.widget_descriptors import LabelDescriptor
 from tk_builder.widgets import basic_widgets
 
-NO_TEXT_UPDATE_WIDGETS = ['ttk::scale',
-                          'ttk::combobox',
-                          'entry',
-                          'spinbox',
-                          ]
+NO_TEXT_UPDATE_WIDGETS = [ttk.Scale, ttk.Combobox, tkinter.Entry, tkinter.Spinbox]
 
 
 class AbstractWidgetPanel(basic_widgets.LabelFrame):
+    _widget_list = ()  # the list of names of the widget element variables
+
     def __init__(self, parent):
         self.parent = parent
-        tkinter.LabelFrame.__init__(self, parent)
+        basic_widgets.LabelFrame.__init__(self, parent)
         self.config(borderwidth=2)
-        self._widget_list = None     # type: list
-        self.rows = None           # type: tkinter.Frame
+        self._rows = None           # type: List[tkinter.Frame]
 
     def close_window(self):
         self.parent.withdraw()
 
-    def init_w_horizontal_layout(self,
-                                 basic_widget_list,         # type: list
-                                 ):
-        self.init_w_basic_widget_list(basic_widget_list,
-                                      n_rows=1,
-                                      n_widgets_per_row_list=[len(basic_widget_list)])
+    def init_w_horizontal_layout(self):
+        self.init_w_basic_widget_list(n_rows=1, n_widgets_per_row_list=[len(self._widget_list), ])
 
-    def init_w_vertical_layout(self,
-                               basic_widget_list,           # type: list
-                               ):
-        self.init_w_basic_widget_list(basic_widget_list,
-                                      n_rows=len(basic_widget_list),
-                                      n_widgets_per_row_list=list(np.ones(len(basic_widget_list))))
+    def init_w_vertical_layout(self):
+        self.init_w_basic_widget_list(n_rows=len(self._widget_list),
+                                      n_widgets_per_row_list=[1, ]*len(self._widget_list))
 
     def init_w_rows(self, basic_widgets_nested_list):
         flattened_list = []
@@ -43,15 +34,14 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
             widgets_per_row.append(len(widget_list))
             for widget in widget_list:
                 flattened_list.append(widget)
-        self.init_w_basic_widget_list(flattened_list, len(basic_widgets_nested_list), widgets_per_row)
+        self.init_w_basic_widget_list(len(basic_widgets_nested_list), widgets_per_row)
 
     def init_w_box_layout(self,
-                          basic_widget_list,  # type: list
                           n_columns,  # type: int
                           column_widths=None,  # type: Union[int, list]
                           row_heights=None,  # type: Union[int, list]
                           ):
-        n_total_widgets = len(basic_widget_list)
+        n_total_widgets = len(self._widget_list)
         n_rows = int(np.ceil(n_total_widgets/n_columns))
         n_widgets_per_row = []
         n_widgets_left = n_total_widgets
@@ -62,7 +52,7 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
             else:
                 n_widgets_per_row.append(n_widgets_left)
             n_widgets_left -= n_columns
-        self.init_w_basic_widget_list(basic_widget_list, n_rows, n_widgets_per_row)
+        self.init_w_basic_widget_list(n_rows, n_widgets_per_row)
         for i, widget in enumerate(self._widget_list):
             column_num = np.mod(i, n_columns)
             row_num = int(i/n_columns)
@@ -77,60 +67,25 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
                 row_height = row_heights[row_num]
                 getattr(self, widget).config(height=row_height)
 
-    # def init_w_basic_widget_list(self,
-    #                              basic_widget_list,         # type: []
-    #                              n_rows,                    # type: int
-    #                              n_widgets_per_row_list,    # type: [int]
-    #                              ):
-    #     """
-    #     This is a convenience method to initialize a basic widget panel.  To use this first make a subclass
-    #     This should also be the master method to initialize a panel.  Other convenience methods can be made
-    #     to perform the button/widget location initialization, but all of those methods should perform their
-    #     ordering then reference this method to actually perform the initialization.
-    #     :param basic_widget_list:
-    #     :param n_rows:
-    #     :param n_widgets_per_row_list:
-    #     :return:
-    #     """
-    #     self.rows = [tkinter.Frame(self) for i in range(n_rows)]
-    #     for row in self.rows:
-    #         row.config(borderwidth=2)
-    #         row.pack()
-    #
-    #     # find transition points
-    #     transitions = np.cumsum(n_widgets_per_row_list)
-    #     self._widget_list = []
-    #     row_num = 0
-    #     for i, widget in enumerate(basic_widget_list):
-    #         if i in transitions:
-    #             row_num += 1
-    #         if type(widget) == str:
-    #             widget = LabelDesctriptor(widget)
-    #         setattr(self, widget.name, widget.the_type(self.rows[row_num]))
-    #         getattr(self, widget.name).pack(side="left", padx=5, pady=5)
-    #         if getattr(self, widget.name).widgetName in NO_TEXT_UPDATE_WIDGETS:
-    #             pass
-    #         else:
-    #             getattr(self, widget.name).set_text(widget.name.replace("_", " "))
-    #         self._widget_list.append(widget)
-
-    def init_w_basic_widget_list(self,
-                                 basic_widget_list,         # type: []
-                                 n_rows,                    # type: int
-                                 n_widgets_per_row_list,    # type: [int]
-                                 ):
+    def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
         """
         This is a convenience method to initialize a basic widget panel.  To use this first make a subclass
         This should also be the master method to initialize a panel.  Other convenience methods can be made
         to perform the button/widget location initialization, but all of those methods should perform their
         ordering then reference this method to actually perform the initialization.
-        :param basic_widget_list:
-        :param n_rows:
-        :param n_widgets_per_row_list:
-        :return:
+
+        Parameters
+        ----------
+        n_rows : int
+        n_widgets_per_row_list : List[int]
+
+        Returns
+        -------
+        None
         """
-        self.rows = [tkinter.Frame(self) for i in range(n_rows)]
-        for row in self.rows:
+
+        self._rows = [tkinter.Frame(self) for i in range(n_rows)]
+        for row in self._rows:
             row.config(borderwidth=2)
             row.pack()
 
@@ -138,22 +93,29 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
         transitions = np.cumsum(n_widgets_per_row_list)
         self._widget_list = []
         row_num = 0
-        for i, widget in enumerate(basic_widget_list):
+        for i, widget_name in enumerate(self._widget_list):
+            widget_descriptor = getattr(self.__class__, widget_name, None)
+            if widget_descriptor is None:
+                raise ValueError('widget class {} has no widget named {}'.format(self.__class__.__name__, widget_name))
+
+            if widget_name != widget_descriptor.name:
+                raise ValueError('widget {} of class {} has inconsistent name {}'.format(widget_name, self.__class__.__name__, widget_descriptor.name))
+
+            widget_type = widget_descriptor.the_type
+
+            # check whether things have been instantiated
+            current_value = getattr(self, widget_name)
+            if current_value is not None:
+                current_value.destroy()
+
             if i in transitions:
                 row_num += 1
-            if type(widget) == str:
-                widget = LabelDescriptor(widget)
-            widget_name = widget.name
-            # widget_text = widget.default_text
-            widget_text = widget.name
-            widget = widget.the_type(self.rows[row_num])
-            widget_type = widget.widgetName
+
+            widget_text = widget_descriptor.default_text
+            widget = widget_type(self._rows[row_num])
             widget.pack(side="left", padx=5, pady=5)
-            if widget_type in NO_TEXT_UPDATE_WIDGETS:
-                pass
-            else:
+            if hasattr(widget_type, 'set_text') and widget_text is not None:
                 widget.set_text(widget_text.replace("_", " "))
-            self._widget_list.append(widget)
             setattr(self, widget_name, widget)
 
     def set_text_formatting(self, formatting_list):
