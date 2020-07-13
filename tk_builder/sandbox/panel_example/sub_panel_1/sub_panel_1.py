@@ -3,7 +3,7 @@ import tk_builder.widgets.basic_widgets as basic_widgets
 from tk_builder.widgets.widget_elements import widget_descriptors
 
 
-class PanelWidgets(object):
+class PanelWidgets:
     button = widget_descriptors.ButtonDescriptor("button")  # type: basic_widgets.Button
     combobox = widget_descriptors.ComboboxDescriptor("combobox")  # type: basic_widgets.Combobox
     scale = widget_descriptors.ScaleDescriptor("scale")  # type: basic_widgets.Scale
