@@ -2,7 +2,6 @@ import numpy as np
 from typing import Union, List
 import tkinter
 from tkinter import ttk
-from tk_builder.widgets.widget_elements.widget_descriptors import LabelDescriptor
 from tk_builder.widgets import basic_widgets
 
 NO_TEXT_UPDATE_WIDGETS = [ttk.Scale, ttk.Combobox, tkinter.Entry, tkinter.Spinbox]
@@ -91,7 +90,6 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
 
         # find transition points
         transitions = np.cumsum(n_widgets_per_row_list)
-        self._widget_list = []
         row_num = 0
         for i, widget_name in enumerate(self._widget_list):
             widget_descriptor = getattr(self.__class__, widget_name, None)
@@ -117,6 +115,7 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
             if hasattr(widget_type, 'set_text') and widget_text is not None:
                 widget.set_text(widget_text.replace("_", " "))
             setattr(self, widget_name, widget)
+        self.pack()
 
     def set_text_formatting(self, formatting_list):
         pass
@@ -129,21 +128,18 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
 
     def unpress_all_buttons(self):
         for widget in self._widget_list:
-            if widget.widgetName == "button":
-                widget.config(relief="raised")
+            if isinstance(getattr(self, widget), basic_widgets.Button):
+                getattr(self, widget).config(relief="raised")
 
     def press_all_buttons(self):
         for widget in self._widget_list:
-            if widget.widgetName == "button":
-                widget.config(relief="sunken")
+            if isinstance(getattr(self, widget), basic_widgets.Button):
+                getattr(self, widget).config(relief="sunken")
 
     def activate_all_buttons(self):
         for widget in self._widget_list:
-            widget.config(state="normal")
-
-    def disable_all_buttons(self):
-        for widget in self._widget_list:
-            widget.config(state="disabled")
+            if isinstance(getattr(self, widget), basic_widgets.Button):
+                getattr(self, widget).config(state="disabled")
 
     def set_active_button(self,
                           button,

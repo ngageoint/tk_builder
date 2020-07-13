@@ -22,8 +22,4 @@ class Panel1(AbstractWidgetPanel):
     def __init__(self, parent):
         AbstractWidgetPanel.__init__(self, parent)
         self.parent = parent
-
         self.init_w_vertical_layout()
-
-        # need to pack both master frame and self, since this is the main app window.
-        self.pack()
