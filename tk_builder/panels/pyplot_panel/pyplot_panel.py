@@ -1,4 +1,13 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import logging
+try:
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+except ImportError:
+    logging.error('Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
+                  'because the matplotlib in your environment was not built with tkinter '
+                  'backend support enabled. No functionality for the pyplot panel '
+                  'will be functional.')
+    FigureCanvasTkAgg = None
+
 from matplotlib.figure import Figure
 from matplotlib.collections import LineCollection
 import time
