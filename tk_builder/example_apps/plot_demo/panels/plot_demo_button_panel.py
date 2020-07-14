@@ -1,15 +1,16 @@
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets import widget_descriptors
 
 
-class ButtonPanel(AbstractWidgetPanel):
+class ButtonPanel(WidgetPanel):
     """
     Basic button panel.
     """
-
-    single_plot = basic_widgets.Button
-    multi_plot = basic_widgets.Button
-    animated_plot = basic_widgets.Button
+    _widget_list = ("single_plot", "multi_plot", "animated_plot")
+    single_plot = widget_descriptors.ButtonDescriptor("single_plot")
+    multi_plot = widget_descriptors.ButtonDescriptor("multi_plot")
+    animated_plot = widget_descriptors.ButtonDescriptor("animated_plot")
 
     def __init__(self, parent):
         """
@@ -20,7 +21,5 @@ class ButtonPanel(AbstractWidgetPanel):
             The parent widget.
         """
 
-        AbstractWidgetPanel.__init__(self, parent)
-        widget_list = ["single_plot", "multi_plot", "animated_plot"]
-        self.init_w_horizontal_layout(widget_list)
-        self.set_label_text("plot demo buttons")
+        WidgetPanel.__init__(self, parent)
+        self.init_w_horizontal_layout()

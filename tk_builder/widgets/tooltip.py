@@ -1,6 +1,7 @@
 import tkinter
 import tkinter.tix
 
+
 class ToolTip(object):
     """
         create a tooltip for a given widget

@@ -1,9 +1,9 @@
-from tk_builder.panels.widget_panel.widget_panel_2 import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 import tk_builder.widgets.basic_widgets as basic_widgets
-from tk_builder.widgets.widget_elements import widget_descriptors
+from tk_builder.widgets import widget_descriptors
 
 
-class Panel1(AbstractWidgetPanel):
+class Panel2(WidgetPanel):
     _widget_list = (
         'button', 'combobox', 'scale', 'label', 'label_frame', 'entry',
         # 'text',  # omit this one for now, because it's broken
@@ -20,6 +20,10 @@ class Panel1(AbstractWidgetPanel):
     check_button = widget_descriptors.CheckButtonDescriptor("check_button")  # type: basic_widgets.CheckButton
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         self.parent = parent
+
         self.init_w_vertical_layout()
+
+        # need to pack both master frame and self, since this is the main app window.
+        self.pack()

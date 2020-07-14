@@ -27,9 +27,9 @@ class AppVariables:
 
 class ImageCanvasPanel(LabelFrame):
     def __init__(self,
-                 master,
+                 primary,
                  ):
-        LabelFrame.__init__(self, master)
+        LabelFrame.__init__(self, primary)
 
         self.variables = AppVariables()
         self.outer_canvas = ImageCanvas(self)

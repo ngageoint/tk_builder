@@ -2,28 +2,30 @@ import numpy
 
 import tkinter
 from tkinter import Menu
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
-from tk_builder.sandbox.image_canvas_axes.panels.control_panel import ControlPanel
+from tk_builder.example_apps.image_canvas_axes.panels.control_panel import ControlPanel
+from tk_builder.widgets import widget_descriptors
 
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables
 
 
-class CanvasResize(AbstractWidgetPanel):
-    image_panel = ImageCanvasPanel         # type: ImageCanvasPanel
-    control_panel = ControlPanel
+class CanvasResize(WidgetPanel):
+    _widget_list = ("image_panel", )
 
-    def __init__(self, master):
+    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: ImageCanvasPanel
+    control_panel = widget_descriptors.PanelDescriptor("control_panel", ControlPanel)   # type: ControlPanel
+
+    def __init__(self, primary):
         self.app_variables = AppVariables()
 
-        self.master = master
+        self.primary = primary
 
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
 
-        widgets_list = ["image_panel"]
-        self.init_w_horizontal_layout(widgets_list)
+        self.init_w_horizontal_layout()
 
         self.image_panel.set_canvas_size(800, 600)
 
@@ -48,7 +50,7 @@ class CanvasResize(AbstractWidgetPanel):
         self.image_panel.image_y_min_val = 5000
         self.image_panel.image_y_max_val = 2000
 
-        self.control_popup_panel = tkinter.Toplevel(self.master)
+        self.control_popup_panel = tkinter.Toplevel(self.primary)
         self.control_panel = ControlPanel(self.control_popup_panel)
 
         menubar = Menu()
@@ -60,12 +62,10 @@ class CanvasResize(AbstractWidgetPanel):
         popups_menu = Menu(menubar, tearoff=0)
         popups_menu.add_command(label="Main Controls", command=self.controls_popup)
 
-        master.config(menu=menubar)
+        primary.config(menu=menubar)
 
-        master_frame.pack()
+        primary_frame.pack()
         self.pack()
-
-        self.control_panel.x_slider.config
 
         # callbacks
         self.control_panel.x_slider.on_left_mouse_motion(self.callback_x_slider_update)

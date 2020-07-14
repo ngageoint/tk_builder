@@ -585,16 +585,16 @@ TOOLS = ToolConstants()
 
 
 class ImageCanvas(basic_widgets.Canvas):
-    def __init__(self, master):
+    def __init__(self, primary):
         """
 
         Parameters
         ----------
-        master
-            The master widget.
+        primary
+            The primary widget.
         """
 
-        basic_widgets.Canvas.__init__(self, master)
+        basic_widgets.Canvas.__init__(self, primary)
 
         self.variables = AppVariables()
 

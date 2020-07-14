@@ -1,7 +1,7 @@
 import os
 import tkinter
 from tkinter import Menu
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
 
 from tk_builder.image_readers.geotiff_reader import GeotiffImageReader
@@ -9,7 +9,7 @@ from tkinter import filedialog
 from tk_builder.example_apps.geotiff_viewer.panels.band_selection import BandSelection
 
 
-class GeotiffViewer(AbstractWidgetPanel):
+class GeotiffViewer(WidgetPanel):
     """
     A geotiff viewer prototype.
     """
@@ -18,19 +18,19 @@ class GeotiffViewer(AbstractWidgetPanel):
     band_selection_panel = BandSelection  # type: BandSelection
     image_reader = None  # type: GeotiffImageReader
 
-    def __init__(self, master):
+    def __init__(self, primary):
         """
 
         Parameters
         ----------
-        master
-            The master widget.
+        primary
+            The primary widget.
         """
 
-        self.master = master
+        self.primary = primary
 
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
 
         widgets_list = ["geotiff_image_panel", "band_selection_panel"]
         self.init_w_vertical_layout(widgets_list)
@@ -52,9 +52,9 @@ class GeotiffViewer(AbstractWidgetPanel):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Popups", menu=popups_menu)
 
-        master.config(menu=menubar)
+        primary.config(menu=menubar)
 
-        master_frame.pack()
+        primary_frame.pack()
         self.pack()
 
         self.band_selection_panel.red_selection.on_selection(self.callback_update_red_band)

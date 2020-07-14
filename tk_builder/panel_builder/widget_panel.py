@@ -4,10 +4,8 @@ import tkinter
 from tkinter import ttk
 from tk_builder.widgets import basic_widgets
 
-NO_TEXT_UPDATE_WIDGETS = [ttk.Scale, ttk.Combobox, tkinter.Entry, tkinter.Spinbox]
 
-
-class AbstractWidgetPanel(basic_widgets.LabelFrame):
+class WidgetPanel(basic_widgets.LabelFrame):
     _widget_list = ()  # the list of names of the widget element variables
 
     def __init__(self, parent):
@@ -69,7 +67,7 @@ class AbstractWidgetPanel(basic_widgets.LabelFrame):
     def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
         """
         This is a convenience method to initialize a basic widget panel.  To use this first make a subclass
-        This should also be the master method to initialize a panel.  Other convenience methods can be made
+        This should also be the primary method to initialize a panel.  Other convenience methods can be made
         to perform the button/widget location initialization, but all of those methods should perform their
         ordering then reference this method to actually perform the initialization.
 

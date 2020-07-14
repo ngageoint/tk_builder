@@ -1,11 +1,11 @@
 import os
 import tkinter
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from tk_builder.panels.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
 
 
-class FileSelector(AbstractWidgetPanel):
+class FileSelector(WidgetPanel):
     """
     File selector interface.
     """
@@ -22,7 +22,7 @@ class FileSelector(AbstractWidgetPanel):
             The parent widget.
         """
 
-        AbstractWidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, parent)
         tkinter.LabelFrame.__init__(self, parent)
         self.config(borderwidth=2)
         self.fname = None
