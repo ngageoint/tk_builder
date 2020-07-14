@@ -3,15 +3,17 @@ import tkinter
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tk_builder.panel_builder.widget_panel import WidgetPanel
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets import widget_descriptors
 
 
 class FileSelector(WidgetPanel):
     """
     File selector interface.
     """
-
-    select_file = basic_widgets.Button  # type: basic_widgets.Button
-    fname_label = basic_widgets.Entry   # type: basic_widgets.Label
+    _widget_list = ("select_file", "fname_label")
+    select_file = widget_descriptors.ButtonDescriptor(
+        "select_file", default_text="file selector")  # type: basic_widgets.Button
+    fname_label = widget_descriptors.LabelDescriptor("fname_label", default_text="")   # type: basic_widgets.Label
 
     def __init__(self, parent):
         """
@@ -27,9 +29,7 @@ class FileSelector(WidgetPanel):
         self.config(borderwidth=2)
         self.fname = None
 
-        widget_list = ["select_file", "fname_label"]
-        self.init_w_horizontal_layout(widget_list)
-        self.set_label_text("file selector")
+        self.init_w_horizontal_layout()
         self.fname_filters = [('All files', '*')]
         # in practice this would be overridden if the user wants more things to happen after selecting a file.
         self.select_file.on_left_mouse_click(self.event_select_file)

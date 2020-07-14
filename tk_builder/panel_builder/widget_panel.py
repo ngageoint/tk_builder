@@ -1,7 +1,6 @@
 import numpy as np
 from typing import Union, List
 import tkinter
-from tkinter import ttk
 from tk_builder.widgets import basic_widgets
 
 

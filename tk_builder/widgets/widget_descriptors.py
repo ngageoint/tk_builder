@@ -2,6 +2,7 @@ from tkinter import Widget
 
 from tk_builder.base_elements import TypedDescriptor
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets.pyplot_canvas import PyplotCanvas
 
 
 class BaseWidgetDescriptor(TypedDescriptor):
@@ -210,7 +211,7 @@ class PyplotCanvasDescriptor(BaseWidgetDescriptor):
 
     def __init__(self, name, default_text=None, docstring=None):
         super(PyplotCanvasDescriptor, self).__init__(name,
-                                                     basic_widgets.PyplotCanvas,
+                                                     PyplotCanvas,
                                                      default_text=default_text,
                                                      docstring=docstring)
 
