@@ -27,7 +27,6 @@ class PlotDemo(WidgetPanel):
         # set the primary frame
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
-        widget_list = ["pyplot_panel", "button_panel"]
         self.init_w_vertical_layout()
 
         # need to pack both primary frame and self, since this is the main app window.

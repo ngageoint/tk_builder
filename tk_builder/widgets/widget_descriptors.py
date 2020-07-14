@@ -2,8 +2,6 @@ from tkinter import Widget
 
 from tk_builder.base_elements import TypedDescriptor
 from tk_builder.widgets import basic_widgets
-from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
-from tk_builder.panels.pyplot_panel.pyplot_panel import PyplotPanel
 
 
 class BaseWidgetDescriptor(TypedDescriptor):
@@ -173,6 +171,7 @@ class ImageCanvasPanelDescriptor(BaseWidgetDescriptor):
     """
 
     def __init__(self, name, default_text=None, docstring=None):
+        from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
         super(ImageCanvasPanelDescriptor, self).__init__(name,
                                                          ImageCanvasPanel,
                                                          default_text=default_text,
@@ -185,6 +184,7 @@ class PyplotPanelDescriptor(BaseWidgetDescriptor):
     """
 
     def __init__(self, name, default_text=None, docstring=None):
+        from tk_builder.panels.pyplot_panel.pyplot_panel import PyplotPanel
         super(PyplotPanelDescriptor, self).__init__(name,
                                                     PyplotPanel,
                                                     default_text=default_text,
@@ -201,3 +201,16 @@ class TreeviewDescriptor(BaseWidgetDescriptor):
                                                  basic_widgets.Treeview,
                                                  default_text=default_text,
                                                  docstring=docstring)
+
+
+class PyplotCanvasDescriptor(BaseWidgetDescriptor):
+    """
+    A descriptor for a tree view type.
+    """
+
+    def __init__(self, name, default_text=None, docstring=None):
+        super(PyplotCanvasDescriptor, self).__init__(name,
+                                                     basic_widgets.PyplotCanvas,
+                                                     default_text=default_text,
+                                                     docstring=docstring)
+

@@ -10,3 +10,4 @@ from tk_builder.widgets.widget_wrappers.spinbox import Spinbox
 from tk_builder.widgets.widget_wrappers.radiobutton import RadioButton
 from tk_builder.widgets.widget_wrappers.checkbutton import CheckButton
 from tk_builder.widgets.widget_wrappers.treeview import Treeview
+from tk_builder.widgets.widget_wrappers.pyplot_canvas import PyplotCanvas
