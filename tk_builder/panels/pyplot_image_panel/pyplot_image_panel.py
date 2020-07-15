@@ -28,10 +28,7 @@ class PyplotImagePanel(tkinter.LabelFrame):
         plt.imshow(self.image_data)
         self.canvas = FigureCanvasTkAgg(fig, master=self)
         self.canvas.get_tk_widget().pack()
-
         self.update_image(self.image_data)
-
-        # self.canvas.get_tk_widget().pack(fill='both', expand=1)
 
     def update_image(self, image_data):
         self.image_data = image_data

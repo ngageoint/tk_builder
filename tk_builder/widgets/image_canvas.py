@@ -125,7 +125,10 @@ class CanvasImage(object):
         x_start = full_image_rect[1]
         x_end = full_image_rect[3]
 
+        # TODO: figure out what's going on here, something seems to be swapped
         decimated_data = self.image_reader[y_start:y_end:decimation, x_start:x_end:decimation]
+        # decimated_data = self.image_reader[x_start:x_end:decimation, y_start:y_end:decimation]
+
         return decimated_data
 
     def get_scaled_display_data(self, decimated_image):
@@ -616,7 +619,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.active_tool = None
         self.variables.current_shape_id = None
 
-    def set_image_reader(self, image_reader):
+    def _set_image_reader(self, image_reader):
         """
         Set the image reader.
 
@@ -1670,6 +1673,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if decimation is None:
             decimation = self.variables.canvas_image_object.\
                 get_decimation_factor_from_full_image_rect(tmp_image_coords)
+        tmp_image_coords = (int(tmp_image_coords[0]), int(tmp_image_coords[1]), int(tmp_image_coords[2]), int(tmp_image_coords[3]))
         image_data_in_rect = self.variables.canvas_image_object.\
             get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
         return image_data_in_rect

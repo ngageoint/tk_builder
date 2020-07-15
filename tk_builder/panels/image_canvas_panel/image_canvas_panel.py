@@ -61,7 +61,7 @@ class ImageCanvasPanel(LabelFrame):
         -------
         None
         """
-        self.canvas.set_image_reader(image_reader)
+        self.canvas._set_image_reader(image_reader)
         if self.variables.image_x_start is None:
             self.variables.image_x_start = 0
         if self.variables.image_y_start is None:
@@ -150,6 +150,8 @@ class ImageCanvasPanel(LabelFrame):
     @x_label.setter
     def x_label(self, value):
         self.variables.x_label = value
+        if value is not None:
+            self.bottom_margin_pixels = 100
         self.update_outer_canvas()
 
     @property
@@ -158,7 +160,9 @@ class ImageCanvasPanel(LabelFrame):
 
     @y_label.setter
     def y_label(self, value):
-        self.variables.y_label = value
+        self.variables.y_label = " " + value
+        if value is not None:
+            self.left_margin_pixels = 100
         self.update_outer_canvas()
 
     @property
@@ -210,8 +214,12 @@ class ImageCanvasPanel(LabelFrame):
                                         anchor=tkinter.NW,
                                         window=self.canvas)
         self._update_x_axis()
+        self._update_x_label()
         self._update_y_axis()
+        self._update_y_label()
         self._update_title()
+
+        self._update_canvas_margins()
 
     def _update_title(self):
         display_image = self.canvas.variables.canvas_image_object.display_image
@@ -239,15 +247,33 @@ class ImageCanvasPanel(LabelFrame):
         for x in x_axis_positions:
             tick_positions.append((x, bottom_pixel_index))
 
-        m = (self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
-        b = self.variables.image_x_start
+        if self.variables.image_x_start and self.variables.image_x_end:
+            m = (self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
+            b = self.variables.image_x_start
 
-        display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx((0, 0, image_width, image_height))
-        tick_vals = numpy.linspace(display_image_coords[1], display_image_coords[3], self.variables.n_x_axis_ticks)
-        tick_vals = m * tick_vals + b
+            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx((0, 0, image_width, image_height))
+            tick_vals = numpy.linspace(display_image_coords[1], display_image_coords[3], self.variables.n_x_axis_ticks)
+            tick_vals = m * tick_vals + b
 
-        for xy, tick_val in zip(tick_positions, tick_vals):
-            self.outer_canvas.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
+            for xy, tick_val in zip(tick_positions, tick_vals):
+                self.outer_canvas.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
+
+            self.outer_canvas.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks/2)], label_y_index),
+                                          text=self.x_label,
+                                          fill="black",
+                                          anchor="n")
+        if self.variables.right_margin == 0:
+            self.variables.right_margin = 20
+
+    def _update_x_label(self):
+        display_image = self.canvas.variables.canvas_image_object.display_image
+        image_height, image_width = numpy.shape(display_image)
+        left_pixel_index = self.left_margin_pixels + 2
+        right_pixel_index = self.left_margin_pixels + image_width
+        bottom_pixel_index = self.top_margin_pixels + self.canvas.variables.canvas_height + 30
+        label_y_index = bottom_pixel_index + 30
+
+        x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
 
         self.outer_canvas.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks/2)], label_y_index),
                                       text=self.x_label,
@@ -260,7 +286,6 @@ class ImageCanvasPanel(LabelFrame):
         image_height, image_width = numpy.shape(display_image)
         top_pixel_index = self.top_margin_pixels
         bottom_pixel_index = self.top_margin_pixels + image_height
-        label_x_index = left_pixel_index - 30
 
         y_axis_positions = numpy.linspace(top_pixel_index, bottom_pixel_index, self.variables.n_y_axis_ticks)
 
@@ -268,20 +293,32 @@ class ImageCanvasPanel(LabelFrame):
         for y in y_axis_positions:
             tick_positions.append((left_pixel_index, y))
 
-        m = (self.variables.image_y_end - self.variables.image_y_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_ny
-        b = self.variables.image_y_start
+        if self.variables.image_y_start and self.variables.image_y_end:
+            m = (self.variables.image_y_end - self.variables.image_y_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_ny
+            b = self.variables.image_y_start
 
-        display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
-            (0, 0, image_width, image_height))
-        tick_vals = numpy.linspace(display_image_coords[0], display_image_coords[2], self.variables.n_y_axis_ticks)
-        tick_vals = m * tick_vals + b
+            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
+                (0, 0, image_width, image_height))
+            tick_vals = numpy.linspace(display_image_coords[0], display_image_coords[2], self.variables.n_y_axis_ticks)
+            tick_vals = m * tick_vals + b
 
-        for xy, tick_val in zip(tick_positions, tick_vals):
-            self.outer_canvas.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
+            for xy, tick_val in zip(tick_positions, tick_vals):
+                self.outer_canvas.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
 
-        self.outer_canvas.create_text((label_x_index, y_axis_positions[int(self.variables.n_y_axis_ticks/2)]),
-                                text=self.variables.y_label,
-                                fill="black",
-                                anchor="s",
-                                angle=90,
-                                justify="right")
+    def _update_y_label(self):
+        left_pixel_index = self.left_margin_pixels - 40
+        display_image = self.canvas.variables.canvas_image_object.display_image
+        image_height, image_width = numpy.shape(display_image)
+        top_pixel_index = self.top_margin_pixels
+        bottom_pixel_index = self.top_margin_pixels + image_height
+
+        y_axis_positions = numpy.linspace(top_pixel_index, bottom_pixel_index, self.variables.n_y_axis_ticks)
+
+        label_x_index = left_pixel_index - 30
+
+        self.outer_canvas.create_text((label_x_index, y_axis_positions[int(self.variables.n_y_axis_ticks / 2)]),
+                                      text=self.variables.y_label,
+                                      fill="black",
+                                      anchor="s",
+                                      angle=90,
+                                      justify="right")
