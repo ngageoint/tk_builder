@@ -181,7 +181,7 @@ class ImageCanvasPanelDescriptor(BaseWidgetDescriptor):
 
 class PyplotPanelDescriptor(BaseWidgetDescriptor):
     """
-    A descriptor for a image canvas panel type.
+    A descriptor for a PyplotPanel type.
     """
 
     def __init__(self, name, default_text=None, docstring=None):
@@ -206,7 +206,7 @@ class TreeviewDescriptor(BaseWidgetDescriptor):
 
 class PyplotCanvasDescriptor(BaseWidgetDescriptor):
     """
-    A descriptor for a tree view type.
+    A descriptor for a tree PyplotCanvas type.
     """
 
     def __init__(self, name, default_text=None, docstring=None):
@@ -215,3 +215,15 @@ class PyplotCanvasDescriptor(BaseWidgetDescriptor):
                                                      default_text=default_text,
                                                      docstring=docstring)
 
+
+class FileSelectorDescriptor(BaseWidgetDescriptor):
+    """
+    A descriptor for a tree PyplotCanvas type.
+    """
+
+    def __init__(self, name, default_text=None, docstring=None):
+        from tk_builder.panels.file_selector.file_selector import FileSelector
+        super(FileSelectorDescriptor, self).__init__(name,
+                                                     FileSelector,
+                                                     default_text=default_text,
+                                                     docstring=docstring)
