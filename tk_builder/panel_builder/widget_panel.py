@@ -133,15 +133,23 @@ class WidgetPanel(basic_widgets.LabelFrame):
             if isinstance(getattr(self, widget), basic_widgets.Button):
                 getattr(self, widget).config(relief="sunken")
 
-    def activate_all_buttons(self):
+    def enable_all_buttons(self):
         for widget in self._widget_list:
             if isinstance(getattr(self, widget), basic_widgets.Button):
-                getattr(self, widget).config(state="disabled")
+                getattr(self, widget).config(state="normal")
+
+    def disable_all_widgets(self):
+        for widget in self._widget_list:
+            getattr(self, widget).configure(state="disabled")
+
+    def enable_all_widgets(self):
+        for widget in self._widget_list:
+            getattr(self, widget).config(state="normal")
 
     def set_active_button(self,
                           button,
                           ):
         self.unpress_all_buttons()
-        self.activate_all_buttons()
+        self.enable_all_buttons()
         button.config(state="disabled")
         button.config(relief="sunken")
