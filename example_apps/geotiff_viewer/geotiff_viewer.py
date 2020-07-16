@@ -59,7 +59,6 @@ class GeotiffViewer(WidgetPanel):
         primary.config(menu=menubar)
 
         primary_frame.pack()
-        self.pack()
 
         self.band_selection_panel.red_selection.on_selection(self.callback_update_red_band)
         self.band_selection_panel.green_selection.on_selection(self.callback_update_green_band)
@@ -101,7 +100,7 @@ class GeotiffViewer(WidgetPanel):
                                                           ("all files", "*.*"))
                                                )
         self.image_reader = GeotiffImageReader(fname)
-        self.geotiff_image_panel.canvas._set_image_reader(self.image_reader)
+        self.geotiff_image_panel.set_image_reader(self.image_reader)
         self.populate_band_selections()
 
     def populate_band_selections(self):

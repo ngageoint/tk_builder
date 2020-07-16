@@ -26,7 +26,7 @@ class FileSelector(WidgetPanel):
 
         WidgetPanel.__init__(self, parent)
         tkinter.LabelFrame.__init__(self, parent)
-        self.config(borderwidth=2)
+        self.config(borderwidth=0)
         self.fname = None
 
         self.init_w_horizontal_layout()

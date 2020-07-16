@@ -111,12 +111,6 @@ class CanvasImage(object):
         self.canvas_ny = canvas_ny
         self.update_canvas_display_image_from_full_image()
 
-        osplat = platform.system()
-        if osplat == "Windows":
-            import ctypes
-            user32 = ctypes.windll.user32
-            user32.SetProcessDPIAware()
-
     def get_decimated_image_data_in_full_image_rect(self, full_image_rect, decimation):
         """
         Get decimated data.
@@ -583,6 +577,7 @@ class AppVariables(object):
     tmp_closest_coord_index = IntegerDescriptor(
         'tmp_closest_coord_index', default_value=0,
         docstring='')  # type: int
+    resizeable = BooleanDescriptor("resizeable", default_value=False, docstring="")  # type: bool
 
     def __init__(self):
 
@@ -607,8 +602,13 @@ class ImageCanvas(basic_widgets.Canvas):
         primary
             The primary widget.
         """
+        osplat = platform.system()
+        if osplat == "Windows":
+            import ctypes
+            user32 = ctypes.windll.user32
+            user32.SetProcessDPIAware()
 
-        basic_widgets.Canvas.__init__(self, primary)
+        basic_widgets.Canvas.__init__(self, primary, highlightthickness=0)
 
         self.variables = AppVariables()
 
@@ -629,6 +629,25 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.variables.active_tool = None
         self.variables.current_shape_id = None
+
+    @property
+    def resizeable(self):
+        return self.variables.resizeable
+
+    @resizeable.setter
+    def resizeable(self, value):
+        self.variables.resizeable = value
+
+        if self.resizeable:
+            self.on_resize(self.callback_resize)
+
+    def callback_resize(self, event):
+        # resize the canvas
+        print(event)
+        self.variables.canvas_image_object.canvas_nx = event.width
+        self.variables.canvas_image_object.canvas_ny = event.height
+        self.set_canvas_size(event.width, event.height)
+        self.update_current_image()
 
     def _set_image_reader(self, image_reader):
         """

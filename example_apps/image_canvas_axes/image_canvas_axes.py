@@ -62,7 +62,6 @@ class CanvasResize(WidgetPanel):
         primary.config(menu=menubar)
 
         primary_frame.pack()
-        self.pack()
 
         # callbacks
         self.control_panel.x_slider.on_left_mouse_motion(self.callback_x_slider_update)

@@ -12,6 +12,4 @@ class ControlPanel(WidgetPanel):
         WidgetPanel.__init__(self, parent)
 
         self.init_w_vertical_layout()
-
-        self.pack()
 #        self.parent.protocol("WM_DELETE_WINDOW", self.close_window)

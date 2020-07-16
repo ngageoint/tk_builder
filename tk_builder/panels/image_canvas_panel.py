@@ -27,15 +27,15 @@ class AppVariables:
 
 class ImageCanvasPanel(LabelFrame):
     def __init__(self,
-                 primary,
+                 parent,
                  ):
-        LabelFrame.__init__(self, primary)
+        LabelFrame.__init__(self, parent)
 
         self.variables = AppVariables()
         self.outer_canvas = ImageCanvas(self)
         self.canvas = ImageCanvas(self.outer_canvas)
-        self.outer_canvas.pack()
-        self.canvas.pack()
+        self.outer_canvas.pack(fill=tkinter.BOTH, expand=1)
+        self.canvas.pack(fill=tkinter.BOTH, expand=1)
 
         self.canvas.on_mouse_wheel(self.callback_handle_mouse_wheel)
         self.canvas.on_left_mouse_release(self.callback_handle_left_mouse_release)

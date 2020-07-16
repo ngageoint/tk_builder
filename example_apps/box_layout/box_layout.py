@@ -20,7 +20,6 @@ class PrimaryPanel(WidgetPanel):
 
         self.nx_label.set_text("nx: ")
         self.ny_label.set_text("ny: ")
-        self.pack()
 
 
 def main():

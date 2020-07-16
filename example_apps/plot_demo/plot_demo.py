@@ -31,7 +31,6 @@ class PlotDemo(WidgetPanel):
 
         # need to pack both primary frame and self, since this is the main app window.
         primary_frame.pack()
-        self.pack()
 
         # set up event listeners
         self.button_panel.single_plot.on_left_mouse_click(self.callback_single_plot)

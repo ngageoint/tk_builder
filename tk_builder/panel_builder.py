@@ -84,7 +84,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         self._rows = [tkinter.Frame(self) for i in range(n_rows)]
         for row in self._rows:
             row.config(borderwidth=2)
-            row.pack()
+            row.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         # find transition points
         transitions = np.cumsum(n_widgets_per_row_list)
@@ -111,11 +111,11 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
             widget_text = widget_descriptor.default_text
             widget = widget_type(self._rows[row_num])
-            widget.pack(side="left", padx=5, pady=5)
+            widget.pack(side="left", padx=5, pady=5, fill=tkinter.BOTH, expand=tkinter.YES)
             if hasattr(widget_type, 'set_text') and widget_text is not None:
                 widget.set_text(widget_text.replace("_", " "))
             setattr(self, widget_name, widget)
-        self.pack()
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
     def set_text_formatting(self, formatting_list):
         pass
@@ -124,7 +124,11 @@ class WidgetPanel(basic_widgets.LabelFrame):
         if spacing_npix_y is None:
             spacing_npix_y = spacing_npix_x
         for widget in self._widget_list:
-            getattr(self, widget).pack(side="left", padx=spacing_npix_x, pady=spacing_npix_y)
+            getattr(self, widget).pack(side="left",
+                                       padx=spacing_npix_x,
+                                       pady=spacing_npix_y,
+                                       fill=tkinter.BOTH,
+                                       expand=tkinter.YES)
 
     def unpress_all_buttons(self):
         for widget in self._widget_list:
