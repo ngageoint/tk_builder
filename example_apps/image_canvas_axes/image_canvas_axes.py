@@ -2,10 +2,10 @@ import numpy
 
 import tkinter
 from tkinter import Menu
-from tk_builder.panel_builder.widget_panel import WidgetPanel
-from tk_builder.panels.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
-from tk_builder.example_apps.image_canvas_axes.panels.control_panel import ControlPanel
+from example_apps.image_canvas_axes.control_panel import ControlPanel
 from tk_builder.widgets import widget_descriptors
 
 from sarpy_apps.apps.aperture_tool.app_variables import AppVariables

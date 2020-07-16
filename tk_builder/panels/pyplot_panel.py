@@ -14,8 +14,8 @@ import time
 import numpy as np
 
 from tk_builder.widgets import basic_widgets
-from tk_builder.panels.pyplot_panel.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
-from tk_builder.panel_builder.widget_panel import WidgetPanel
+from tk_builder.panels.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
+from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 
 SCALE_Y_AXIS_PER_FRAME_TRUE = "scale y axis per frame"

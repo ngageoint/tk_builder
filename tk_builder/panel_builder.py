@@ -11,7 +11,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         self.parent = parent
         basic_widgets.LabelFrame.__init__(self, parent)
         self.config(borderwidth=2)
-        self._rows = None           # type: List[tkinter.Frame]
+        self._rows = None  # type: List[tkinter.Frame]
 
     def close_window(self):
         self.parent.withdraw()
@@ -21,16 +21,17 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
     def init_w_vertical_layout(self):
         self.init_w_basic_widget_list(n_rows=len(self._widget_list),
-                                      n_widgets_per_row_list=[1, ]*len(self._widget_list))
+                                      n_widgets_per_row_list=[1, ] * len(self._widget_list))
 
-    def init_w_rows(self, basic_widgets_nested_list):
+    def init_w_rows(self):
         flattened_list = []
         widgets_per_row = []
-        for widget_list in basic_widgets_nested_list:
+        for widget_list in self._widget_list:
             widgets_per_row.append(len(widget_list))
             for widget in widget_list:
                 flattened_list.append(widget)
-        self.init_w_basic_widget_list(len(basic_widgets_nested_list), widgets_per_row)
+        self._widget_list = tuple(flattened_list)
+        self.init_w_basic_widget_list(len(self._widget_list), widgets_per_row)
 
     def init_w_box_layout(self,
                           n_columns,  # type: int
@@ -38,11 +39,11 @@ class WidgetPanel(basic_widgets.LabelFrame):
                           row_heights=None,  # type: Union[int, list]
                           ):
         n_total_widgets = len(self._widget_list)
-        n_rows = int(np.ceil(n_total_widgets/n_columns))
+        n_rows = int(np.ceil(n_total_widgets / n_columns))
         n_widgets_per_row = []
         n_widgets_left = n_total_widgets
         for i in range(n_rows):
-            n_widgets = n_widgets_left/n_columns
+            n_widgets = n_widgets_left / n_columns
             if n_widgets >= 1:
                 n_widgets_per_row.append(n_columns)
             else:
@@ -51,7 +52,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         self.init_w_basic_widget_list(n_rows, n_widgets_per_row)
         for i, widget in enumerate(self._widget_list):
             column_num = np.mod(i, n_columns)
-            row_num = int(i/n_columns)
+            row_num = int(i / n_columns)
             if column_widths is not None and isinstance(column_widths, type(1)):
                 getattr(self, widget).config(width=column_widths)
             elif column_widths is not None and isinstance(column_widths, type([])):
@@ -94,7 +95,9 @@ class WidgetPanel(basic_widgets.LabelFrame):
                 raise ValueError('widget class {} has no widget named {}'.format(self.__class__.__name__, widget_name))
 
             if widget_name != widget_descriptor.name:
-                raise ValueError('widget {} of class {} has inconsistent name {}'.format(widget_name, self.__class__.__name__, widget_descriptor.name))
+                raise ValueError(
+                    'widget {} of class {} has inconsistent name {}'.format(widget_name, self.__class__.__name__,
+                                                                            widget_descriptor.name))
 
             widget_type = widget_descriptor.the_type
 
@@ -153,3 +156,46 @@ class WidgetPanel(basic_widgets.LabelFrame):
         self.enable_all_buttons()
         button.config(state="disabled")
         button.config(relief="sunken")
+
+
+class RadioButtonPanel(WidgetPanel):
+    _selection_dict = {}
+
+    def __init__(self, parent):
+        self.parent = parent
+        WidgetPanel.__init__(self, parent)
+        self._selected_value = tkinter.IntVar()
+
+    def init_w_vertical_layout(self):
+        super().init_w_vertical_layout()
+        self._setup_radiobuttons()
+
+    def init_w_horizontal_layout(self):
+        super().init_w_horizontal_layout()
+        self._setup_radiobuttons()
+
+    def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
+        super().init_w_basic_widget_list(n_rows, n_widgets_per_row_list)
+        self._setup_radiobuttons()
+
+    def init_w_box_layout(self,
+                          n_columns,  # type: int
+                          column_widths=None,  # type: Union[int, list]
+                          row_heights=None,  # type: Union[int, list]
+                          ):
+        super().init_w_box_layout(n_columns,  # type: int
+                                  column_widths=None,  # type: Union[int, list]
+                                  row_heights=None,  # type: Union[int, list]
+                                  )
+        self._setup_radiobuttons()
+
+    def _setup_radiobuttons(self):
+        for i, w in enumerate(self._widget_list):
+            button = getattr(self, self._widget_list[i])
+            self._selection_dict[str(i)] = button
+            button.config(variable=self._selected_value, value=i)
+        self._selected_value.set(0)
+
+    def selection(self):
+        val = self._selected_value.get()
+        return self._selection_dict[str(val)]
