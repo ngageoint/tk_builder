@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+This module provides functionality for
+"""
+
 import PIL.Image
 from PIL import ImageTk
 import platform
@@ -105,6 +110,12 @@ class CanvasImage(object):
         self.canvas_nx = canvas_nx
         self.canvas_ny = canvas_ny
         self.update_canvas_display_image_from_full_image()
+
+        osplat = platform.system()
+        if osplat == "Windows":
+            import ctypes
+            user32 = ctypes.windll.user32
+            user32.SetProcessDPIAware()
 
     def get_decimated_image_data_in_full_image_rect(self, full_image_rect, decimation):
         """
@@ -2250,9 +2261,13 @@ class ImageCanvas(basic_widgets.Canvas):
         numpy.ndarray
         """
 
-        # TODO: are we mssing a conversion to numpy?
         x_ul = self.winfo_rootx() + 1
         y_ul = self.winfo_rooty() + 1
+
+        # x_ul = x_ul*2
+        # y_ul = y_ul*2
+        print("x_ul: " + str(x_ul))
+        print("y_ul: " + str(y_ul))
         x_lr = x_ul + self.variables.canvas_width
         y_lr = y_ul + self.variables.canvas_height
         im = ImageGrab.grab()

@@ -1,22 +1,22 @@
-import numpy
+import os
+import time
 
+import numpy
 import tkinter
-from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
-from example_apps.image_canvas_axes.control_panel import ControlPanel
 from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets import basic_widgets
 
 
-class CanvasResize(WidgetPanel):
-    _widget_list = ("image_panel", )
+class SaveImageCanvas(WidgetPanel):
+    _widget_list = ("image_panel", "save_button")
 
     image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: ImageCanvasPanel
-    control_panel = widget_descriptors.PanelDescriptor("control_panel", ControlPanel)   # type: ControlPanel
+    save_button = widget_descriptors.ButtonDescriptor("save_button", default_text="save")  # type: basic_widgets.Button
 
     def __init__(self, primary):
-
         self.primary = primary
 
         primary_frame = tkinter.Frame(primary)
@@ -47,37 +47,17 @@ class CanvasResize(WidgetPanel):
         self.image_panel.image_y_min_val = 5000
         self.image_panel.image_y_max_val = 2000
 
-        self.control_popup_panel = tkinter.Toplevel(self.primary)
-        self.control_panel = ControlPanel(self.control_popup_panel)
+        self.save_button.on_left_mouse_click(self.callback_save_as_png)
+        self.image_panel.pack(fill="both", expand=True)
+        self.pack(fill="both", expand=True)
+        primary_frame.pack(fill="both", expand=True)
 
-        menubar = Menu()
-
-        filemenu = Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Exit", command=self.exit)
-
-        # create more pulldown menus
-        popups_menu = Menu(menubar, tearoff=0)
-        popups_menu.add_command(label="Main Controls", command=self.controls_popup)
-
-        primary.config(menu=menubar)
-
-        primary_frame.pack()
-        self.pack()
-
-        # callbacks
-        self.control_panel.x_slider.on_left_mouse_motion(self.callback_x_slider_update)
-
-    def callback_x_slider_update(self, event):
-        print(self.control_panel.x_slider.get())
-
-    def exit(self):
-        self.quit()
-
-    def controls_popup(self):
-        self.control_panel.deiconify()
+    def callback_save_as_png(self, event):
+        self.image_panel.canvas.save_full_canvas_as_png(os.path.expanduser("~/Downloads/canvas_image.png"))
+        self.image_panel.outer_canvas.save_full_canvas_as_png(os.path.expanduser("~/Downloads/image_panel.png"))
 
 
 if __name__ == '__main__':
     root = tkinter.Tk()
-    app = CanvasResize(root)
+    app = SaveImageCanvas(root)
     root.mainloop()
