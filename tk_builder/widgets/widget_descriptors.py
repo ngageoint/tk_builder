@@ -172,9 +172,9 @@ class ImageCanvasPanelDescriptor(BaseWidgetDescriptor):
     """
 
     def __init__(self, name, default_text=None, docstring=None):
-        from tk_builder.widgets.image_canvas_w_axes import ImageCanvasPanel
+        from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
         super(ImageCanvasPanelDescriptor, self).__init__(name,
-                                                         ImageCanvasPanel,
+                                                         AxesImageCanvas,
                                                          default_text=default_text,
                                                          docstring=docstring)
 

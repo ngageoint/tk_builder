@@ -639,8 +639,9 @@ class ImageCanvas(basic_widgets.Canvas):
 
     def callback_resize(self, event):
         # resize the canvas
-        self.variables.canvas_image_object.canvas_nx = event.width
-        self.variables.canvas_image_object.canvas_ny = event.height
+        if self.variables.canvas_image_object is not None:
+            self.variables.canvas_image_object.canvas_nx = event.width
+            self.variables.canvas_image_object.canvas_ny = event.height
         self.set_canvas_size(event.width, event.height)
         self.update_current_image()
 
@@ -1832,9 +1833,10 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         rect = (0, 0, self.variables.canvas_width, self.variables.canvas_height)
-        self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(rect)
-        self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
-        self.update()
+        if self.variables.canvas_image_object is not None:
+            self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(rect)
+            self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
+            self.update()
 
     def redraw_all_shapes(self):
         """

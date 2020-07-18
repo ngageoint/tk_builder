@@ -3,7 +3,7 @@ import numpy
 import tkinter
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets.image_canvas_w_axes import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from example_apps.image_canvas_axes.control_panel import ControlPanel
 from tk_builder.widgets import widget_descriptors
@@ -12,7 +12,7 @@ from tk_builder.widgets import widget_descriptors
 class CanvasResize(WidgetPanel):
     _widget_list = ("image_panel", )
 
-    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: ImageCanvasPanel
+    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: AxesImageCanvas
     control_panel = widget_descriptors.PanelDescriptor("control_panel", ControlPanel)   # type: ControlPanel
 
     def __init__(self, primary):

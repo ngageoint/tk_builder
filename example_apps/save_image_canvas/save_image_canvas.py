@@ -3,7 +3,7 @@ import os
 import numpy
 import tkinter
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets.image_canvas_w_axes import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
@@ -12,7 +12,7 @@ from tk_builder.widgets import basic_widgets
 class SaveImageCanvas(WidgetPanel):
     _widget_list = ("image_panel", "save_button")
 
-    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: ImageCanvasPanel
+    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: AxesImageCanvas
     save_button = widget_descriptors.ButtonDescriptor("save_button", default_text="save")  # type: basic_widgets.Button
 
     def __init__(self, primary):
@@ -53,7 +53,7 @@ class SaveImageCanvas(WidgetPanel):
 
     def callback_save_as_png(self, event):
         self.image_panel.canvas.save_full_canvas_as_png(os.path.expanduser("~/Downloads/canvas_image.png"))
-        self.image_panel.outer_canvas.save_full_canvas_as_png(os.path.expanduser("~/Downloads/image_panel.png"))
+        self.image_panel.save_full_canvas_as_png(os.path.expanduser("~/Downloads/image_panel.png"))
 
 
 if __name__ == '__main__':

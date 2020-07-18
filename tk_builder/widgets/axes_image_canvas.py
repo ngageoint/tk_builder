@@ -27,7 +27,7 @@ class AppVariables(CanvasAppVariables):
     n_y_axis_ticks = IntegerDescriptor('n_y_axis_ticks', default_value=5)  # type: int
 
 
-class ImageCanvasPanel(ImageCanvas):
+class AxesImageCanvas(ImageCanvas):
     def __init__(self,
                  parent,
                  ):
@@ -45,11 +45,6 @@ class ImageCanvasPanel(ImageCanvas):
         self.canvas._set_image_reader(canvas_reader)
         self.canvas.pack(fill=tkinter.BOTH, expand=1)
 
-        background_image = numpy.ones((self.variables.canvas_height,
-                                       self.variables.canvas_width), dtype=int) * 255
-        background_reader = NumpyImageReader(background_image)
-        self._set_image_reader(background_reader)
-
         self.update_everything()
 
     @property
@@ -64,8 +59,12 @@ class ImageCanvasPanel(ImageCanvas):
         if self.resizeable:
             self.on_resize(self.callback_resize)
 
+    # TODO: This will recursively run until failure if a widget shifts and then triggers another window resize.
     def callback_resize(self, event):
         # resize the canvas
+        print(event)
+        print(self.variables.canvas_width)
+        print(self.variables.canvas_height)
         super().callback_resize(event)
         self.update_everything()
 
@@ -192,6 +191,7 @@ class ImageCanvasPanel(ImageCanvas):
                                     self.variables.canvas_height - self.top_margin_pixels - self.bottom_margin_pixels)
         self.update_current_image()
         self.canvas.update_current_image()
+
         display_image_size = numpy.shape(self.canvas.variables.canvas_image_object.display_image)
         if display_image_size[1] < self.variables.canvas_width or display_image_size[0] < self.variables.canvas_height:
             self.canvas.set_canvas_size(display_image_size[1], display_image_size[0])
@@ -199,6 +199,13 @@ class ImageCanvasPanel(ImageCanvas):
                            self.top_margin_pixels,
                            anchor=tkinter.NW,
                            window=self.canvas)
+
+        # now make the outer canvas fit the inner canvas
+        self.set_canvas_size(self.canvas.variables.canvas_width + self.left_margin_pixels + self.right_margin_pixels,
+                             self.canvas.variables.canvas_height + self.top_margin_pixels + self.bottom_margin_pixels)
+
+        print("height :" + str(self.canvas.variables.canvas_height))
+
         self._update_x_axis()
         self._update_x_label()
         self._update_y_axis()
@@ -224,6 +231,7 @@ class ImageCanvasPanel(ImageCanvas):
         right_pixel_index = self.left_margin_pixels + image_width
         bottom_pixel_index = self.top_margin_pixels + self.canvas.variables.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
+        print("bottom pixel: " + str(bottom_pixel_index))
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
 
@@ -232,8 +240,7 @@ class ImageCanvasPanel(ImageCanvas):
             tick_positions.append((x, bottom_pixel_index))
 
         if self.variables.image_x_start and self.variables.image_x_end:
-            m = (
-                            self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
+            m = (self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
             b = self.variables.image_x_start
 
             display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
@@ -248,8 +255,6 @@ class ImageCanvasPanel(ImageCanvas):
                              text=self.x_label,
                              fill="black",
                              anchor="n")
-        if self.variables.right_margin == 0:
-            self.variables.right_margin = 20
 
     def _update_x_label(self):
         display_image = self.canvas.variables.canvas_image_object.display_image

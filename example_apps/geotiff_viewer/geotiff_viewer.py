@@ -2,7 +2,7 @@ import os
 import tkinter
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets.image_canvas_w_axes import ImageCanvasPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 
 from tk_builder.image_readers.geotiff_reader import GeotiffImageReader
 from tk_builder.widgets import widget_descriptors
@@ -17,8 +17,8 @@ class GeotiffViewer(WidgetPanel):
     A geotiff viewer prototype.
     """
     _widget_list = ("band_selection_panel", "controls_panel", "geotiff_image_panel", "zoom_image_panel")
-    geotiff_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("geotiff_image_panel")  # type: ImageCanvasPanel
-    zoom_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("zoom_image_panel")  # type: ImageCanvasPanel
+    geotiff_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("geotiff_image_panel")  # type: AxesImageCanvas
+    zoom_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("zoom_image_panel")  # type: AxesImageCanvas
     band_selection_panel = widget_descriptors.PanelDescriptor("band_selection_panel", BandSelection)  # type: BandSelection
     controls_panel = widget_descriptors.PanelDescriptor("controls_panel", Controls)  # type: Controls
     image_reader = None  # type: GeotiffImageReader
