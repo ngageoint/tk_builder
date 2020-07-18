@@ -1,75 +1,76 @@
 import tkinter
-from tk_builder.widgets.widget_wrappers.labelFrame import LabelFrame
+
 from tk_builder.widgets.image_canvas import ImageCanvas
+from tk_builder.widgets.image_canvas import AppVariables as CanvasAppVariables
+from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 import numpy
+from tk_builder.base_elements import IntegerDescriptor, StringDescriptor
 
 
-class AppVariables:
-    def __init__(self):
-        self.x_label = None
-        self.y_label = None
-        self.title = None
-        self.top_margin = 0
-        self.bottom_margin = 0
-        self.left_margin = 0
-        self.right_margin = 0
-        self.n_x_axis_ticks = 5
-        self.n_y_axis_ticks = 5
-        self.image_x_start = None
-        self.image_x_end = None
-        self.image_y_start = None
-        self.image_y_end = None
-        self.x_axis_n_decimals = 2
-        self.canvas_width = None
-        self.canvas_height = None
-        self.tooltip = None
+class AppVariables(CanvasAppVariables):
+    """
+    The canvas image application variables.
+    """
+
+    title = StringDescriptor('title', default_value="", docstring='')  # type: str
+    x_label = StringDescriptor('x_label', default_value="", docstring='')  # type: str
+    y_label = StringDescriptor('y_label', default_value="", docstring='')  # type: str
+    image_x_start = IntegerDescriptor('image_x_start', default_value=None)  # type: int
+    image_x_end = IntegerDescriptor('image_x_end', default_value=None)  # type: int
+    image_y_start = IntegerDescriptor('image_y_start', default_value=None)  # type: int
+    image_y_end = IntegerDescriptor('image_y_end', default_value=None)  # type: int
+    top_margin = IntegerDescriptor('top_margin', default_value=0)  # type: int
+    bottom_margin = IntegerDescriptor('bottom_margin', default_value=0)  # type: int
+    left_margin = IntegerDescriptor('left_margin', default_value=0)  # type: int
+    right_margin = IntegerDescriptor('right_margin', default_value=0)  # type: int
+    n_x_axis_ticks = IntegerDescriptor('n_x_axis_ticks', default_value=5)  # type: int
+    n_y_axis_ticks = IntegerDescriptor('n_y_axis_ticks', default_value=5)  # type: int
 
 
-class ImageCanvasPanel(LabelFrame):
+class ImageCanvasPanel(ImageCanvas):
     def __init__(self,
                  parent,
                  ):
-        LabelFrame.__init__(self, parent)
+        ImageCanvas.__init__(self, parent)
 
         self.variables = AppVariables()
-        self.outer_canvas = ImageCanvas(self)
-        self.canvas = ImageCanvas(self.outer_canvas)
-        self.outer_canvas.pack(fill=tkinter.BOTH, expand=1)
+        self.canvas = ImageCanvas(self)
+        self.pack(fill=tkinter.BOTH, expand=1)
+        inner_canvas_height = int(self.variables.canvas_height / 2)
+        inner_canvas_width = int(self.variables.canvas_width / 2)
+        self.canvas.set_canvas_size(inner_canvas_width, inner_canvas_height)
+        canvas_image = numpy.zeros((self.variables.canvas_height,
+                                    self.variables.canvas_width), dtype=int)
+        canvas_reader = NumpyImageReader(canvas_image)
+        self.canvas._set_image_reader(canvas_reader)
         self.canvas.pack(fill=tkinter.BOTH, expand=1)
 
-        self.canvas.on_mouse_wheel(self.callback_handle_mouse_wheel)
-        self.canvas.on_left_mouse_release(self.callback_handle_left_mouse_release)
+        background_image = numpy.ones((self.variables.canvas_height,
+                                       self.variables.canvas_width), dtype=int) * 255
+        background_reader = NumpyImageReader(background_image)
+        self._set_image_reader(background_reader)
 
-    def callback_handle_mouse_wheel(self, event):
-        self.set_canvas_size(self.variables.canvas_width, self.variables.canvas_height)
-        self.canvas.callback_mouse_zoom(event)
-        self.update_outer_canvas()
+        self.update_everything()
 
-    def callback_handle_left_mouse_release(self, event):
-        self.canvas.callback_handle_left_mouse_release(event)
-        self.update_outer_canvas()
+    @property
+    def resizeable(self):
+        return self.variables.resizeable
 
-    def set_image_reader(self, image_reader):
-        """
-        Set the image reader.
+    @resizeable.setter
+    def resizeable(self, value):
+        self.variables.resizeable = value
+        self.canvas.resizeable = False
 
-        Parameters
-        ----------
-        image_reader : ImageReader
+        if self.resizeable:
+            self.on_resize(self.callback_resize)
 
-        Returns
-        -------
-        None
-        """
-        self.canvas._set_image_reader(image_reader)
-        if self.variables.image_x_start is None:
-            self.variables.image_x_start = 0
-        if self.variables.image_y_start is None:
-            self.variables.image_y_start = 0
-        if self.variables.image_x_end is None:
-            self.variables.image_x_end = self.canvas.variables.canvas_image_object.image_reader.full_image_nx
-        if self.variables.image_y_end is None:
-            self.variables.image_y_end = self.canvas.variables.canvas_image_object.image_reader.full_image_ny
+    def callback_resize(self, event):
+        # resize the canvas
+        super().callback_resize(event)
+        self.update_everything()
+
+    def zoom_to_selection(self, canvas_rect, animate=False):
+        pass
 
     @property
     def top_margin_pixels(self):
@@ -78,12 +79,12 @@ class ImageCanvasPanel(LabelFrame):
     @top_margin_pixels.setter
     def top_margin_pixels(self, value):
         self.variables.top_margin = value
-        self.outer_canvas.create_window(self.left_margin_pixels,
-                                        self.top_margin_pixels,
-                                        anchor=tkinter.NW,
-                                        window=self.canvas)
-        self._update_canvas_margins()
-        self.update_outer_canvas()
+        self.create_window(self.left_margin_pixels,
+                           self.top_margin_pixels,
+                           anchor=tkinter.NW,
+                           window=self.canvas)
+        print(self.top_margin_pixels)
+        self.update_everything()
 
     @property
     def left_margin_pixels(self):
@@ -92,12 +93,12 @@ class ImageCanvasPanel(LabelFrame):
     @left_margin_pixels.setter
     def left_margin_pixels(self, value):
         self.variables.left_margin = value
-        self.outer_canvas.create_window(self.left_margin_pixels,
-                                        self.top_margin_pixels,
-                                        anchor=tkinter.NW,
-                                        window=self.canvas)
-        self._update_canvas_margins()
-        self.update_outer_canvas()
+        self.create_window(self.left_margin_pixels,
+                           self.top_margin_pixels,
+                           anchor=tkinter.NW,
+                           window=self.canvas)
+        print(self.left_margin_pixels)
+        self.update_everything()
 
     @property
     def bottom_margin_pixels(self):
@@ -106,8 +107,7 @@ class ImageCanvasPanel(LabelFrame):
     @bottom_margin_pixels.setter
     def bottom_margin_pixels(self, value):
         self.variables.bottom_margin = value
-        self._update_canvas_margins()
-        self.update_outer_canvas()
+        self.update_everything()
 
     @property
     def right_margin_pixels(self):
@@ -116,23 +116,7 @@ class ImageCanvasPanel(LabelFrame):
     @right_margin_pixels.setter
     def right_margin_pixels(self, value):
         self.variables.right_margin = value
-        self._update_canvas_margins()
-        self.update_outer_canvas()
-
-    def set_canvas_size(self, width_npix, height_npix):
-        self.outer_canvas.set_canvas_size(self.canvas.variables.canvas_width +
-                                          self.variables.left_margin + self.variables.right_margin,
-                                          self.canvas.variables.canvas_height +
-                                          self.variables.top_margin + self.variables.bottom_margin)
-        self.canvas.set_canvas_size(width_npix, height_npix)
-        self.variables.canvas_width = width_npix
-        self.variables.canvas_height = height_npix
-
-    def _update_canvas_margins(self):
-        self.outer_canvas.set_canvas_size(self.canvas.variables.canvas_width +
-                                          self.variables.left_margin + self.variables.right_margin,
-                                          self.canvas.variables.canvas_height +
-                                          self.variables.top_margin + self.variables.bottom_margin)
+        self.update_everything()
 
     @property
     def title(self):
@@ -141,7 +125,7 @@ class ImageCanvasPanel(LabelFrame):
     @title.setter
     def title(self, value):
         self.variables.title = value
-        self.update_outer_canvas()
+        self.update_everything()
 
     @property
     def x_label(self):
@@ -152,7 +136,7 @@ class ImageCanvasPanel(LabelFrame):
         self.variables.x_label = value
         if value is not None:
             self.bottom_margin_pixels = 100
-        self.update_outer_canvas()
+        self.update_everything()
 
     @property
     def y_label(self):
@@ -163,7 +147,7 @@ class ImageCanvasPanel(LabelFrame):
         self.variables.y_label = " " + value
         if value is not None:
             self.left_margin_pixels = 100
-        self.update_outer_canvas()
+        self.update_everything()
 
     @property
     def image_x_min_val(self):
@@ -172,7 +156,7 @@ class ImageCanvasPanel(LabelFrame):
     @image_x_min_val.setter
     def image_x_min_val(self, value):
         self.variables.image_x_start = value
-        self.update_outer_canvas()
+        self.update_everything()
 
     @property
     def image_x_max_val(self):
@@ -181,7 +165,7 @@ class ImageCanvasPanel(LabelFrame):
     @image_x_max_val.setter
     def image_x_max_val(self, value):
         self.variables.image_x_end = value
-        self.update_outer_canvas()
+        self.update_everything()
 
     @property
     def image_y_min_val(self):
@@ -190,7 +174,7 @@ class ImageCanvasPanel(LabelFrame):
     @image_y_min_val.setter
     def image_y_min_val(self, value):
         self.variables.image_y_start = value
-        self.update_outer_canvas()
+        self.update_everything()
 
     @property
     def image_y_max_val(self):
@@ -199,27 +183,27 @@ class ImageCanvasPanel(LabelFrame):
     @image_y_max_val.setter
     def image_y_max_val(self, value):
         self.variables.image_y_end = value
-        self.update_outer_canvas()
+        self.update_everything()
 
-    def update_outer_canvas(self):
-        self.outer_canvas.delete("all")
+    def update_everything(self):
+        self.delete("all")
         self.set_canvas_size(self.variables.canvas_width, self.variables.canvas_height)
+        self.canvas.set_canvas_size(self.variables.canvas_width - self.left_margin_pixels - self.right_margin_pixels,
+                                    self.variables.canvas_height - self.top_margin_pixels - self.bottom_margin_pixels)
+        self.update_current_image()
         self.canvas.update_current_image()
         display_image_size = numpy.shape(self.canvas.variables.canvas_image_object.display_image)
         if display_image_size[1] < self.variables.canvas_width or display_image_size[0] < self.variables.canvas_height:
             self.canvas.set_canvas_size(display_image_size[1], display_image_size[0])
-        self._update_canvas_margins()
-        self.outer_canvas.create_window(self.left_margin_pixels,
-                                        self.top_margin_pixels,
-                                        anchor=tkinter.NW,
-                                        window=self.canvas)
+        self.create_window(self.left_margin_pixels,
+                           self.top_margin_pixels,
+                           anchor=tkinter.NW,
+                           window=self.canvas)
         self._update_x_axis()
         self._update_x_label()
         self._update_y_axis()
         self._update_y_label()
         self._update_title()
-
-        self._update_canvas_margins()
 
     def _update_title(self):
         display_image = self.canvas.variables.canvas_image_object.display_image
@@ -228,10 +212,10 @@ class ImageCanvasPanel(LabelFrame):
         right_pixel_index = self.left_margin_pixels + image_width
         label_y_index = self.top_margin_pixels - 30
 
-        self.outer_canvas.create_text(((left_pixel_index + right_pixel_index)/2, label_y_index),
-                                      text=self.title,
-                                      fill="black",
-                                      anchor="n")
+        self.create_text(((left_pixel_index + right_pixel_index) / 2, label_y_index),
+                         text=self.title,
+                         fill="black",
+                         anchor="n")
 
     def _update_x_axis(self):
         display_image = self.canvas.variables.canvas_image_object.display_image
@@ -248,20 +232,22 @@ class ImageCanvasPanel(LabelFrame):
             tick_positions.append((x, bottom_pixel_index))
 
         if self.variables.image_x_start and self.variables.image_x_end:
-            m = (self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
+            m = (
+                            self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
             b = self.variables.image_x_start
 
-            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx((0, 0, image_width, image_height))
+            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
+                (0, 0, image_width, image_height))
             tick_vals = numpy.linspace(display_image_coords[1], display_image_coords[3], self.variables.n_x_axis_ticks)
             tick_vals = m * tick_vals + b
 
             for xy, tick_val in zip(tick_positions, tick_vals):
-                self.outer_canvas.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
+                self.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
 
-            self.outer_canvas.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks/2)], label_y_index),
-                                          text=self.x_label,
-                                          fill="black",
-                                          anchor="n")
+            self.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks / 2)], label_y_index),
+                             text=self.x_label,
+                             fill="black",
+                             anchor="n")
         if self.variables.right_margin == 0:
             self.variables.right_margin = 20
 
@@ -275,10 +261,10 @@ class ImageCanvasPanel(LabelFrame):
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
 
-        self.outer_canvas.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks/2)], label_y_index),
-                                      text=self.x_label,
-                                      fill="black",
-                                      anchor="n")
+        self.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks / 2)], label_y_index),
+                         text=self.x_label,
+                         fill="black",
+                         anchor="n")
 
     def _update_y_axis(self):
         left_pixel_index = self.left_margin_pixels - 40
@@ -294,7 +280,8 @@ class ImageCanvasPanel(LabelFrame):
             tick_positions.append((left_pixel_index, y))
 
         if self.variables.image_y_start and self.variables.image_y_end:
-            m = (self.variables.image_y_end - self.variables.image_y_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_ny
+            m = (
+                            self.variables.image_y_end - self.variables.image_y_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_ny
             b = self.variables.image_y_start
 
             display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
@@ -303,7 +290,7 @@ class ImageCanvasPanel(LabelFrame):
             tick_vals = m * tick_vals + b
 
             for xy, tick_val in zip(tick_positions, tick_vals):
-                self.outer_canvas.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
+                self.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
 
     def _update_y_label(self):
         left_pixel_index = self.left_margin_pixels - 40
@@ -316,9 +303,12 @@ class ImageCanvasPanel(LabelFrame):
 
         label_x_index = left_pixel_index - 30
 
-        self.outer_canvas.create_text((label_x_index, y_axis_positions[int(self.variables.n_y_axis_ticks / 2)]),
-                                      text=self.variables.y_label,
-                                      fill="black",
-                                      anchor="s",
-                                      angle=90,
-                                      justify="right")
+        self.create_text((label_x_index, y_axis_positions[int(self.variables.n_y_axis_ticks / 2)]),
+                         text=self.variables.y_label,
+                         fill="black",
+                         anchor="s",
+                         angle=90,
+                         justify="right")
+
+    def set_image_reader(self, image_reader):
+        self.canvas._set_image_reader(image_reader)

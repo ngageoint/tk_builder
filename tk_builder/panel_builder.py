@@ -11,7 +11,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         self.parent = parent
         basic_widgets.LabelFrame.__init__(self, parent)
         self.config(borderwidth=2)
-        self._rows = None  # type: List[tkinter.Frame]
+        self._rows = None  # type: List[basic_widgets.Frame]
 
     def close_window(self):
         self.parent.withdraw()
@@ -81,7 +81,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         None
         """
 
-        self._rows = [tkinter.Frame(self) for i in range(n_rows)]
+        self._rows = [basic_widgets.Frame(self) for i in range(n_rows)]
         for row in self._rows:
             row.config(borderwidth=2)
             row.pack(fill=tkinter.BOTH, expand=tkinter.YES)

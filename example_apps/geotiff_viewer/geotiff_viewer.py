@@ -2,7 +2,7 @@ import os
 import tkinter
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.image_canvas_w_axes import ImageCanvasPanel
 
 from tk_builder.image_readers.geotiff_reader import GeotiffImageReader
 from tk_builder.widgets import widget_descriptors

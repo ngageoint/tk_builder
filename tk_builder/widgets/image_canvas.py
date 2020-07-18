@@ -129,11 +129,7 @@ class CanvasImage(object):
         y_end = full_image_rect[2]
         x_start = full_image_rect[1]
         x_end = full_image_rect[3]
-
-        # TODO: figure out what's going on here, something seems to be swapped
         decimated_data = self.image_reader[y_start:y_end:decimation, x_start:x_end:decimation]
-        # decimated_data = self.image_reader[x_start:x_end:decimation, y_start:y_end:decimation]
-
         return decimated_data
 
     def get_scaled_display_data(self, decimated_image):
@@ -577,7 +573,7 @@ class AppVariables(object):
     tmp_closest_coord_index = IntegerDescriptor(
         'tmp_closest_coord_index', default_value=0,
         docstring='')  # type: int
-    resizeable = BooleanDescriptor("resizeable", default_value=False, docstring="")  # type: bool
+    resizeable = BooleanDescriptor("resizeable", default_value=True, docstring="")  # type: bool
 
     def __init__(self):
 
@@ -643,7 +639,6 @@ class ImageCanvas(basic_widgets.Canvas):
 
     def callback_resize(self, event):
         # resize the canvas
-        print(event)
         self.variables.canvas_image_object.canvas_nx = event.width
         self.variables.canvas_image_object.canvas_ny = event.height
         self.set_canvas_size(event.width, event.height)
@@ -1186,6 +1181,9 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.variables.canvas_width = width_npix
         self.variables.canvas_height = height_npix
+        if self.variables.canvas_image_object is not None:
+            self.variables.canvas_image_object.canvas_nx = width_npix
+            self.variables.canvas_image_object.canvas_ny = height_npix
         self.config(width=width_npix, height=height_npix)
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
@@ -2283,10 +2281,6 @@ class ImageCanvas(basic_widgets.Canvas):
         x_ul = self.winfo_rootx() + 1
         y_ul = self.winfo_rooty() + 1
 
-        # x_ul = x_ul*2
-        # y_ul = y_ul*2
-        print("x_ul: " + str(x_ul))
-        print("y_ul: " + str(y_ul))
         x_lr = x_ul + self.variables.canvas_width
         y_lr = y_ul + self.variables.canvas_height
         im = ImageGrab.grab()

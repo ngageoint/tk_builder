@@ -3,7 +3,7 @@ import numpy
 import tkinter
 from tkinter import Menu
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.image_canvas_w_axes import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from example_apps.image_canvas_axes.control_panel import ControlPanel
 from tk_builder.widgets import widget_descriptors
@@ -24,7 +24,8 @@ class CanvasResize(WidgetPanel):
 
         self.init_w_horizontal_layout()
 
-        self.image_panel.set_canvas_size(800, 600)
+        # self.image_panel.set_canvas_size(800, 600)
+        self.image_panel.resizeable = True
 
         image_data = numpy.random.random((500, 1200))
         image_data = image_data * 255
@@ -32,10 +33,10 @@ class CanvasResize(WidgetPanel):
         self.image_panel.set_image_reader(image_reader)
         self.image_panel.canvas.set_current_tool_to_pan()
 
-        self.image_panel.left_margin_pixels = 200
-        self.image_panel.top_margin_pixels = 100
-        self.image_panel.bottom_margin_pixels = 100
-        self.image_panel.right_margin_pixels = 100
+        self.image_panel.left_margin_pixels = 5
+        self.image_panel.top_margin_pixels = 5
+        self.image_panel.bottom_margin_pixels = 5
+        self.image_panel.right_margin_pixels = 5
         self.image_panel.x_label = "x axis"
         self.image_panel.y_label = "Y axis"
 
@@ -61,13 +62,34 @@ class CanvasResize(WidgetPanel):
 
         primary.config(menu=menubar)
 
-        primary_frame.pack()
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+
+        self.control_panel.top_margin.set(self.image_panel.top_margin_pixels)
+        self.control_panel.bottom_margin.set(self.image_panel.bottom_margin_pixels)
+        self.control_panel.left_margin.set(self.image_panel.left_margin_pixels)
+        self.control_panel.right_margin.set(self.image_panel.right_margin_pixels)
 
         # callbacks
-        self.control_panel.x_slider.on_left_mouse_motion(self.callback_x_slider_update)
+        self.control_panel.top_margin.on_left_mouse_release(self.callback_top_margin_update)
+        self.control_panel.bottom_margin.on_left_mouse_release(self.callback_bottom_margin_update)
+        self.control_panel.left_margin.on_left_mouse_release(self.callback_left_margin_update)
+        self.control_panel.right_margin.on_left_mouse_release(self.callback_right_margin_update)
 
-    def callback_x_slider_update(self, event):
-        print(self.control_panel.x_slider.get())
+    def callback_top_margin_update(self, event):
+        margin = int(self.control_panel.top_margin.get())
+        self.image_panel.top_margin_pixels = margin
+
+    def callback_bottom_margin_update(self, event):
+        margin = int(self.control_panel.bottom_margin.get())
+        self.image_panel.bottom_margin_pixels = margin
+
+    def callback_left_margin_update(self, event):
+        margin = int(self.control_panel.left_margin.get())
+        self.image_panel.left_margin_pixels = margin
+
+    def callback_right_margin_update(self, event):
+        margin = int(self.control_panel.right_margin.get())
+        self.image_panel.right_margin_pixels = margin
 
     def exit(self):
         self.quit()

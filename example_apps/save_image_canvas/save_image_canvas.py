@@ -3,7 +3,7 @@ import os
 import numpy
 import tkinter
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.widgets.image_canvas_w_axes import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
@@ -22,8 +22,8 @@ class SaveImageCanvas(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
 
         self.init_w_horizontal_layout()
-
         self.image_panel.set_canvas_size(800, 600)
+        self.image_panel.resizeable = True
 
         image_data = numpy.random.random((500, 1200))
         image_data = image_data * 255
