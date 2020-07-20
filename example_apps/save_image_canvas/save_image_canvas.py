@@ -12,7 +12,7 @@ from tk_builder.widgets import basic_widgets
 class SaveImageCanvas(WidgetPanel):
     _widget_list = ("image_panel", "save_button")
 
-    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: AxesImageCanvas
+    image_panel = widget_descriptors.AxesImageCanvasDescriptor("image_panel")         # type: AxesImageCanvas
     save_button = widget_descriptors.ButtonDescriptor("save_button", default_text="save")  # type: basic_widgets.Button
 
     def __init__(self, primary):

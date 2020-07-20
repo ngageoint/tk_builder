@@ -4,7 +4,7 @@ from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.image_canvas import AppVariables as CanvasAppVariables
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 import numpy
-from tk_builder.base_elements import IntegerDescriptor, StringDescriptor
+from tk_builder.base_elements import IntegerDescriptor, StringDescriptor, BooleanDescriptor
 
 
 class AppVariables(CanvasAppVariables):
@@ -35,7 +35,7 @@ class AxesImageCanvas(ImageCanvas):
 
         self.variables = AppVariables()
         self.canvas = ImageCanvas(self)
-        self.pack(fill=tkinter.BOTH, expand=1)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
         inner_canvas_height = int(self.variables.canvas_height / 2)
         inner_canvas_width = int(self.variables.canvas_width / 2)
         self.canvas.set_canvas_size(inner_canvas_width, inner_canvas_height)
@@ -43,30 +43,7 @@ class AxesImageCanvas(ImageCanvas):
                                     self.variables.canvas_width), dtype=int)
         canvas_reader = NumpyImageReader(canvas_image)
         self.canvas._set_image_reader(canvas_reader)
-        self.canvas.pack(fill=tkinter.BOTH, expand=1)
-
-        self.update_everything()
-
-    @property
-    def resizeable(self):
-        return self.variables.resizeable
-
-    @resizeable.setter
-    def resizeable(self, value):
-        self.variables.resizeable = value
-        self.canvas.resizeable = False
-
-        if self.resizeable:
-            self.on_resize(self.callback_resize)
-
-    # TODO: This will recursively run until failure if a widget shifts and then triggers another window resize.
-    def callback_resize(self, event):
-        # resize the canvas
-        print(event)
-        print(self.variables.canvas_width)
-        print(self.variables.canvas_height)
-        super().callback_resize(event)
-        self.update_everything()
+        self.canvas.pack(fill=tkinter.BOTH, expand=tkinter.NO)
 
     def zoom_to_selection(self, canvas_rect, animate=False):
         pass
@@ -83,7 +60,6 @@ class AxesImageCanvas(ImageCanvas):
                            anchor=tkinter.NW,
                            window=self.canvas)
         print(self.top_margin_pixels)
-        self.update_everything()
 
     @property
     def left_margin_pixels(self):
@@ -97,7 +73,6 @@ class AxesImageCanvas(ImageCanvas):
                            anchor=tkinter.NW,
                            window=self.canvas)
         print(self.left_margin_pixels)
-        self.update_everything()
 
     @property
     def bottom_margin_pixels(self):
@@ -106,7 +81,6 @@ class AxesImageCanvas(ImageCanvas):
     @bottom_margin_pixels.setter
     def bottom_margin_pixels(self, value):
         self.variables.bottom_margin = value
-        self.update_everything()
 
     @property
     def right_margin_pixels(self):
@@ -115,7 +89,6 @@ class AxesImageCanvas(ImageCanvas):
     @right_margin_pixels.setter
     def right_margin_pixels(self, value):
         self.variables.right_margin = value
-        self.update_everything()
 
     @property
     def title(self):
@@ -124,7 +97,6 @@ class AxesImageCanvas(ImageCanvas):
     @title.setter
     def title(self, value):
         self.variables.title = value
-        self.update_everything()
 
     @property
     def x_label(self):
@@ -135,7 +107,6 @@ class AxesImageCanvas(ImageCanvas):
         self.variables.x_label = value
         if value is not None:
             self.bottom_margin_pixels = 100
-        self.update_everything()
 
     @property
     def y_label(self):
@@ -146,7 +117,6 @@ class AxesImageCanvas(ImageCanvas):
         self.variables.y_label = " " + value
         if value is not None:
             self.left_margin_pixels = 100
-        self.update_everything()
 
     @property
     def image_x_min_val(self):
@@ -155,7 +125,6 @@ class AxesImageCanvas(ImageCanvas):
     @image_x_min_val.setter
     def image_x_min_val(self, value):
         self.variables.image_x_start = value
-        self.update_everything()
 
     @property
     def image_x_max_val(self):
@@ -164,7 +133,6 @@ class AxesImageCanvas(ImageCanvas):
     @image_x_max_val.setter
     def image_x_max_val(self, value):
         self.variables.image_x_end = value
-        self.update_everything()
 
     @property
     def image_y_min_val(self):
@@ -173,7 +141,6 @@ class AxesImageCanvas(ImageCanvas):
     @image_y_min_val.setter
     def image_y_min_val(self, value):
         self.variables.image_y_start = value
-        self.update_everything()
 
     @property
     def image_y_max_val(self):
@@ -182,35 +149,6 @@ class AxesImageCanvas(ImageCanvas):
     @image_y_max_val.setter
     def image_y_max_val(self, value):
         self.variables.image_y_end = value
-        self.update_everything()
-
-    def update_everything(self):
-        self.delete("all")
-        self.set_canvas_size(self.variables.canvas_width, self.variables.canvas_height)
-        self.canvas.set_canvas_size(self.variables.canvas_width - self.left_margin_pixels - self.right_margin_pixels,
-                                    self.variables.canvas_height - self.top_margin_pixels - self.bottom_margin_pixels)
-        self.update_current_image()
-        self.canvas.update_current_image()
-
-        display_image_size = numpy.shape(self.canvas.variables.canvas_image_object.display_image)
-        if display_image_size[1] < self.variables.canvas_width or display_image_size[0] < self.variables.canvas_height:
-            self.canvas.set_canvas_size(display_image_size[1], display_image_size[0])
-        self.create_window(self.left_margin_pixels,
-                           self.top_margin_pixels,
-                           anchor=tkinter.NW,
-                           window=self.canvas)
-
-        # now make the outer canvas fit the inner canvas
-        self.set_canvas_size(self.canvas.variables.canvas_width + self.left_margin_pixels + self.right_margin_pixels,
-                             self.canvas.variables.canvas_height + self.top_margin_pixels + self.bottom_margin_pixels)
-
-        print("height :" + str(self.canvas.variables.canvas_height))
-
-        self._update_x_axis()
-        self._update_x_label()
-        self._update_y_axis()
-        self._update_y_label()
-        self._update_title()
 
     def _update_title(self):
         display_image = self.canvas.variables.canvas_image_object.display_image

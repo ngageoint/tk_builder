@@ -166,15 +166,24 @@ class CheckButtonDescriptor(BaseWidgetDescriptor):
                                                     docstring=docstring)
 
 
-class ImageCanvasPanelDescriptor(BaseWidgetDescriptor):
+class AxesImageCanvasDescriptor(BaseWidgetDescriptor):
     """
-    A descriptor for a image canvas panel type.
+    A descriptor for a image canvas with axes type.
     """
 
     def __init__(self, name, default_text=None, docstring=None):
         from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
+        super(AxesImageCanvasDescriptor, self).__init__(name,
+                                                        AxesImageCanvas,
+                                                        default_text=default_text,
+                                                        docstring=docstring)
+
+
+class ImageCanvasPanelDescriptor(BaseWidgetDescriptor):
+    def __init__(self, name, default_text=None, docstring=None):
+        from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
         super(ImageCanvasPanelDescriptor, self).__init__(name,
-                                                         AxesImageCanvas,
+                                                         ImageCanvasPanel,
                                                          default_text=default_text,
                                                          docstring=docstring)
 

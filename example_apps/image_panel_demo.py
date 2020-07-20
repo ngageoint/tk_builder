@@ -1,18 +1,22 @@
-import numpy
-
+import os
 import tkinter
 from tkinter import Menu
+
+import numpy
+
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
+from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
-from example_apps.image_canvas_axes.control_panel import ControlPanel
 from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets.image_canvas import ToolConstants
+
+from example_apps.image_canvas_axes.control_panel import ControlPanel
 
 
 class CanvasResize(WidgetPanel):
     _widget_list = ("image_panel", )
 
-    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: AxesImageCanvas
+    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: ImageCanvasPanel
     control_panel = widget_descriptors.PanelDescriptor("control_panel", ControlPanel)   # type: ControlPanel
 
     def __init__(self, primary):
@@ -31,22 +35,22 @@ class CanvasResize(WidgetPanel):
         image_data = image_data * 255
         image_reader = NumpyImageReader(image_data)
         self.image_panel.set_image_reader(image_reader)
-        self.image_panel.canvas.set_current_tool_to_pan()
+        self.image_panel.current_tool = ToolConstants.PAN_TOOL
 
-        self.image_panel.left_margin_pixels = 5
-        self.image_panel.top_margin_pixels = 5
-        self.image_panel.bottom_margin_pixels = 5
-        self.image_panel.right_margin_pixels = 5
-        self.image_panel.x_label = "x axis"
-        self.image_panel.y_label = "Y axis"
+        self.image_panel.image_canvas.left_margin_pixels = 0
+        self.image_panel.image_canvas.top_margin_pixels = 0
+        self.image_panel.image_canvas.bottom_margin_pixels = 0
+        self.image_panel.image_canvas.right_margin_pixels = 0
+        self.image_panel.image_canvas.x_label = "x axis"
+        self.image_panel.image_canvas.y_label = "Y axis"
 
-        self.image_panel.title = "This is a title"
+        self.image_panel.image_canvas.title = "This is a title"
 
-        self.image_panel.image_x_min_val = 500
-        self.image_panel.image_x_max_val = 1200
+        self.image_panel.image_canvas.image_x_min_val = 500
+        self.image_panel.image_canvas.image_x_max_val = 1200
 
-        self.image_panel.image_y_min_val = 5000
-        self.image_panel.image_y_max_val = 2000
+        self.image_panel.image_canvas.image_y_min_val = 5000
+        self.image_panel.image_canvas.image_y_max_val = 2000
 
         self.control_popup_panel = tkinter.Toplevel(self.primary)
         self.control_panel = ControlPanel(self.control_popup_panel)
@@ -62,12 +66,12 @@ class CanvasResize(WidgetPanel):
 
         primary.config(menu=menubar)
 
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.NO)
 
-        self.control_panel.top_margin.set(self.image_panel.top_margin_pixels)
-        self.control_panel.bottom_margin.set(self.image_panel.bottom_margin_pixels)
-        self.control_panel.left_margin.set(self.image_panel.left_margin_pixels)
-        self.control_panel.right_margin.set(self.image_panel.right_margin_pixels)
+        self.control_panel.top_margin.set(self.image_panel.image_canvas.top_margin_pixels)
+        self.control_panel.bottom_margin.set(self.image_panel.image_canvas.bottom_margin_pixels)
+        self.control_panel.left_margin.set(self.image_panel.image_canvas.left_margin_pixels)
+        self.control_panel.right_margin.set(self.image_panel.image_canvas.right_margin_pixels)
 
         # callbacks
         self.control_panel.top_margin.on_left_mouse_release(self.callback_top_margin_update)
@@ -77,25 +81,30 @@ class CanvasResize(WidgetPanel):
 
     def callback_top_margin_update(self, event):
         margin = int(self.control_panel.top_margin.get())
-        self.image_panel.top_margin_pixels = margin
+        self.image_panel.image_canvas.top_margin_pixels = margin
+        self.image_panel.update_everything(event)
 
     def callback_bottom_margin_update(self, event):
         margin = int(self.control_panel.bottom_margin.get())
-        self.image_panel.bottom_margin_pixels = margin
+        self.image_panel.image_canvas.bottom_margin_pixels = margin
 
     def callback_left_margin_update(self, event):
         margin = int(self.control_panel.left_margin.get())
-        self.image_panel.left_margin_pixels = margin
+        self.image_panel.image_canvas.left_margin_pixels = margin
 
     def callback_right_margin_update(self, event):
         margin = int(self.control_panel.right_margin.get())
-        self.image_panel.right_margin_pixels = margin
+        self.image_panel.image_canvas.right_margin_pixels = margin
 
     def exit(self):
         self.quit()
 
     def controls_popup(self):
         self.control_panel.deiconify()
+
+    def callback_save_as_png(self, event):
+        self.image_panel.canvas.save_full_canvas_as_png(os.path.expanduser("~/Downloads/canvas_image.png"))
+        self.image_panel.save_full_canvas_as_png(os.path.expanduser("~/Downloads/image_panel.png"))
 
 
 if __name__ == '__main__':

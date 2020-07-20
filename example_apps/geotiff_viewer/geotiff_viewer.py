@@ -17,8 +17,8 @@ class GeotiffViewer(WidgetPanel):
     A geotiff viewer prototype.
     """
     _widget_list = ("band_selection_panel", "controls_panel", "geotiff_image_panel", "zoom_image_panel")
-    geotiff_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("geotiff_image_panel")  # type: AxesImageCanvas
-    zoom_image_panel = widget_descriptors.ImageCanvasPanelDescriptor("zoom_image_panel")  # type: AxesImageCanvas
+    geotiff_image_panel = widget_descriptors.AxesImageCanvasDescriptor("geotiff_image_panel")  # type: AxesImageCanvas
+    zoom_image_panel = widget_descriptors.AxesImageCanvasDescriptor("zoom_image_panel")  # type: AxesImageCanvas
     band_selection_panel = widget_descriptors.PanelDescriptor("band_selection_panel", BandSelection)  # type: BandSelection
     controls_panel = widget_descriptors.PanelDescriptor("controls_panel", Controls)  # type: Controls
     image_reader = None  # type: GeotiffImageReader
