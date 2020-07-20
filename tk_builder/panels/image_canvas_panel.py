@@ -78,7 +78,7 @@ class ImageCanvasPanel(WidgetPanel):
         print("canvas_height: " + str(self.image_canvas.variables.canvas_height))
 
         width = self.winfo_width()-18
-        height = self.winfo_width()
+        height = self.winfo_height() - 33
 
         self.image_canvas.set_canvas_size(width, height)
 
@@ -89,6 +89,7 @@ class ImageCanvasPanel(WidgetPanel):
                                                  self.image_canvas.top_margin_pixels -
                                                  self.image_canvas.bottom_margin_pixels)
 
+        self.image_canvas.update_current_image()
         self.image_canvas.canvas.update_current_image()
 
         self.image_canvas.create_window(self.image_canvas.left_margin_pixels,

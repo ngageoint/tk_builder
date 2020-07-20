@@ -41,8 +41,12 @@ class AxesImageCanvas(ImageCanvas):
         self.canvas.set_canvas_size(inner_canvas_width, inner_canvas_height)
         canvas_image = numpy.zeros((self.variables.canvas_height,
                                     self.variables.canvas_width), dtype=int)
+        background_image = numpy.ones((self.variables.canvas_height,
+                                       self.variables.canvas_width), dtype=int) * 255
+        background_reader = NumpyImageReader(background_image)
         canvas_reader = NumpyImageReader(canvas_image)
         self.canvas._set_image_reader(canvas_reader)
+        self._set_image_reader(background_reader)
         self.canvas.pack(fill=tkinter.BOTH, expand=tkinter.NO)
 
     def zoom_to_selection(self, canvas_rect, animate=False):

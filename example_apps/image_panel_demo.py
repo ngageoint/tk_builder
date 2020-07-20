@@ -66,7 +66,7 @@ class CanvasResize(WidgetPanel):
 
         primary.config(menu=menubar)
 
-        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.NO)
+        primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         self.control_panel.top_margin.set(self.image_panel.image_canvas.top_margin_pixels)
         self.control_panel.bottom_margin.set(self.image_panel.image_canvas.bottom_margin_pixels)
@@ -87,14 +87,17 @@ class CanvasResize(WidgetPanel):
     def callback_bottom_margin_update(self, event):
         margin = int(self.control_panel.bottom_margin.get())
         self.image_panel.image_canvas.bottom_margin_pixels = margin
+        self.image_panel.update_everything(event)
 
     def callback_left_margin_update(self, event):
         margin = int(self.control_panel.left_margin.get())
         self.image_panel.image_canvas.left_margin_pixels = margin
+        self.image_panel.update_everything(event)
 
     def callback_right_margin_update(self, event):
         margin = int(self.control_panel.right_margin.get())
         self.image_panel.image_canvas.right_margin_pixels = margin
+        self.image_panel.update_everything(event)
 
     def exit(self):
         self.quit()
