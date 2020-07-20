@@ -391,7 +391,7 @@ class WidgetEvents(tkinter.Misc):
         None
         """
 
-        self.event_binding('<Enter>', callback, *args, **kwargs)
+        self.event_binding('<Return>', callback, *args, **kwargs)
 
     def on_resize(self, callback, *args, **kwargs):
         self.event_binding("<Configure>", callback)
