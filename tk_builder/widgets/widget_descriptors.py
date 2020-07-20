@@ -94,6 +94,18 @@ class LabelFrameDescriptor(BaseWidgetDescriptor):
                                                    docstring=docstring)
 
 
+class FrameDescriptor(BaseWidgetDescriptor):
+    """
+    A descriptor for a label frame type.
+    """
+
+    def __init__(self, name, default_text=None, docstring=None):
+        super(FrameDescriptor, self).__init__(name,
+                                              basic_widgets.Frame,
+                                              default_text=default_text,
+                                              docstring=docstring)
+
+
 class PanelDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a panel type.

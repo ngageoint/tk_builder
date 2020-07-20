@@ -173,7 +173,6 @@ class AxesImageCanvas(ImageCanvas):
         right_pixel_index = self.left_margin_pixels + image_width
         bottom_pixel_index = self.top_margin_pixels + self.canvas.variables.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
-        print("bottom pixel: " + str(bottom_pixel_index))
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
 

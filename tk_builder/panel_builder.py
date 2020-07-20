@@ -6,11 +6,14 @@ from tk_builder.widgets import basic_widgets
 
 class WidgetPanel(basic_widgets.LabelFrame):
     _widget_list = ()  # the list of names of the widget element variables
+    padx = 5
+    pady = 5
 
     def __init__(self, parent):
         self.parent = parent
         basic_widgets.LabelFrame.__init__(self, parent)
         self.config(borderwidth=2)
+
         self._rows = None  # type: List[basic_widgets.Frame]
 
     def close_window(self):
@@ -111,7 +114,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
             widget_text = widget_descriptor.default_text
             widget = widget_type(self._rows[row_num])
-            widget.pack(side="left", padx=5, pady=5, fill=tkinter.BOTH, expand=tkinter.YES)
+            widget.pack(side="left", padx=self.padx, pady=self.pady, fill=tkinter.BOTH, expand=tkinter.YES)
             if hasattr(widget_type, 'set_text') and widget_text is not None:
                 widget.set_text(widget_text.replace("_", " "))
             setattr(self, widget_name, widget)
