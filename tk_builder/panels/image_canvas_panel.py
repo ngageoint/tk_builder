@@ -19,13 +19,16 @@ class AppVariables(CanvasAppVariables):
 
 
 class Toolbar(WidgetPanel):
-    _widget_list = ("zoom_in", "zoom_out", "pan",
-                    "left_margin_label", "left_margin", "right_margin_label","right_margin",
+    _widget_list = ("zoom_in", "zoom_out", "pan", "margins_checkbox",
+                    "left_margin_label", "left_margin", "right_margin_label", "right_margin",
                     "top_margin_label", "top_margin",
                     "bottom_margin_label", "bottom_margin")
     zoom_in = widget_descriptors.ButtonDescriptor("zoom_in")
     zoom_out = widget_descriptors.ButtonDescriptor("zoom_out")
     pan = widget_descriptors.ButtonDescriptor("pan")
+
+    margins_checkbox = widget_descriptors.CheckButtonDescriptor("margins_checkbox", default_text="margins")  # type: basic_widgets.CheckButton
+
     left_margin_label = widget_descriptors.LabelDescriptor("left_margin_label", default_text="left margin")  # type: basic_widgets.Label
     right_margin_label = widget_descriptors.LabelDescriptor("right_margin_label", default_text="right margin")  # type: basic_widgets.Label
     top_margin_label = widget_descriptors.LabelDescriptor("top_margin_label", default_text="top margin")  # type: basic_widgets.Label
@@ -38,7 +41,7 @@ class Toolbar(WidgetPanel):
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.init_w_basic_widget_list(2, [3, 8])
+        self.init_w_basic_widget_list(2, [4, 8])
 
 
 class ImageCanvasPanel(WidgetPanel):
@@ -56,13 +59,26 @@ class ImageCanvasPanel(WidgetPanel):
         self.toolbar.top_margin.config(width=5)
         self.toolbar.bottom_margin.config(width=5)
 
-        # set up callbacks
-        self.toolbar.left_margin.on_enter_or_return_key(self.update_margins)
-        self.toolbar.right_margin.on_enter_or_return_key(self.update_margins)
-        self.toolbar.top_margin.on_enter_or_return_key(self.update_margins)
-        self.toolbar.bottom_margin.on_enter_or_return_key(self.update_margins)
+        self.toolbar.left_margin_label.master.forget()
 
-    def update_margins(self, event):
+        # set up callbacks
+        self.toolbar.left_margin.on_enter_or_return_key(self.callback_update_margins)
+        self.toolbar.right_margin.on_enter_or_return_key(self.callback_update_margins)
+        self.toolbar.top_margin.on_enter_or_return_key(self.callback_update_margins)
+        self.toolbar.bottom_margin.on_enter_or_return_key(self.callback_update_margins)
+
+        self.toolbar.margins_checkbox.config(command=self.callback_hide_show_margins)
+
+    def callback_hide_show_margins(self):
+        show_margins = self.toolbar.margins_checkbox.is_selected()
+        if show_margins is False:
+            self.toolbar.left_margin_label.master.forget()
+        else:
+            self.toolbar.left_margin_label.master.pack()
+
+        print(show_margins)
+
+    def callback_update_margins(self, event):
         self.image_frame.outer_canvas.left_margin_pixels = int(self.toolbar.left_margin.get())
         self.image_frame.outer_canvas.right_margin_pixels = int(self.toolbar.right_margin.get())
         self.image_frame.outer_canvas.top_margin_pixels = int(self.toolbar.top_margin.get())
