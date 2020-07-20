@@ -37,20 +37,20 @@ class CanvasResize(WidgetPanel):
         self.image_panel.set_image_reader(image_reader)
         self.image_panel.current_tool = ToolConstants.PAN_TOOL
 
-        self.image_panel.image_canvas.left_margin_pixels = 0
-        self.image_panel.image_canvas.top_margin_pixels = 0
-        self.image_panel.image_canvas.bottom_margin_pixels = 0
-        self.image_panel.image_canvas.right_margin_pixels = 0
-        self.image_panel.image_canvas.x_label = "x axis"
-        self.image_panel.image_canvas.y_label = "Y axis"
+        self.image_panel.image_frame.outer_canvas.left_margin_pixels = 0
+        self.image_panel.image_frame.outer_canvas.top_margin_pixels = 0
+        self.image_panel.image_frame.outer_canvas.bottom_margin_pixels = 0
+        self.image_panel.image_frame.outer_canvas.right_margin_pixels = 0
+        self.image_panel.image_frame.outer_canvas.x_label = "x axis"
+        self.image_panel.image_frame.outer_canvas.y_label = "Y axis"
 
-        self.image_panel.image_canvas.title = "This is a title"
+        self.image_panel.image_frame.outer_canvas.title = "This is a title"
 
-        self.image_panel.image_canvas.image_x_min_val = 500
-        self.image_panel.image_canvas.image_x_max_val = 1200
+        self.image_panel.image_frame.outer_canvas.image_x_min_val = 500
+        self.image_panel.image_frame.outer_canvas.image_x_max_val = 1200
 
-        self.image_panel.image_canvas.image_y_min_val = 5000
-        self.image_panel.image_canvas.image_y_max_val = 2000
+        self.image_panel.image_frame.outer_canvas.image_y_min_val = 5000
+        self.image_panel.image_frame.outer_canvas.image_y_max_val = 2000
 
         self.control_popup_panel = tkinter.Toplevel(self.primary)
         self.control_panel = ControlPanel(self.control_popup_panel)
@@ -68,10 +68,10 @@ class CanvasResize(WidgetPanel):
 
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-        self.control_panel.top_margin.set(self.image_panel.image_canvas.top_margin_pixels)
-        self.control_panel.bottom_margin.set(self.image_panel.image_canvas.bottom_margin_pixels)
-        self.control_panel.left_margin.set(self.image_panel.image_canvas.left_margin_pixels)
-        self.control_panel.right_margin.set(self.image_panel.image_canvas.right_margin_pixels)
+        self.control_panel.top_margin.set(self.image_panel.image_frame.outer_canvas.top_margin_pixels)
+        self.control_panel.bottom_margin.set(self.image_panel.image_frame.outer_canvas.bottom_margin_pixels)
+        self.control_panel.left_margin.set(self.image_panel.image_frame.outer_canvas.left_margin_pixels)
+        self.control_panel.right_margin.set(self.image_panel.image_frame.outer_canvas.right_margin_pixels)
 
         # callbacks
         self.control_panel.top_margin.on_left_mouse_release(self.callback_top_margin_update)
@@ -81,22 +81,22 @@ class CanvasResize(WidgetPanel):
 
     def callback_top_margin_update(self, event):
         margin = int(self.control_panel.top_margin.get())
-        self.image_panel.image_canvas.top_margin_pixels = margin
+        self.image_panel.image_frame.outer_canvas.top_margin_pixels = margin
         self.image_panel.update_everything(event)
 
     def callback_bottom_margin_update(self, event):
         margin = int(self.control_panel.bottom_margin.get())
-        self.image_panel.image_canvas.bottom_margin_pixels = margin
+        self.image_panel.image_frame.outer_canvas.bottom_margin_pixels = margin
         self.image_panel.update_everything(event)
 
     def callback_left_margin_update(self, event):
         margin = int(self.control_panel.left_margin.get())
-        self.image_panel.image_canvas.left_margin_pixels = margin
+        self.image_panel.image_frame.outer_canvas.left_margin_pixels = margin
         self.image_panel.update_everything(event)
 
     def callback_right_margin_update(self, event):
         margin = int(self.control_panel.right_margin.get())
-        self.image_panel.image_canvas.right_margin_pixels = margin
+        self.image_panel.image_frame.outer_canvas.right_margin_pixels = margin
         self.image_panel.update_everything(event)
 
     def exit(self):
