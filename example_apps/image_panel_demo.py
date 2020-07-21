@@ -10,8 +10,6 @@ from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants
 
-from example_apps.image_canvas_axes.control_panel import ControlPanel
-
 
 class CanvasResize(WidgetPanel):
     _widget_list = ("image_panel", )
@@ -27,7 +25,7 @@ class CanvasResize(WidgetPanel):
 
         self.init_w_horizontal_layout()
 
-        # self.image_panel.set_canvas_size(800, 600)
+        self.image_panel.image_frame.set_canvas_size(800, 600)
         self.image_panel.resizeable = True
 
         image_data = numpy.random.random((500, 1200))
@@ -35,15 +33,6 @@ class CanvasResize(WidgetPanel):
         image_reader = NumpyImageReader(image_data)
         self.image_panel.set_image_reader(image_reader)
         self.image_panel.current_tool = ToolConstants.PAN_TOOL
-
-        self.image_panel.image_frame.outer_canvas.left_margin_pixels = 0
-        self.image_panel.image_frame.outer_canvas.top_margin_pixels = 0
-        self.image_panel.image_frame.outer_canvas.bottom_margin_pixels = 0
-        self.image_panel.image_frame.outer_canvas.right_margin_pixels = 0
-        self.image_panel.image_frame.outer_canvas.x_label = "x axis"
-        self.image_panel.image_frame.outer_canvas.y_label = "Y axis"
-
-        self.image_panel.image_frame.outer_canvas.title = "This is a title"
 
         self.image_panel.image_frame.outer_canvas.image_x_min_val = 500
         self.image_panel.image_frame.outer_canvas.image_x_max_val = 1200

@@ -2247,11 +2247,12 @@ class ImageCanvas(basic_widgets.Canvas):
 
         # put a sleep in here in case there is a dialog covering the screen
         # before this method is called.
-        time.sleep(0.2)
+        time.sleep(0.1)
         # TODO: are we missing a PIL.Image conversion here?
         im = self.save_currently_displayed_canvas_to_numpy_array()
         im.save(output_fname)
 
+    # TODO: figure out proper offsets, the current solution is close but not perfect
     def save_currently_displayed_canvas_to_numpy_array(self):
         """
         Export the currently displayed canvas as a numpy array.

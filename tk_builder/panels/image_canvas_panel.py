@@ -1,4 +1,6 @@
+import os
 import tkinter
+from tkinter.filedialog import asksaveasfilename
 
 import numpy
 
@@ -19,20 +21,41 @@ class AppVariables(CanvasAppVariables):
 
 
 class Toolbar(WidgetPanel):
-    _widget_list = ("zoom_in", "zoom_out", "pan", "margins_checkbox",
-                    "left_margin_label", "left_margin", "right_margin_label", "right_margin",
-                    "top_margin_label", "top_margin",
-                    "bottom_margin_label", "bottom_margin")
-    zoom_in = widget_descriptors.ButtonDescriptor("zoom_in")
-    zoom_out = widget_descriptors.ButtonDescriptor("zoom_out")
-    pan = widget_descriptors.ButtonDescriptor("pan")
-
+    top_level_controls = ("zoom_in",
+                          "zoom_out",
+                          "pan",
+                          "margins_checkbox",
+                          "axes_labels_checkbox",
+                          "save_canvas",
+                          "save_image")
+    axes_labels_controls = ("title_label", "title",
+                            "x_label", "x",
+                            "y_label", "y")
+    margin_controls = ("left_margin_label", "left_margin",
+                       "right_margin_label", "right_margin",
+                       "top_margin_label", "top_margin",
+                       "bottom_margin_label", "bottom_margin")
+    _widget_list = (top_level_controls, axes_labels_controls, margin_controls)
+    zoom_in = widget_descriptors.ButtonDescriptor("zoom_in")  # type: basic_widgets.Button
+    zoom_out = widget_descriptors.ButtonDescriptor("zoom_out")  # type: basic_widgets.Button
+    pan = widget_descriptors.ButtonDescriptor("pan")  # type: basic_widgets.Button
     margins_checkbox = widget_descriptors.CheckButtonDescriptor("margins_checkbox", default_text="margins")  # type: basic_widgets.CheckButton
+    axes_labels_checkbox = widget_descriptors.CheckButtonDescriptor("axes_labels_checkbox", default_text="axes labels")  # type: basic_widgets.CheckButton
+    save_canvas = widget_descriptors.ButtonDescriptor("save_canvas", default_text="save canvas")  # type: basic_widgets.Button
+    save_image = widget_descriptors.ButtonDescriptor("save_image", default_text="save image")  # type: basic_widgets.Button
 
     left_margin_label = widget_descriptors.LabelDescriptor("left_margin_label", default_text="left margin")  # type: basic_widgets.Label
     right_margin_label = widget_descriptors.LabelDescriptor("right_margin_label", default_text="right margin")  # type: basic_widgets.Label
     top_margin_label = widget_descriptors.LabelDescriptor("top_margin_label", default_text="top margin")  # type: basic_widgets.Label
     bottom_margin_label = widget_descriptors.LabelDescriptor("bottom_margin_label", default_text="bottom margin")  # type: basic_widgets.Label
+
+    title_label = widget_descriptors.LabelDescriptor("title_label", default_text="title")  # type: basic_widgets.Label
+    x_label = widget_descriptors.LabelDescriptor("x_label", default_text="x label")  # type: basic_widgets.Label
+    y_label = widget_descriptors.LabelDescriptor("y_label", default_text="y label")  # type: basic_widgets.Label
+
+    title = widget_descriptors.EntryDescriptor("title", default_text="")  # type: basic_widgets.Entry
+    x = widget_descriptors.EntryDescriptor("x", default_text="")  # type: basic_widgets.Entry
+    y = widget_descriptors.EntryDescriptor("y", default_text="")  # type: basic_widgets.Entry
 
     left_margin = widget_descriptors.EntryDescriptor("left_margin", default_text="0")  # type: basic_widgets.Entry
     right_margin = widget_descriptors.EntryDescriptor("right_margin", default_text="0")  # type: basic_widgets.Entry
@@ -41,7 +64,7 @@ class Toolbar(WidgetPanel):
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.init_w_basic_widget_list(2, [4, 8])
+        self.init_w_rows()
 
 
 class ImageCanvasPanel(WidgetPanel):
@@ -60,14 +83,48 @@ class ImageCanvasPanel(WidgetPanel):
         self.toolbar.bottom_margin.config(width=5)
 
         self.toolbar.left_margin_label.master.forget()
+        self.toolbar.title_label.master.forget()
 
         # set up callbacks
-        self.toolbar.left_margin.on_enter_or_return_key(self.callback_update_margins)
-        self.toolbar.right_margin.on_enter_or_return_key(self.callback_update_margins)
-        self.toolbar.top_margin.on_enter_or_return_key(self.callback_update_margins)
-        self.toolbar.bottom_margin.on_enter_or_return_key(self.callback_update_margins)
+        self.toolbar.save_canvas.on_left_mouse_click(self.callback_save_canvas)
+        self.toolbar.save_image.on_left_mouse_click(self.callback_save_image)
+
+        self.toolbar.left_margin.on_enter_or_return_key(self.callback_update_axes)
+        self.toolbar.right_margin.on_enter_or_return_key(self.callback_update_axes)
+        self.toolbar.top_margin.on_enter_or_return_key(self.callback_update_axes)
+        self.toolbar.bottom_margin.on_enter_or_return_key(self.callback_update_axes)
+
+        self.toolbar.title.on_enter_or_return_key(self.callback_update_axes)
+        self.toolbar.x.on_enter_or_return_key(self.callback_update_axes)
+        self.toolbar.y.on_enter_or_return_key(self.callback_update_axes)
+
+        self.toolbar.zoom_in.on_left_mouse_click(self.callback_set_to_zoom_in)
+        self.toolbar.zoom_out.on_left_mouse_click(self.callback_set_to_zoom_out)
+        self.toolbar.pan.on_left_mouse_click(self.callback_set_to_pan)
 
         self.toolbar.margins_checkbox.config(command=self.callback_hide_show_margins)
+        self.toolbar.axes_labels_checkbox.config(command=self.callback_hide_show_axes_controls)
+
+    def callback_set_to_zoom_in(self, event):
+        self.current_tool = ToolConstants.ZOOM_IN_TOOL
+
+    def callback_set_to_zoom_out(self, event):
+        self.current_tool = ToolConstants.ZOOM_OUT_TOOL
+
+    def callback_set_to_pan(self, event):
+        self.current_tool = ToolConstants.PAN_TOOL
+
+    def callback_save_canvas(self, event):
+        save_fname = asksaveasfilename()
+        if "." not in os.path.basename(save_fname):
+            save_fname = save_fname + ".png"
+        self.image_frame.outer_canvas.save_full_canvas_as_png(save_fname)
+
+    def callback_save_image(self, event):
+        save_fname = asksaveasfilename()
+        if "." not in os.path.basename(save_fname):
+            save_fname = save_fname + ".png"
+        self.image_frame.outer_canvas.canvas.save_full_canvas_as_png(save_fname)
 
     def callback_hide_show_margins(self):
         show_margins = self.toolbar.margins_checkbox.is_selected()
@@ -76,13 +133,32 @@ class ImageCanvasPanel(WidgetPanel):
         else:
             self.toolbar.left_margin_label.master.pack()
 
-        print(show_margins)
+    def callback_hide_show_axes_controls(self):
+        show_axes_controls = self.toolbar.axes_labels_checkbox.is_selected()
+        if show_axes_controls is False:
+            self.toolbar.title_label.master.forget()
+        else:
+            self.toolbar.title_label.master.pack()
 
-    def callback_update_margins(self, event):
+    def callback_update_axes(self, event):
+        self.image_frame.outer_canvas.title = self.toolbar.title.get()
+        self.image_frame.outer_canvas.x_label = self.toolbar.x.get()
+        self.image_frame.outer_canvas.y_label = self.toolbar.y.get()
+
+        if self.toolbar.top_margin.get() == "0":
+            self.toolbar.top_margin.set_text(str(self.image_frame.outer_canvas.top_margin_pixels))
+        if self.toolbar.bottom_margin.get() == "0":
+            self.toolbar.bottom_margin.set_text(str(self.image_frame.outer_canvas.bottom_margin_pixels))
+        if self.toolbar.left_margin.get() == "0":
+            self.toolbar.left_margin.set_text(str(self.image_frame.outer_canvas.left_margin_pixels))
+        if self.toolbar.right_margin.get() == "0":
+            self.toolbar.right_margin.set_text(str(self.image_frame.outer_canvas.right_margin_pixels))
+
         self.image_frame.outer_canvas.left_margin_pixels = int(self.toolbar.left_margin.get())
         self.image_frame.outer_canvas.right_margin_pixels = int(self.toolbar.right_margin.get())
         self.image_frame.outer_canvas.top_margin_pixels = int(self.toolbar.top_margin.get())
         self.image_frame.outer_canvas.bottom_margin_pixels = int(self.toolbar.bottom_margin.get())
+
         self.update_everything()
 
     def set_image_reader(self, image_reader):
