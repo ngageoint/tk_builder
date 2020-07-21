@@ -55,10 +55,6 @@ class CanvasResize(WidgetPanel):
     def exit(self):
         self.quit()
 
-    def callback_save_as_png(self, event):
-        self.image_panel.canvas.save_full_canvas_as_png(os.path.expanduser("~/Downloads/canvas_image.png"))
-        self.image_panel.save_full_canvas_as_png(os.path.expanduser("~/Downloads/image_panel.png"))
-
 
 if __name__ == '__main__':
     root = tkinter.Tk()

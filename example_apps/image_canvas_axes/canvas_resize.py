@@ -12,7 +12,7 @@ from tk_builder.widgets import widget_descriptors
 from example_apps.image_canvas_axes.control_panel import ControlPanel
 
 
-class CanvasResize(WidgetPanel):
+class ImagePanelDemo(WidgetPanel):
     _widget_list = ("image_panel", )
 
     image_panel = widget_descriptors.AxesImageCanvasDescriptor("image_panel")         # type: AxesImageCanvas
@@ -36,10 +36,10 @@ class CanvasResize(WidgetPanel):
         self.image_panel.set_image_reader(image_reader)
         self.image_panel.canvas.set_current_tool_to_pan()
 
-        self.image_panel.left_margin_pixels = 5
-        self.image_panel.top_margin_pixels = 5
-        self.image_panel.bottom_margin_pixels = 5
-        self.image_panel.right_margin_pixels = 5
+        self.image_panel.left_margin_pixels = 0
+        self.image_panel.top_margin_pixels = 0
+        self.image_panel.bottom_margin_pixels = 0
+        self.image_panel.right_margin_pixels = 0
         self.image_panel.x_label = "x axis"
         self.image_panel.y_label = "Y axis"
 
@@ -107,5 +107,5 @@ class CanvasResize(WidgetPanel):
 
 if __name__ == '__main__':
     root = tkinter.Tk()
-    app = CanvasResize(root)
+    app = ImagePanelDemo(root)
     root.mainloop()

@@ -246,8 +246,6 @@ class ImageCanvasPanel(WidgetPanel):
             display_image_dims = numpy.shape(
                 self.image_frame.outer_canvas.canvas.variables.canvas_image_object.display_image)
 
-            print(display_image_dims)
-
             self.image_frame.outer_canvas.set_canvas_size(display_image_dims[1] + self.image_frame.outer_canvas.right_margin_pixels + self.image_frame.outer_canvas.left_margin_pixels,
                                                           display_image_dims[0] + self.image_frame.outer_canvas.top_margin_pixels + self.image_frame.outer_canvas.bottom_margin_pixels + 5)
             self.image_frame.outer_canvas.canvas.set_canvas_size(self.image_frame.outer_canvas.variables.canvas_width -
