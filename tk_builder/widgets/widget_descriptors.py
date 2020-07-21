@@ -191,13 +191,22 @@ class AxesImageCanvasDescriptor(BaseWidgetDescriptor):
                                                         docstring=docstring)
 
 
-class ImageCanvasPanelDescriptor(BaseWidgetDescriptor):
+class ImagePanelDescriptor(BaseWidgetDescriptor):
     def __init__(self, name, default_text=None, docstring=None):
-        from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
-        super(ImageCanvasPanelDescriptor, self).__init__(name,
-                                                         ImageCanvasPanel,
-                                                         default_text=default_text,
-                                                         docstring=docstring)
+        from tk_builder.panels.image_panel import ImagePanel
+        super(ImagePanelDescriptor, self).__init__(name,
+                                                   ImagePanel,
+                                                   default_text=default_text,
+                                                   docstring=docstring)
+
+
+class ImageCanvasDescriptor(BaseWidgetDescriptor):
+    def __init__(self, name, default_text=None, docstring=None):
+        from tk_builder.widgets.image_canvas import ImageCanvas
+        super(ImageCanvasDescriptor, self).__init__(name,
+                                                    ImageCanvas,
+                                                    default_text=default_text,
+                                                    docstring=docstring)
 
 
 class PyplotCanvasDescriptor(BaseWidgetDescriptor):

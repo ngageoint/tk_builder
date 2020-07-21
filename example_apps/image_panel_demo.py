@@ -5,7 +5,7 @@ from tkinter import Menu
 import numpy
 
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.panels.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants
@@ -14,7 +14,7 @@ from tk_builder.widgets.image_canvas import ToolConstants
 class CanvasResize(WidgetPanel):
     _widget_list = ("image_panel", )
 
-    image_panel = widget_descriptors.ImageCanvasPanelDescriptor("image_panel")         # type: ImageCanvasPanel
+    image_panel = widget_descriptors.ImagePanelDescriptor("image_panel")         # type: ImagePanel
 
     def __init__(self, primary):
 
@@ -34,11 +34,11 @@ class CanvasResize(WidgetPanel):
         self.image_panel.set_image_reader(image_reader)
         self.image_panel.current_tool = ToolConstants.PAN_TOOL
 
-        self.image_panel.image_frame.outer_canvas.image_x_min_val = 500
-        self.image_panel.image_frame.outer_canvas.image_x_max_val = 1200
+        self.image_panel.axes_canvas.image_x_min_val = 500
+        self.image_panel.axes_canvas.image_x_max_val = 1200
 
-        self.image_panel.image_frame.outer_canvas.image_y_min_val = 5000
-        self.image_panel.image_frame.outer_canvas.image_y_max_val = 2000
+        self.image_panel.axes_canvas.image_y_min_val = 5000
+        self.image_panel.axes_canvas.image_y_max_val = 2000
 
         menubar = Menu()
 

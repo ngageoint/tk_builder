@@ -111,7 +111,7 @@ class AxesImageCanvas(ImageCanvas):
     @x_label.setter
     def x_label(self, value):
         self.variables.x_label = value
-        if value != "" or value is not None:
+        if value != "0" or value is not None:
             self.bottom_margin_pixels = 100
 
     @property
@@ -121,7 +121,7 @@ class AxesImageCanvas(ImageCanvas):
     @y_label.setter
     def y_label(self, value):
         self.variables.y_label = " " + value
-        if value != "" or value is not None:
+        if value != "0" or value is not None:
             self.left_margin_pixels = 100
 
     @property

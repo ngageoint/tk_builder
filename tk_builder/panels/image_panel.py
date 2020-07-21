@@ -6,6 +6,8 @@ import numpy
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
+from tk_builder.widgets.image_canvas import ImageCanvas
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.widgets.image_frame import ImageFrame
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.axes_image_canvas import AppVariables as CanvasAppVariables
@@ -67,12 +69,14 @@ class Toolbar(WidgetPanel):
         self.init_w_rows()
 
 
-class ImageCanvasPanel(WidgetPanel):
+class ImagePanel(WidgetPanel):
     _widget_list = ("toolbar", "image_frame",)
     image_frame = widget_descriptors.PanelDescriptor("image_frame", ImageFrame)  # type: ImageFrame
     toolbar = widget_descriptors.PanelDescriptor("toolbar", Toolbar)  # type: Toolbar
+    canvas = widget_descriptors.ImageCanvasDescriptor("canvas")  # type: ImageCanvas
+    axes_canvas = widget_descriptors.AxesImageCanvasDescriptor("axes_canvas")  # type: AxesImageCanvas
 
-    def __init__(self, parent, canvas_width=600, canvas_height=400):
+    def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
         self.variables = AppVariables()
         self.init_w_vertical_layout()
@@ -105,6 +109,9 @@ class ImageCanvasPanel(WidgetPanel):
         self.toolbar.margins_checkbox.config(command=self.callback_hide_show_margins)
         self.toolbar.axes_labels_checkbox.config(command=self.callback_hide_show_axes_controls)
 
+        self.canvas = self.image_frame.outer_canvas.canvas
+        self.axes_canvas = self.image_frame.outer_canvas
+
     def callback_set_to_zoom_in(self, event):
         self.current_tool = ToolConstants.ZOOM_IN_TOOL
 
@@ -118,13 +125,13 @@ class ImageCanvasPanel(WidgetPanel):
         save_fname = asksaveasfilename()
         if "." not in os.path.basename(save_fname):
             save_fname = save_fname + ".png"
-        self.image_frame.outer_canvas.save_full_canvas_as_png(save_fname)
+        self.axes_canvas.save_full_canvas_as_png(save_fname)
 
     def callback_save_image(self, event):
         save_fname = asksaveasfilename()
         if "." not in os.path.basename(save_fname):
             save_fname = save_fname + ".png"
-        self.image_frame.outer_canvas.canvas.save_full_canvas_as_png(save_fname)
+        self.canvas.save_full_canvas_as_png(save_fname)
 
     def callback_hide_show_margins(self):
         show_margins = self.toolbar.margins_checkbox.is_selected()
@@ -233,35 +240,36 @@ class ImageCanvasPanel(WidgetPanel):
         if parent_geom_width > 1 and outer_canvas_width > 1:
             self.image_frame.set_canvas_size(adjusted_canvas_width, adjusted_canvas_height)
 
-            self.image_frame.outer_canvas.set_canvas_size(adjusted_canvas_width, adjusted_canvas_height)
-            self.image_frame.outer_canvas.canvas.set_canvas_size(self.image_frame.outer_canvas.variables.canvas_width -
-                                                                 self.image_frame.outer_canvas.left_margin_pixels -
-                                                                 self.image_frame.outer_canvas.right_margin_pixels,
-                                                                 self.image_frame.outer_canvas.variables.canvas_height -
-                                                                 self.image_frame.outer_canvas.top_margin_pixels -
-                                                                 self.image_frame.outer_canvas.bottom_margin_pixels)
+            self.axes_canvas.set_canvas_size(adjusted_canvas_width, adjusted_canvas_height)
+            self.canvas.set_canvas_size(self.axes_canvas.variables.canvas_width -
+                                                                 self.axes_canvas.left_margin_pixels -
+                                                                 self.axes_canvas.right_margin_pixels,
+                                                                 self.axes_canvas.variables.canvas_height -
+                                                                 self.axes_canvas.top_margin_pixels -
+                                                                 self.axes_canvas.bottom_margin_pixels)
 
-            self.image_frame.outer_canvas.canvas.update_current_image()
+            self.canvas.update_current_image()
 
             display_image_dims = numpy.shape(
-                self.image_frame.outer_canvas.canvas.variables.canvas_image_object.display_image)
+                self.canvas.variables.canvas_image_object.display_image)
 
-            self.image_frame.outer_canvas.set_canvas_size(display_image_dims[1] + self.image_frame.outer_canvas.right_margin_pixels + self.image_frame.outer_canvas.left_margin_pixels,
-                                                          display_image_dims[0] + self.image_frame.outer_canvas.top_margin_pixels + self.image_frame.outer_canvas.bottom_margin_pixels + 5)
-            self.image_frame.outer_canvas.canvas.set_canvas_size(self.image_frame.outer_canvas.variables.canvas_width -
+            self.axes_canvas.set_canvas_size(display_image_dims[1] + self.axes_canvas.right_margin_pixels + self.axes_canvas.left_margin_pixels,
+                                                          display_image_dims[0] + self.axes_canvas.top_margin_pixels + self.axes_canvas.bottom_margin_pixels + 5)
+            self.canvas.set_canvas_size(self.axes_canvas.variables.canvas_width -
                                                                  self.image_frame.outer_canvas.left_margin_pixels -
                                                                  self.image_frame.outer_canvas.right_margin_pixels,
                                                                  self.image_frame.outer_canvas.variables.canvas_height -
                                                                  self.image_frame.outer_canvas.top_margin_pixels -
                                                                  self.image_frame.outer_canvas.bottom_margin_pixels)
-            self.image_frame.outer_canvas.canvas.update_current_image()
-        self.image_frame.outer_canvas.delete("all")
+            self.canvas.update_current_image()
+        self.axes_canvas.delete("all")
 
         self.image_frame.create_window(0, 0, anchor=tkinter.NW, window=self.image_frame.outer_canvas)
         self.image_frame.outer_canvas.create_window(self.image_frame.outer_canvas.left_margin_pixels,
                                                     self.image_frame.outer_canvas.top_margin_pixels,
                                                     anchor=tkinter.NW,
                                                     window=self.image_frame.outer_canvas.canvas)
+        self.canvas.redraw_all_shapes()
 
         self.image_frame.outer_canvas._update_y_axis()
         self.image_frame.outer_canvas._update_y_label()

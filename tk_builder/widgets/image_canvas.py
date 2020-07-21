@@ -1656,6 +1656,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.get_shape_image_coords(shape_id)
+        print("canvas nx:  " + str(self.variables.canvas_image_object.canvas_nx))
         return self.variables.canvas_image_object.full_image_yx_to_canvas_coords(image_coords)
 
     def get_image_data_in_canvas_rect_by_id(self, rect_id, decimation=None):
