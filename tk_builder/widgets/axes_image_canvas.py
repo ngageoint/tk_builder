@@ -163,7 +163,7 @@ class AxesImageCanvas(ImageCanvas):
         right_pixel_index = self.left_margin_pixels + image_width
         label_y_index = self.top_margin_pixels - 30
 
-        self.create_text(((left_pixel_index + right_pixel_index) / 2, label_y_index),
+        self.create_new_text(((left_pixel_index + right_pixel_index) / 2, label_y_index),
                          text=self.title,
                          fill="black",
                          anchor="n")
@@ -192,9 +192,9 @@ class AxesImageCanvas(ImageCanvas):
             tick_vals = m * tick_vals + b
 
             for xy, tick_val in zip(tick_positions, tick_vals):
-                self.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
+                self.create_new_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
 
-            self.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks / 2)], label_y_index),
+            self.create_new_text((x_axis_positions[int(self.variables.n_x_axis_ticks / 2)], label_y_index),
                              text=self.x_label,
                              fill="black",
                              anchor="n")
@@ -209,7 +209,7 @@ class AxesImageCanvas(ImageCanvas):
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
 
-        self.create_text((x_axis_positions[int(self.variables.n_x_axis_ticks / 2)], label_y_index),
+        self.create_new_text((x_axis_positions[int(self.variables.n_x_axis_ticks / 2)], label_y_index),
                          text=self.x_label,
                          fill="black",
                          anchor="n")
@@ -238,7 +238,7 @@ class AxesImageCanvas(ImageCanvas):
             tick_vals = m * tick_vals + b
 
             for xy, tick_val in zip(tick_positions, tick_vals):
-                self.create_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
+                self.create_new_text(xy, text="{:.2f}".format(tick_val), fill="black", anchor="n")
 
     def _update_y_label(self):
         left_pixel_index = self.left_margin_pixels - 40
@@ -251,7 +251,7 @@ class AxesImageCanvas(ImageCanvas):
 
         label_x_index = left_pixel_index - 30
 
-        self.create_text((label_x_index, y_axis_positions[int(self.variables.n_y_axis_ticks / 2)]),
+        self.create_new_text((label_x_index, y_axis_positions[int(self.variables.n_y_axis_ticks / 2)]),
                          text=self.variables.y_label,
                          fill="black",
                          anchor="s",

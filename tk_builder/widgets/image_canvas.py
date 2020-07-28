@@ -59,6 +59,7 @@ class ShapeTypeConstants:
     RECT = "rect"
     ARROW = "arrow"
     POLYGON = "polygon"
+    TEXT = "text"
 
 
 class CanvasImage(object):
@@ -579,6 +580,7 @@ class AppVariables(object):
         self.shape_ids = []  # type: [int]
         self.shape_properties = {}
         self.shape_drag_xy_limits = {}  # type: dict
+        self.shape_drag_image_coord_limits = {}  # type: dict
         self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
         self.tmp_points = None  # type: [int]
 
@@ -1362,10 +1364,15 @@ class ImageCanvas(basic_widgets.Canvas):
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
             self.variables.actively_drawing_shape = True
 
-    def create_text(self, *args, **kw):
+    def create_new_text(self, *args, **kw):
         """Create text with coordinates x1,y1."""
         shape_id = self._create('text', args, kw)
         self.variables.shape_ids.append(shape_id)
+        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.TEXT)
+        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, "white")
+        self.set_shape_canvas_coords(shape_id, args)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id)
+        self.variables.current_shape_id = shape_id
         return shape_id
 
     def create_new_rect(self, coords, **options):
@@ -1656,7 +1663,6 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.get_shape_image_coords(shape_id)
-        print("canvas nx:  " + str(self.variables.canvas_image_object.canvas_nx))
         return self.variables.canvas_image_object.full_image_yx_to_canvas_coords(image_coords)
 
     def get_image_data_in_canvas_rect_by_id(self, rect_id, decimation=None):
