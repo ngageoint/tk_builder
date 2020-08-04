@@ -12,6 +12,7 @@ import tkinter.colorchooser as colorchooser
 from typing import Union, Tuple, List, Dict
 
 import numpy
+from scipy.linalg import norm
 
 from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
     IntegerTupleDescriptor, StringDescriptor, TypedDescriptor, FloatDescriptor
@@ -24,42 +25,6 @@ if platform.system() == "Linux":
     import pyscreenshot as ImageGrab
 else:
     from PIL import ImageGrab
-
-
-class ToolConstants:
-    ZOOM_IN_TOOL = "zoom in"
-    ZOOM_OUT_TOOL = "zoom out"
-    DRAW_RECT_BY_DRAGGING = "draw rect by dragging"
-    DRAW_RECT_BY_CLICKING = "draw rect by clicking"
-    DRAW_LINE_BY_DRAGGING = "draw line by dragging"
-    DRAW_LINE_BY_CLICKING = "draw line by clicking"
-    DRAW_ARROW_BY_DRAGGING = "draw arrow by dragging"
-    DRAW_ARROW_BY_CLICKING = "draw arrow by clicking"
-    DRAW_POLYGON_BY_CLICKING = "draw polygon by clicking"
-    DRAW_POINT_BY_CLICKING = "draw point by clicking"
-    SELECT_TOOL = "select tool"
-    SELECT_CLOSEST_SHAPE_TOOL = "select closest shape"
-    PAN_TOOL = "pan tool"
-    TRANSLATE_SHAPE_TOOL = "translate shape tool"
-    EDIT_SHAPE_COORDS_TOOL = "edit shape coords tool"
-    EDIT_SHAPE_TOOL = "edit shape tool"
-
-
-class ShapePropertyConstants:
-    SHAPE_TYPE = "shape type"
-    CANVAS_COORDS = "canvas coords"
-    IMAGE_COORDS = "image coords"
-    POINT_SIZE = "point size"
-    COLOR = "color"
-
-
-class ShapeTypeConstants:
-    POINT = "point"
-    LINE = "line"
-    RECT = "rect"
-    ARROW = "arrow"
-    POLYGON = "polygon"
-    TEXT = "text"
 
 
 class CanvasImage(object):
@@ -458,6 +423,16 @@ class CanvasImage(object):
         return out
 
 
+class VectorObject(object):
+    def __init__(self, vector_type,
+                 tkinter_options,
+                 image_drag_limits=None):
+        self.type = vector_type
+        self.tkinter_options = tkinter_options
+        self.image_drag_limits = image_drag_limits
+        stop = 1
+
+
 class AppVariables(object):
     """
     The canvas image application variables.
@@ -578,11 +553,47 @@ class AppVariables(object):
     def __init__(self):
 
         self.shape_ids = []  # type: [int]
+        self.vector_objects = {}  # type: {VectorObject}
         self.shape_properties = {}
-        self.shape_drag_xy_limits = {}  # type: dict
         self.shape_drag_image_coord_limits = {}  # type: dict
         self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
         self.tmp_points = None  # type: [int]
+
+
+class ToolConstants:
+    ZOOM_IN_TOOL = "zoom in"
+    ZOOM_OUT_TOOL = "zoom out"
+    DRAW_RECT_BY_DRAGGING = "draw rect by dragging"
+    DRAW_RECT_BY_CLICKING = "draw rect by clicking"
+    DRAW_LINE_BY_DRAGGING = "draw line by dragging"
+    DRAW_LINE_BY_CLICKING = "draw line by clicking"
+    DRAW_ARROW_BY_DRAGGING = "draw arrow by dragging"
+    DRAW_ARROW_BY_CLICKING = "draw arrow by clicking"
+    DRAW_POLYGON_BY_CLICKING = "draw polygon by clicking"
+    DRAW_POINT_BY_CLICKING = "draw point by clicking"
+    SELECT_TOOL = "select tool"
+    SELECT_CLOSEST_SHAPE_TOOL = "select closest shape"
+    PAN_TOOL = "pan tool"
+    TRANSLATE_SHAPE_TOOL = "translate shape tool"
+    EDIT_SHAPE_COORDS_TOOL = "edit shape coords tool"
+    EDIT_SHAPE_TOOL = "edit shape tool"
+
+
+class ShapePropertyConstants:
+    SHAPE_TYPE = "shape type"
+    CANVAS_COORDS = "canvas coords"
+    IMAGE_COORDS = "image coords"
+    POINT_SIZE = "point size"
+    COLOR = "color"
+
+
+class ShapeTypeConstants:
+    POINT = "point"
+    LINE = "line"
+    RECT = "rect"
+    ARROW = "arrow"
+    POLYGON = "polygon"
+    TEXT = "text"
 
 
 SHAPE_PROPERTIES = ShapePropertyConstants()
@@ -648,6 +659,19 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             self.set_image_from_numpy_array(self.variables.canvas_image_object.canvas_decimated_image)
 
+    def get_vector_object(self, vector_id):
+        """
+
+        Parameters
+        ----------
+        vector_id : int
+
+        Returns
+        -------
+        VectorObject
+        """
+        return self.variables.vector_objects[str(vector_id)]
+
     def get_canvas_line_length(self, line_id):
         """
         Gets the canvas line length.
@@ -684,21 +708,6 @@ class ImageCanvas(basic_widgets.Canvas):
 
         canvas_line_length = self.get_canvas_line_length(line_id)
         return canvas_line_length * self.variables.canvas_image_object.decimation_factor
-
-    def get_shape_type(self, shape_id):
-        """
-        Gets the shape type.
-
-        Parameters
-        ----------
-        shape_id : int
-
-        Returns
-        -------
-        str
-        """
-
-        return self._get_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE)
 
     def hide_shape(self, shape_id):
         """
@@ -901,7 +910,8 @@ class ImageCanvas(basic_widgets.Canvas):
                     print("no tool selected")
             else:
                 if self.variables.current_shape_id in self.variables.shape_ids:
-                    if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.POINT:
+                    vector_object = self.get_vector_object(self.variables.current_shape_id)
+                    if vector_object.type == SHAPE_TYPES.POINT:
                         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id,
                                                                        (start_x, start_y))
                     elif self.variables.active_tool == TOOLS.DRAW_LINE_BY_CLICKING:
@@ -968,7 +978,8 @@ class ImageCanvas(basic_widgets.Canvas):
             elif self.variables.active_tool == TOOLS.DRAW_RECT_BY_CLICKING:
                 self.event_drag_line(event)
         elif self.variables.current_tool == TOOLS.EDIT_SHAPE_TOOL:
-            if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.RECT:
+            vector_object = self.get_vector_object(self.variables.current_shape_id)
+            if vector_object.type == SHAPE_TYPES.RECT:
                 select_x1, select_y1, select_x2, select_y2 = self.get_shape_canvas_coords(
                     self.variables.current_shape_id)
                 select_xul = min(select_x1, select_x2)
@@ -999,6 +1010,29 @@ class ImageCanvas(basic_widgets.Canvas):
                 else:
                     self.config(cursor="arrow")
                     self.variables.active_tool = None
+            elif vector_object.type == SHAPE_TYPES.LINE or vector_object.type == SHAPE_TYPES.ARROW:
+                canvas_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+                x_coords = canvas_coords[0::2]
+                y_coords = canvas_coords[1::2]
+                distance_to_vertex = numpy.sqrt(numpy.square(event.x - x_coords[0]) + numpy.square(event.y - y_coords[0]))
+                p2 = numpy.asarray((x_coords[1], y_coords[1]))
+                p1 = numpy.asarray((x_coords[0], y_coords[0]))
+                p3 = numpy.asarray((event.x, event.y))
+                distance_to_line = norm(numpy.cross(p2 - p1, p1 - p3)) / norm(p2 - p1)
+                for xy in zip(x_coords, y_coords):
+                    vertex_distance = numpy.sqrt(numpy.square(event.x - xy[0]) + numpy.square(event.y - xy[1]))
+                    if vertex_distance < distance_to_vertex:
+                        distance_to_vertex = vertex_distance
+
+                if distance_to_vertex < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="target")
+                    self.variables.active_tool = TOOLS.EDIT_SHAPE_COORDS_TOOL
+                elif distance_to_line < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="fleur")
+                    self.variables.active_tool = TOOLS.TRANSLATE_SHAPE_TOOL
+                else:
+                    self.config(cursor="arrow")
+                    self.variables.active_tool = None
 
     def callback_handle_left_mouse_motion(self, event):
         """
@@ -1013,6 +1047,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        vector_object = self.get_vector_object(self.variables.current_shape_id)
         if self.variables.active_tool == TOOLS.PAN_TOOL:
             x_dist = event.x - self.variables.tmp_anchor_point[0]
             y_dist = event.y - self.variables.tmp_anchor_point[1]
@@ -1029,9 +1064,11 @@ class ImageCanvas(basic_widgets.Canvas):
             width = new_x2 - new_x1
             height = new_y2 - new_y1
 
-            if str(self.variables.current_shape_id) in self.variables.shape_drag_xy_limits.keys():
-                drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = self.variables.shape_drag_xy_limits[str(self.variables.current_shape_id)]
-                if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.RECT:
+            if vector_object.image_drag_limits:
+                vector_object = self.get_vector_object(self.variables.current_shape_id)
+                drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = \
+                    self.image_coords_to_canvas_coords(vector_object.image_drag_limits)
+                if vector_object.type == SHAPE_TYPES.RECT:
                     if new_x1 < drag_x_lim_1:
                         new_x1 = drag_x_lim_1
                         new_x2 = new_x1 + width
@@ -1053,8 +1090,9 @@ class ImageCanvas(basic_widgets.Canvas):
             new_coords = list(previous_coords)
             new_coords[coord_x_index] = event.x
             new_coords[coord_y_index] = event.y
-            if str(self.variables.current_shape_id) in self.variables.shape_drag_xy_limits.keys():
-                drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = self.variables.shape_drag_xy_limits[str(self.variables.current_shape_id)]
+            if vector_object.image_drag_limits:
+                drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = \
+                    self.image_coords_to_canvas_coords(vector_object.image_drag_limits)
                 if new_coords[coord_x_index] < drag_x_lim_1:
                     new_coords[coord_x_index] = drag_x_lim_1
                 if new_coords[coord_x_index] > drag_x_lim_2:
@@ -1184,8 +1222,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        if self.get_shape_type(shape_id) == SHAPE_TYPES.POINT:
+        vector_object = self.get_vector_object(shape_id)
+        if vector_object.type == SHAPE_TYPES.POINT:
             point_size = self._get_shape_property(shape_id, SHAPE_PROPERTIES.POINT_SIZE)
             x1, y1 = (new_coords[0] - point_size), (new_coords[1] - point_size)
             x2, y2 = (new_coords[0] + point_size), (new_coords[1] + point_size)
@@ -1234,8 +1272,8 @@ class ImageCanvas(basic_widgets.Canvas):
             event_y_pos = self.canvasy(event.y)
             coords = self.coords(self.variables.current_shape_id)
             new_coords = list(coords[0:-2]) + [event_x_pos, event_y_pos]
-            if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.ARROW or \
-                    self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.LINE:
+            vector_object = self.get_vector_object(self.variables.current_shape_id)
+            if vector_object.type == SHAPE_TYPES.ARROW or vector_object.type == SHAPE_TYPES.LINE:
                 self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         else:
             pass
@@ -1397,8 +1435,7 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_id = self.create_rectangle(*coords, **options)
 
         self.variables.shape_ids.append(shape_id)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.RECT)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['outline'])
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.RECT, options)
         self.set_shape_canvas_coords(shape_id, coords)
         self.set_shape_pixel_coords_from_canvas_coords(shape_id)
         self.variables.current_shape_id = shape_id
@@ -1489,10 +1526,9 @@ class ImageCanvas(basic_widgets.Canvas):
             options['width'] = self.variables.line_width
 
         shape_id = self.create_line(*coords, **options)
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.LINE, options)
 
         self.variables.shape_ids.append(shape_id)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.LINE)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['fill'])
         self.set_shape_canvas_coords(shape_id, coords)
         self.set_shape_pixel_coords_from_canvas_coords(shape_id)
         self.variables.current_shape_id = shape_id
@@ -1542,15 +1578,14 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        shape_type = self.get_shape_type(shape_id)
-        if shape_type == SHAPE_TYPES.RECT:
+        vector_object = self.get_vector_object()
+        shape_type = vector_object(shape_id).type
+        if shape_type == SHAPE_TYPES.RECT or shape_type == SHAPE_TYPES.POLYGON:
             self.itemconfig(shape_id, outline=color)
-        elif shape_type == SHAPE_TYPES.POLYGON:
-            self.itemconfig(shape_id, outline=color)
+            vector_object.tkinter_options['outline'] = color
         else:
             self.itemconfig(shape_id, fill=color)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, color)
+            vector_object.tkinter_options['fill'] = color
 
     def set_shape_canvas_coords(self, shape_id, coords):
         """
@@ -2152,24 +2187,6 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.shape_properties[str(shape_id)] = {}
         self.variables.shape_properties[str(shape_id)][shape_property] = val
 
-    def _update_shape_properties(self, shape_id, properties):
-        """
-        Update shape properties from a dictionary.
-
-        Parameters
-        ----------
-        shape_id : int
-        properties : Dict[str, str]
-
-        Returns
-        -------
-        None
-        """
-
-        for key in properties.keys():
-            val = properties[key]
-            self._set_shape_property(shape_id, key, val)
-
     def _pan(self, event):
         """
         A pan event.
@@ -2310,10 +2327,9 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         int
         """
-
-        shape_type = self.get_shape_type(self.variables.current_shape_id)
+        vector_object = self.get_vector_object(self.variables.current_shape_id)
         coords = self.get_shape_canvas_coords(shape_id)
-        if shape_type == SHAPE_TYPES.RECT:
+        if vector_object.type == SHAPE_TYPES.RECT:
             select_x1, select_y1, select_x2, select_y2 = coords
             select_xul = min(select_x1, select_x2)
             select_xlr = max(select_x1, select_x2)

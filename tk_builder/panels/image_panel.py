@@ -192,19 +192,21 @@ class ImagePanel(WidgetPanel):
     @current_tool.setter
     def current_tool(self, value):
         if value is None:
-            self.image_frame.outer_canvas.canvas.set_current_tool_to_none()
+            self.canvas.set_current_tool_to_none()
         elif value == ToolConstants.EDIT_SHAPE_TOOL:
-            self.image_frame.outer_canvas.canvas.set_current_tool_to_edit_shape()
+            self.canvas.set_current_tool_to_edit_shape()
         elif value == ToolConstants.PAN_TOOL:
-            self.image_frame.outer_canvas.canvas.set_current_tool_to_pan()
+            self.canvas.set_current_tool_to_pan()
         elif value == ToolConstants.SELECT_TOOL:
-            self.image_frame.outer_canvas.canvas.set_current_tool_to_selection_tool()
+            self.canvas.set_current_tool_to_selection_tool()
         elif value == ToolConstants.ZOOM_IN_TOOL:
-            self.image_frame.outer_canvas.canvas.set_current_tool_to_zoom_in()
+            self.canvas.set_current_tool_to_zoom_in()
         elif value == ToolConstants.ZOOM_OUT_TOOL:
-            self.image_frame.outer_canvas.canvas.set_current_tool_to_zoom_out()
+            self.canvas.set_current_tool_to_zoom_out()
         elif value == ToolConstants.DRAW_ARROW_BY_DRAGGING:
-            self.image_frame.outer_canvas.canvas.set_current_tool_to_draw_arrow_by_dragging()
+            self.canvas.set_current_tool_to_draw_arrow_by_dragging()
+        elif value == ToolConstants.DRAW_RECT_BY_DRAGGING:
+            self.canvas.set_current_tool_to_draw_rect()
 
     def callback_resize(self, event):
         self.update_everything()
