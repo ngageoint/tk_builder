@@ -20,6 +20,7 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.utils.color_utils import color_utils
 from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder.utils.geometry_utils import polygon_utils
 
 if platform.system() == "Linux":
     import pyscreenshot as ImageGrab
@@ -914,18 +915,6 @@ class ImageCanvas(basic_widgets.Canvas):
             else:
                 if self.variables.current_shape_id in self.variables.shape_ids:
                     vector_object = self.get_vector_object(self.variables.current_shape_id)
-                    # if vector_object.image_drag_limits:
-                    #     drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = \
-                    #         self.image_coords_to_canvas_coords(vector_object.image_drag_limits)
-                    #     if new_coords[coord_x_index] < drag_x_lim_1:
-                    #         new_coords[coord_x_index] = drag_x_lim_1
-                    #     if new_coords[coord_x_index] > drag_x_lim_2:
-                    #         new_coords[coord_x_index] = drag_x_lim_2
-                    #     if new_coords[coord_y_index] < drag_y_lim_1:
-                    #         new_coords[coord_y_index] = drag_y_lim_1
-                    #     if new_coords[coord_y_index] > drag_y_lim_2:
-                    #         new_coords[coord_y_index] = drag_y_lim_2
-                    #
                     if vector_object.type == SHAPE_TYPES.POINT:
                         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id,
                                                                        (start_x, start_y))
@@ -1044,6 +1033,27 @@ class ImageCanvas(basic_widgets.Canvas):
                     self.config(cursor="target")
                     self.variables.active_tool = TOOLS.EDIT_SHAPE_COORDS_TOOL
                 elif distance_to_line < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="fleur")
+                    self.variables.active_tool = TOOLS.TRANSLATE_SHAPE_TOOL
+                else:
+                    self.config(cursor="arrow")
+                    self.variables.active_tool = None
+            elif vector_object.type == SHAPE_TYPES.LINE or vector_object.type == SHAPE_TYPES.POLYGON:
+                canvas_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+                x_coords = canvas_coords[0::2]
+                y_coords = canvas_coords[1::2]
+                xy_points = [xy for xy in zip(x_coords, y_coords)]
+                distance_to_vertex = numpy.sqrt(numpy.square(event.x - x_coords[0]) +
+                                                numpy.square(event.y - y_coords[0]))
+                for xy in zip(x_coords, y_coords):
+                    vertex_distance = numpy.sqrt(numpy.square(event.x - xy[0]) + numpy.square(event.y - xy[1]))
+                    if vertex_distance < distance_to_vertex:
+                        distance_to_vertex = vertex_distance
+
+                if distance_to_vertex < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="target")
+                    self.variables.active_tool = TOOLS.EDIT_SHAPE_COORDS_TOOL
+                elif polygon_utils.point_inside_polygon(event.x, event.y, xy_points):
                     self.config(cursor="fleur")
                     self.variables.active_tool = TOOLS.TRANSLATE_SHAPE_TOOL
                 else:
@@ -1311,9 +1321,20 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         if self.variables.current_shape_id:
-            self.show_shape(self.variables.current_shape_id)
             event_x_pos = self.canvasx(event.x)
             event_y_pos = self.canvasy(event.y)
+            drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+            canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+            if event_x_pos < canvas_lims[0]:
+                event_x_pos = canvas_lims[0]
+            elif event_x_pos > canvas_lims[2]:
+                event_x_pos = canvas_lims[2]
+            if event_y_pos < canvas_lims[1]:
+                event_y_pos = canvas_lims[1]
+            elif event_y_pos > canvas_lims[3]:
+                event_y_pos = canvas_lims[3]
+
+            self.show_shape(self.variables.current_shape_id)
             coords = self.coords(self.variables.current_shape_id)
             new_coords = list(coords[0:-2]) + [event_x_pos, event_y_pos]
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
@@ -1366,13 +1387,25 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
+        event_x_pos = self.canvasx(event.x)
+        event_y_pos = self.canvasy(event.y)
+        if self.get_vector_object(self.variables.current_shape_id).image_drag_limits:
+            drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+            canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+            if event_x_pos < canvas_lims[0]:
+                event_x_pos = canvas_lims[0]
+            elif event_x_pos > canvas_lims[2]:
+                event_x_pos = canvas_lims[2]
+            if event_y_pos < canvas_lims[1]:
+                event_y_pos = canvas_lims[1]
+            elif event_y_pos > canvas_lims[3]:
+                event_y_pos = canvas_lims[3]
         if self.variables.actively_drawing_shape:
             old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
-            new_coords = tuple(list(old_coords) + [event.x, event.y])
+            new_coords = tuple(list(old_coords) + [event_x_pos, event_y_pos])
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         else:
-            new_coords = (event.x, event.y, event.x+1, event.y+1)
+            new_coords = (event_x_pos, event_y_pos, event_x_pos + 1, event_y_pos + 1)
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
             self.variables.actively_drawing_shape = True
 
