@@ -109,6 +109,8 @@ class ImagePanel(WidgetPanel):
         self.toolbar.margins_checkbox.config(command=self.callback_hide_show_margins)
         self.toolbar.axes_labels_checkbox.config(command=self.callback_hide_show_axes_controls)
 
+        self.toolbar.pack(expand=tkinter.YES, fill=tkinter.X)
+
         self.canvas = self.image_frame.outer_canvas.canvas
         self.axes_canvas = self.image_frame.outer_canvas
 

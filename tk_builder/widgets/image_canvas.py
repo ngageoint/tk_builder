@@ -887,7 +887,6 @@ class ImageCanvas(basic_widgets.Canvas):
             start_y = self.canvasy(event.y)
 
             self.variables.current_shape_canvas_anchor_point_xy = (start_x, start_y)
-
             if self.variables.current_shape_id not in self.variables.shape_ids:
                 coords = (start_x, start_y, start_x + 1, start_y + 1)
                 if self.variables.active_tool == TOOLS.DRAW_LINE_BY_DRAGGING:
@@ -915,6 +914,18 @@ class ImageCanvas(basic_widgets.Canvas):
             else:
                 if self.variables.current_shape_id in self.variables.shape_ids:
                     vector_object = self.get_vector_object(self.variables.current_shape_id)
+                    # if vector_object.image_drag_limits:
+                    #     drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = \
+                    #         self.image_coords_to_canvas_coords(vector_object.image_drag_limits)
+                    #     if new_coords[coord_x_index] < drag_x_lim_1:
+                    #         new_coords[coord_x_index] = drag_x_lim_1
+                    #     if new_coords[coord_x_index] > drag_x_lim_2:
+                    #         new_coords[coord_x_index] = drag_x_lim_2
+                    #     if new_coords[coord_y_index] < drag_y_lim_1:
+                    #         new_coords[coord_y_index] = drag_y_lim_1
+                    #     if new_coords[coord_y_index] > drag_y_lim_2:
+                    #         new_coords[coord_y_index] = drag_y_lim_2
+                    #
                     if vector_object.type == SHAPE_TYPES.POINT:
                         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id,
                                                                        (start_x, start_y))
@@ -1258,7 +1269,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.set_shape_pixel_coords(shape_id, image_coords)
-        canvas_coords = self.image_coords_to_canvas_coords(shape_id)
+        canvas_coords = self.image_coords_to_canvas_coords(image_coords)
         self.modify_existing_shape_using_canvas_coords(shape_id, canvas_coords, update_pixel_coords=False)
 
     def event_drag_multipoint_line(self, event):
@@ -1326,26 +1337,22 @@ class ImageCanvas(basic_widgets.Canvas):
             self.show_shape(self.variables.current_shape_id)
             event_x_pos = self.canvasx(event.x)
             event_y_pos = self.canvasy(event.y)
+            if self.get_vector_object(self.variables.current_shape_id).image_drag_limits:
+                drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+                canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+                if event_x_pos < canvas_lims[0]:
+                    event_x_pos = canvas_lims[0]
+                elif event_x_pos > canvas_lims[2]:
+                    event_x_pos = canvas_lims[2]
+                if event_y_pos < canvas_lims[1]:
+                    event_y_pos = canvas_lims[1]
+                elif event_y_pos > canvas_lims[3]:
+                    event_y_pos = canvas_lims[3]
             self.modify_existing_shape_using_canvas_coords(
                 self.variables.current_shape_id,
                 (self.variables.current_shape_canvas_anchor_point_xy[0],
                  self.variables.current_shape_canvas_anchor_point_xy[1],
                  event_x_pos, event_y_pos))
-
-    def event_drag_rect(self, event):
-        """
-        Drag a rectangle callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.event_drag_line(event)  # identical actions for line.
 
     def event_click_line(self, event):
         """
@@ -1383,6 +1390,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.shape_ids.remove(shape_id)
+        del self.variables.vector_objects[str(shape_id)]
         self.delete(shape_id)
         if shape_id == self.variables.current_shape_id:
             self.variables.current_shape_id = None
@@ -1400,13 +1408,26 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        event_x_pos = self.canvasx(event.x)
+        event_y_pos = self.canvasy(event.y)
+        drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+        canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+        if event_x_pos < canvas_lims[0]:
+            event_x_pos = canvas_lims[0]
+        elif event_x_pos > canvas_lims[2]:
+            event_x_pos = canvas_lims[2]
+        if event_y_pos < canvas_lims[1]:
+            event_y_pos = canvas_lims[1]
+        elif event_y_pos > canvas_lims[3]:
+            event_y_pos = canvas_lims[3]
+
         if self.variables.actively_drawing_shape:
             old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
-            new_coords = list(old_coords) + [event.x, event.y]
+            new_coords = list(old_coords) + [event_x_pos, event_y_pos]
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         # re-initialize shape if we're not actively drawing
         else:
-            new_coords = (event.x, event.y, event.x+1, event.y+1)
+            new_coords = (event.x, event.y, event_x_pos+1, event_y_pos+1)
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
             self.variables.actively_drawing_shape = True
 
