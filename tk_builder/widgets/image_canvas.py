@@ -1324,15 +1324,16 @@ class ImageCanvas(basic_widgets.Canvas):
             event_x_pos = self.canvasx(event.x)
             event_y_pos = self.canvasy(event.y)
             drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
-            canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
-            if event_x_pos < canvas_lims[0]:
-                event_x_pos = canvas_lims[0]
-            elif event_x_pos > canvas_lims[2]:
-                event_x_pos = canvas_lims[2]
-            if event_y_pos < canvas_lims[1]:
-                event_y_pos = canvas_lims[1]
-            elif event_y_pos > canvas_lims[3]:
-                event_y_pos = canvas_lims[3]
+            if drag_lims:
+                canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+                if event_x_pos < canvas_lims[0]:
+                    event_x_pos = canvas_lims[0]
+                elif event_x_pos > canvas_lims[2]:
+                    event_x_pos = canvas_lims[2]
+                if event_y_pos < canvas_lims[1]:
+                    event_y_pos = canvas_lims[1]
+                elif event_y_pos > canvas_lims[3]:
+                    event_y_pos = canvas_lims[3]
 
             self.show_shape(self.variables.current_shape_id)
             coords = self.coords(self.variables.current_shape_id)
@@ -1444,15 +1445,16 @@ class ImageCanvas(basic_widgets.Canvas):
         event_x_pos = self.canvasx(event.x)
         event_y_pos = self.canvasy(event.y)
         drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
-        canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
-        if event_x_pos < canvas_lims[0]:
-            event_x_pos = canvas_lims[0]
-        elif event_x_pos > canvas_lims[2]:
-            event_x_pos = canvas_lims[2]
-        if event_y_pos < canvas_lims[1]:
-            event_y_pos = canvas_lims[1]
-        elif event_y_pos > canvas_lims[3]:
-            event_y_pos = canvas_lims[3]
+        if drag_lims:
+            canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+            if event_x_pos < canvas_lims[0]:
+                event_x_pos = canvas_lims[0]
+            elif event_x_pos > canvas_lims[2]:
+                event_x_pos = canvas_lims[2]
+            if event_y_pos < canvas_lims[1]:
+                event_y_pos = canvas_lims[1]
+            elif event_y_pos > canvas_lims[3]:
+                event_y_pos = canvas_lims[3]
 
         if self.variables.actively_drawing_shape:
             old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
@@ -1627,8 +1629,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-        vector_object = self.get_vector_object()
-        shape_type = vector_object(shape_id).type
+        vector_object = self.get_vector_object(shape_id)
+        shape_type = vector_object.type
         if shape_type == SHAPE_TYPES.RECT or shape_type == SHAPE_TYPES.POLYGON:
             self.itemconfig(shape_id, outline=color)
             vector_object.tkinter_options['outline'] = color
