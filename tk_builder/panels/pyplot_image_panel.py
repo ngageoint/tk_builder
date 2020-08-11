@@ -1,4 +1,13 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import logging
+try:
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+except ImportError:
+    logging.error('Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
+                  'because the matplotlib in your environment was not built with tkinter '
+                  'backend support enabled. No functionality for the pyplot panel '
+                  'will be functional.')
+    FigureCanvasTkAgg = None
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tkinter
@@ -19,10 +28,7 @@ class PyplotImagePanel(tkinter.LabelFrame):
         plt.imshow(self.image_data)
         self.canvas = FigureCanvasTkAgg(fig, master=self)
         self.canvas.get_tk_widget().pack()
-
         self.update_image(self.image_data)
-
-        # self.canvas.get_tk_widget().pack(fill='both', expand=1)
 
     def update_image(self, image_data):
         self.image_data = image_data

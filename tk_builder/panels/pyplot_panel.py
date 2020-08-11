@@ -1,13 +1,22 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
+
+import logging
+try:
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+except ImportError:
+    logging.error('Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
+                  'because the matplotlib in your environment was not built with tkinter '
+                  'backend support enabled. No functionality for the pyplot panel '
+                  'will be functional.')
+    FigureCanvasTkAgg = None
+
 from matplotlib.collections import LineCollection
 import time
 import numpy as np
 
-import tkinter
 from tk_builder.widgets import basic_widgets
-from tk_builder.panel_templates.pyplot_panel.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.widgets import widget_descriptors
 
 SCALE_Y_AXIS_PER_FRAME_TRUE = "scale y axis per frame"
 SCALE_Y_AXIS_PER_FRAME_FALSE = "don't scale y axis per frame"
@@ -15,35 +24,30 @@ SCALE_Y_AXIS_PER_FRAME_FALSE = "don't scale y axis per frame"
 PYPLOT_UTILS = PlotStyleUtils()
 
 
-class PyplotCanvas(tkinter.LabelFrame):
-    def __init__(self, master):
-        tkinter.LabelFrame.__init__(self, master)
-        fig = Figure()
-        self.ax = fig.add_subplot(111)
-
-        self.canvas = FigureCanvasTkAgg(fig, master=master)
-        self.canvas.get_tk_widget().pack(fill='both')
-
-
-class PyplotControlPanel(AbstractWidgetPanel):
-    color_palette_label = basic_widgets.Label                   # type: basic_widgets.Label
-    color_palette = basic_widgets.Combobox                      # type: basic_widgets.Combobox
-    n_colors_label = basic_widgets.Label                        # type: basic_widgets.Label
-    n_colors = basic_widgets.Spinbox                            # type: basic_widgets.Spinbox
-    scale = basic_widgets.Scale                                 # type: basic_widgets.Scale
-    rescale_y_axis_per_frame = basic_widgets.Combobox           # type: basic_widgets.Combobox
-    animate = basic_widgets.Button                              # type: basic_widgets.Button
-    fps_label = basic_widgets.Label                             # type: basic_widgets.Label
-    fps_entry = basic_widgets.Entry                             # type: basic_widgets.Entry
+class PyplotControlPanel(WidgetPanel):
+    _widget_list = ("color_palette_label",
+                    "color_palette",
+                    "n_colors_label",
+                    "n_colors",
+                    "scale",
+                    "rescale_y_axis_per_frame",
+                    "fps_label",
+                    "fps_entry",
+                    "animate")
+    color_palette_label = widget_descriptors.LabelDescriptor("color_palette_label")  # type: basic_widgets.Label
+    color_palette = widget_descriptors.ComboboxDescriptor("color_palette")                     # type: basic_widgets.Combobox
+    n_colors_label = widget_descriptors.LabelDescriptor("n_colors_label")                        # type: basic_widgets.Label
+    n_colors = widget_descriptors.SpinboxDescriptor("n_colors")                            # type: basic_widgets.Spinbox
+    scale = widget_descriptors.ScaleDescriptor("scale")                                 # type: basic_widgets.Scale
+    rescale_y_axis_per_frame = widget_descriptors.ComboboxDescriptor("rescale_y_axis_per_frame")          # type: basic_widgets.Combobox
+    animate = widget_descriptors.ButtonDescriptor("animate")                             # type: basic_widgets.Button
+    fps_label = widget_descriptors.LabelDescriptor("fps_label")                             # type: basic_widgets.Label
+    fps_entry = widget_descriptors.EntryDescriptor("fps_entry")                            # type: basic_widgets.Entry
 
     def __init__(self, parent):
-        AbstractWidgetPanel.__init__(self, parent)
-        widget_list = ["color_palette_label", "color_palette", "n_colors_label", "n_colors",
-                       "scale",
-                       "rescale_y_axis_per_frame",
-                       "fps_label", "fps_entry", "animate"]
+        WidgetPanel.__init__(self, parent)
 
-        self.init_w_basic_widget_list(widget_list, 4, [4, 1, 1, 3])
+        self.init_w_basic_widget_list(4, [4, 1, 1, 3])
         self.color_palette.update_combobox_values(PYPLOT_UTILS.get_all_palettes_list())
         self.n_colors.config(from_=0)
         self.n_colors.config(to=10)
@@ -73,17 +77,17 @@ class AppVariables():
         self.animation_index = 0
 
 
-class PyplotPanel(AbstractWidgetPanel):
-    pyplot_canvas = PyplotCanvas           # type: PyplotCanvas
-    control_panel = PyplotControlPanel      # type: PyplotControlPanel
+class PyplotPanel(WidgetPanel):
+    _widget_list = ("pyplot_canvas", "control_panel")
+    pyplot_canvas = widget_descriptors.PyplotCanvasDescriptor("pyplot_canvas")           # type: PyplotCanvas
+    control_panel = widget_descriptors.PanelDescriptor("control_panel", PyplotControlPanel)  # type: PyplotControlPanel
 
-    def __init__(self, master):
-        AbstractWidgetPanel.__init__(self, master)
+    def __init__(self, primary):
+        WidgetPanel.__init__(self, primary)
 
         self.variables = AppVariables()
         self.pyplot_utils = PlotStyleUtils()
-        widget_list = ["pyplot_canvas", "control_panel"]
-        self.init_w_vertical_layout(widget_list)
+        self.init_w_vertical_layout()
 
         canvas_size_pixels = self.pyplot_canvas.canvas.figure.get_size_inches() * self.pyplot_canvas.canvas.figure.dpi
 

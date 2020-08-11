@@ -1,39 +1,43 @@
 import os
 import tkinter
 from tkinter import Menu
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
-from tk_builder.panel_templates.image_canvas_panel.image_canvas_panel import ImageCanvasPanel
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 
 from tk_builder.image_readers.geotiff_reader import GeotiffImageReader
+from tk_builder.widgets import widget_descriptors
 from tkinter import filedialog
-from tk_builder.example_apps.geotiff_viewer.panels.band_selection import BandSelection
+from example_apps.geotiff_viewer.panels.band_selection import BandSelection
+from example_apps.geotiff_viewer.panels.controls import Controls
+from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 
 
-class GeotiffViewer(AbstractWidgetPanel):
+class GeotiffViewer(WidgetPanel):
     """
     A geotiff viewer prototype.
     """
-
-    geotiff_image_panel = ImageCanvasPanel  # type: ImageCanvasPanel
-    band_selection_panel = BandSelection  # type: BandSelection
+    _widget_list = ("band_selection_panel", "controls_panel", "geotiff_image_panel", "zoom_image_panel")
+    geotiff_image_panel = widget_descriptors.AxesImageCanvasDescriptor("geotiff_image_panel")  # type: AxesImageCanvas
+    zoom_image_panel = widget_descriptors.AxesImageCanvasDescriptor("zoom_image_panel")  # type: AxesImageCanvas
+    band_selection_panel = widget_descriptors.PanelDescriptor("band_selection_panel", BandSelection)  # type: BandSelection
+    controls_panel = widget_descriptors.PanelDescriptor("controls_panel", Controls)  # type: Controls
     image_reader = None  # type: GeotiffImageReader
 
-    def __init__(self, master):
+    def __init__(self, primary):
         """
 
         Parameters
         ----------
-        master
-            The master widget.
+        primary
+            The primary widget.
         """
 
-        self.master = master
+        self.primary = primary
 
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
 
-        widgets_list = ["geotiff_image_panel", "band_selection_panel"]
-        self.init_w_vertical_layout(widgets_list)
+        self.init_w_horizontal_layout()
 
         self.geotiff_image_panel.set_canvas_size(800, 1080)
         self.geotiff_image_panel.canvas.set_current_tool_to_pan()
@@ -52,15 +56,18 @@ class GeotiffViewer(AbstractWidgetPanel):
         menubar.add_cascade(label="File", menu=filemenu)
         menubar.add_cascade(label="Popups", menu=popups_menu)
 
-        master.config(menu=menubar)
+        primary.config(menu=menubar)
 
-        master_frame.pack()
-        self.pack()
+        primary_frame.pack()
 
         self.band_selection_panel.red_selection.on_selection(self.callback_update_red_band)
         self.band_selection_panel.green_selection.on_selection(self.callback_update_green_band)
         self.band_selection_panel.blue_selection.on_selection(self.callback_update_blue_band)
         self.band_selection_panel.alpha_selection.on_selection(self.callback_update_alpha_band)
+
+        self.controls_panel.pan.on_left_mouse_click(self.callback_set_to_pan)
+        self.controls_panel.select.on_left_mouse_click(self.callback_set_to_select)
+        self.geotiff_image_panel.canvas.on_left_mouse_release(self.callback_select)
 
     def exit(self):
         """
@@ -93,7 +100,7 @@ class GeotiffViewer(AbstractWidgetPanel):
                                                           ("all files", "*.*"))
                                                )
         self.image_reader = GeotiffImageReader(fname)
-        self.geotiff_image_panel.canvas.set_image_reader(self.image_reader)
+        self.geotiff_image_panel.set_image_reader(self.image_reader)
         self.populate_band_selections()
 
     def populate_band_selections(self):
@@ -217,6 +224,19 @@ class GeotiffViewer(AbstractWidgetPanel):
                 self.geotiff_image_panel.canvas.variables.canvas_image_object.drop_bands.remove(band_num)
             self.image_reader.display_bands[band_num] = int(alpha_band)
         self.geotiff_image_panel.canvas.update_current_image()
+
+    def callback_set_to_pan(self, event):
+        self.geotiff_image_panel.canvas.set_current_tool_to_pan()
+
+    def callback_set_to_select(self, event):
+        self.geotiff_image_panel.canvas.set_current_tool_to_selection_tool()
+
+    def callback_select(self, event):
+        data = self.geotiff_image_panel.canvas.get_image_data_in_canvas_rect_by_id(self.geotiff_image_panel.canvas.variables.select_rect_id, decimation=1)
+        data = data[:, :, 0]
+        reader = NumpyImageReader(data)
+        self.zoom_image_panel.set_image_reader(reader)
+        self.zoom_image_panel.canvas.update_current_image()
 
 
 if __name__ == '__main__':

@@ -76,8 +76,10 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
-
-        self.event_binding('<Button-3>', callback, *args, **kwargs)
+        if platform.system() == "Darwin":
+            self.event_binding('<Button-2>', callback, *args, **kwargs)
+        else:
+            self.event_binding('<Button-3>', callback, *args, **kwargs)
 
     def on_left_mouse_double_click(self, callback, *args, **kwargs):
         """
@@ -116,8 +118,10 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
-
-        self.event_binding('<Double-Button-3>', callback, *args, **kwargs)
+        if platform.system() == "Darwin":
+            self.event_binding('<Double-Button-2>', callback, *args, **kwargs)
+        else:
+            self.event_binding('<Double-Button-3>', callback, *args, **kwargs)
 
     def on_left_mouse_press(self, callback, *args, **kwargs):
         """
@@ -156,8 +160,10 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
-
-        self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)
+        if platform.system() == "Darwin":
+            self.event_binding('<ButtonPress-2>', callback, *args, **kwargs)
+        else:
+            self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)
 
     def on_left_mouse_release(self, callback, *args, **kwargs):
         """
@@ -196,8 +202,10 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
-
-        self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)
+        if platform.system() == "Darwin":
+            self.event_binding('<ButtonRelease-2>', callback, *args, **kwargs)
+        else:
+            self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)
 
     def on_mouse_motion(self, callback, *args, **kwargs):
         """
@@ -256,8 +264,10 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
-
-        self.event_binding('<B3-Motion>', callback, *args, **kwargs)
+        if platform.system() == "Darwin":
+            self.event_binding('<B2-Motion>', callback, *args, **kwargs)
+        else:
+            self.event_binding('<B3-Motion>', callback, *args, **kwargs)
 
     def on_mouse_wheel(self, callback, *args, **kwargs):
         """
@@ -381,4 +391,7 @@ class WidgetEvents(tkinter.Misc):
         None
         """
 
-        self.event_binding('<Enter>', callback, *args, **kwargs)
+        self.event_binding('<Return>', callback, *args, **kwargs)
+
+    def on_resize(self, callback, *args, **kwargs):
+        self.event_binding("<Configure>", callback)

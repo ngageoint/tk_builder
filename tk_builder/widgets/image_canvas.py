@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+This module provides functionality for
+"""
+
 import PIL.Image
 from PIL import ImageTk
 import platform
@@ -7,6 +12,7 @@ import tkinter.colorchooser as colorchooser
 from typing import Union, Tuple, List, Dict
 
 import numpy
+from scipy.linalg import norm
 
 from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
     IntegerTupleDescriptor, StringDescriptor, TypedDescriptor, FloatDescriptor
@@ -14,78 +20,12 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.utils.color_utils import color_utils
 from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder.utils.geometry_utils import polygon_utils
 
 if platform.system() == "Linux":
     import pyscreenshot as ImageGrab
 else:
     from PIL import ImageGrab
-
-
-# TODO: what are these here for?
-    # @property
-    # def canvas_image_object(self):  # type: () -> AbstractCanvasImage
-    #     return self._canvas_image_object
-    #
-    # @canvas_image_object.setter
-    # def canvas_image_object(self, value):
-    #     if value is None:
-    #         self._canvas_image_object = None
-    #         return
-    #
-    #     if not isinstance(value, AbstractCanvasImage):
-    #         raise TypeError('Requires instance of AbstractCanvasImage, got {}'.format(type(value)))
-    #     self._canvas_image_object = value
-
-
-# class SpecificAppVariables(AppVariables):
-#     @property
-#     def canvas_image_object(self):  # type: () -> object
-#         return self._canvas_image_object
-#
-#     @canvas_image_object.setter
-#     def canvas_image_object(self, value):
-#         if value is None:
-#             self._canvas_image_object = None
-#             return
-#
-#         if not isinstance(value, object):
-#             raise TypeError('Requires instance of AbstractCanvasImage, got {}'.format(type(value)))
-#         self._canvas_image_object = value
-
-
-class ToolConstants:
-    ZOOM_IN_TOOL = "zoom in"
-    ZOOM_OUT_TOOL = "zoom out"
-    DRAW_RECT_BY_DRAGGING = "draw rect by dragging"
-    DRAW_RECT_BY_CLICKING = "draw rect by clicking"
-    DRAW_LINE_BY_DRAGGING = "draw line by dragging"
-    DRAW_LINE_BY_CLICKING = "draw line by clicking"
-    DRAW_ARROW_BY_DRAGGING = "draw arrow by dragging"
-    DRAW_ARROW_BY_CLICKING = "draw arrow by clicking"
-    DRAW_POLYGON_BY_CLICKING = "draw polygon by clicking"
-    DRAW_POINT_BY_CLICKING = "draw point by clicking"
-    SELECT_TOOL = "select tool"
-    SELECT_CLOSEST_SHAPE_TOOL = "select closest shape"
-    PAN_TOOL = "pan tool"
-    TRANSLATE_SHAPE_TOOL = "translate shape tool"
-    EDIT_SHAPE_COORDS_TOOL = "edit shape coords tool"
-    EDIT_SHAPE_TOOL = "edit shape tool"
-
-
-class ShapePropertyConstants:
-    SHAPE_TYPE = "shape type"
-    CANVAS_COORDS = "canvas coords"
-    IMAGE_COORDS = "image coords"
-    POINT_SIZE = "point size"
-    COLOR = "color"
-
-
-class ShapeTypeConstants:
-    POINT = "point"
-    LINE = "line"
-    RECT = "rect"
-    ARROW = "arrow"
-    POLYGON = "polygon"
 
 
 class CanvasImage(object):
@@ -156,7 +96,6 @@ class CanvasImage(object):
         y_end = full_image_rect[2]
         x_start = full_image_rect[1]
         x_end = full_image_rect[3]
-
         decimated_data = self.image_reader[y_start:y_end:decimation, x_start:x_end:decimation]
         return decimated_data
 
@@ -428,8 +367,8 @@ class CanvasImage(object):
         out = []
         for i in range(siz):
             out.extend(
-                (canvas_coords[2*i]*decimation_factor + self.canvas_full_image_upper_left_yx[1],
-                canvas_coords[2*i+1]*decimation_factor + self.canvas_full_image_upper_left_yx[0]))
+                (canvas_coords[2*i+1]*decimation_factor + self.canvas_full_image_upper_left_yx[0],
+                 canvas_coords[2 * i] * decimation_factor + self.canvas_full_image_upper_left_yx[1]))
         return out
 
     def canvas_rect_to_full_image_rect(self, canvas_rect):
@@ -480,9 +419,24 @@ class CanvasImage(object):
         out = []
         for i in range(siz):
             out.extend(
-                (float(full_image_yx[2*i+1] - self.canvas_full_image_upper_left_yx[1])/decimation_factor,
-                float(full_image_yx[2*i] - self.canvas_full_image_upper_left_yx[0])/decimation_factor))
+                (float(full_image_yx[2*i+1] - self.canvas_full_image_upper_left_yx[1]) / decimation_factor,
+                 float(full_image_yx[2 * i] - self.canvas_full_image_upper_left_yx[0]) / decimation_factor))
         return out
+
+
+class VectorObject(object):
+    def __init__(self, vector_type,
+                 tkinter_options,
+                 image_drag_limits=None):
+        self.type = vector_type
+        self.tkinter_options = tkinter_options
+        self.image_coords = None
+        self.point_size = None
+        self.image_drag_limits = image_drag_limits
+        if vector_type == SHAPE_TYPES.RECT or vector_type == SHAPE_TYPES.POLYGON:
+            self.color = tkinter_options['outline']
+        elif vector_type == SHAPE_TYPES.LINE or vector_type == SHAPE_TYPES.ARROW:
+            self.color = tkinter_options['fill']
 
 
 class AppVariables(object):
@@ -605,10 +559,47 @@ class AppVariables(object):
     def __init__(self):
 
         self.shape_ids = []  # type: [int]
+        self.vector_objects = {}  # type: {VectorObject}
         self.shape_properties = {}
-        self.shape_drag_xy_limits = {}  # type: dict
+        self.shape_drag_image_coord_limits = {}  # type: dict
         self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
         self.tmp_points = None  # type: [int]
+
+
+class ToolConstants:
+    ZOOM_IN_TOOL = "zoom in"
+    ZOOM_OUT_TOOL = "zoom out"
+    DRAW_RECT_BY_DRAGGING = "draw rect by dragging"
+    DRAW_RECT_BY_CLICKING = "draw rect by clicking"
+    DRAW_LINE_BY_DRAGGING = "draw line by dragging"
+    DRAW_LINE_BY_CLICKING = "draw line by clicking"
+    DRAW_ARROW_BY_DRAGGING = "draw arrow by dragging"
+    DRAW_ARROW_BY_CLICKING = "draw arrow by clicking"
+    DRAW_POLYGON_BY_CLICKING = "draw polygon by clicking"
+    DRAW_POINT_BY_CLICKING = "draw point by clicking"
+    SELECT_TOOL = "select tool"
+    SELECT_CLOSEST_SHAPE_TOOL = "select closest shape"
+    PAN_TOOL = "pan tool"
+    TRANSLATE_SHAPE_TOOL = "translate shape tool"
+    EDIT_SHAPE_COORDS_TOOL = "edit shape coords tool"
+    EDIT_SHAPE_TOOL = "edit shape tool"
+
+
+class ShapePropertyConstants:
+    SHAPE_TYPE = "shape type"
+    CANVAS_COORDS = "canvas coords"
+    IMAGE_COORDS = "image coords"
+    POINT_SIZE = "point size"
+    COLOR = "color"
+
+
+class ShapeTypeConstants:
+    POINT = "point"
+    LINE = "line"
+    RECT = "rect"
+    ARROW = "arrow"
+    POLYGON = "polygon"
+    TEXT = "text"
 
 
 SHAPE_PROPERTIES = ShapePropertyConstants()
@@ -617,16 +608,22 @@ TOOLS = ToolConstants()
 
 
 class ImageCanvas(basic_widgets.Canvas):
-    def __init__(self, master):
+    def __init__(self, primary):
         """
 
         Parameters
         ----------
-        master
-            The master widget.
+        primary
+            The primary widget.
         """
+        osplat = platform.system()
+        if osplat == "Windows":
+            import ctypes
+            user32 = ctypes.windll.user32
+            user32.SetProcessDPIAware()
 
-        basic_widgets.Canvas.__init__(self, master)
+        basic_widgets.Canvas.__init__(self, primary, highlightthickness=0)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
 
         self.variables = AppVariables()
 
@@ -648,8 +645,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.active_tool = None
         self.variables.current_shape_id = None
 
-
-    def set_image_reader(self, image_reader):
+    def _set_image_reader(self, image_reader):
         """
         Set the image reader.
 
@@ -668,6 +664,19 @@ class ImageCanvas(basic_widgets.Canvas):
             self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         else:
             self.set_image_from_numpy_array(self.variables.canvas_image_object.canvas_decimated_image)
+
+    def get_vector_object(self, vector_id):
+        """
+
+        Parameters
+        ----------
+        vector_id : int
+
+        Returns
+        -------
+        VectorObject
+        """
+        return self.variables.vector_objects[str(vector_id)]
 
     def get_canvas_line_length(self, line_id):
         """
@@ -705,21 +714,6 @@ class ImageCanvas(basic_widgets.Canvas):
 
         canvas_line_length = self.get_canvas_line_length(line_id)
         return canvas_line_length * self.variables.canvas_image_object.decimation_factor
-
-    def get_shape_type(self, shape_id):
-        """
-        Gets the shape type.
-
-        Parameters
-        ----------
-        shape_id : int
-
-        Returns
-        -------
-        str
-        """
-
-        return self._get_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE)
 
     def hide_shape(self, shape_id):
         """
@@ -881,7 +875,6 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.pan_anchor_point_xy = event.x, event.y
             self.variables.tmp_anchor_point = event.x, event.y
         elif self.variables.active_tool == TOOLS.TRANSLATE_SHAPE_TOOL:
-            self.variables.translate_anchor_point_xy = event.x, event.y
             self.variables.tmp_anchor_point = event.x, event.y
         elif self.variables.active_tool == TOOLS.EDIT_SHAPE_COORDS_TOOL:
             closest_coord_index = self.find_closest_shape_coord(self.variables.current_shape_id, event.x, event.y)
@@ -895,7 +888,6 @@ class ImageCanvas(basic_widgets.Canvas):
             start_y = self.canvasy(event.y)
 
             self.variables.current_shape_canvas_anchor_point_xy = (start_x, start_y)
-
             if self.variables.current_shape_id not in self.variables.shape_ids:
                 coords = (start_x, start_y, start_x + 1, start_y + 1)
                 if self.variables.active_tool == TOOLS.DRAW_LINE_BY_DRAGGING:
@@ -922,7 +914,8 @@ class ImageCanvas(basic_widgets.Canvas):
                     print("no tool selected")
             else:
                 if self.variables.current_shape_id in self.variables.shape_ids:
-                    if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.POINT:
+                    vector_object = self.get_vector_object(self.variables.current_shape_id)
+                    if vector_object.type == SHAPE_TYPES.POINT:
                         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id,
                                                                        (start_x, start_y))
                     elif self.variables.active_tool == TOOLS.DRAW_LINE_BY_CLICKING:
@@ -989,7 +982,8 @@ class ImageCanvas(basic_widgets.Canvas):
             elif self.variables.active_tool == TOOLS.DRAW_RECT_BY_CLICKING:
                 self.event_drag_line(event)
         elif self.variables.current_tool == TOOLS.EDIT_SHAPE_TOOL:
-            if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.RECT:
+            vector_object = self.get_vector_object(self.variables.current_shape_id)
+            if vector_object.type == SHAPE_TYPES.RECT:
                 select_x1, select_y1, select_x2, select_y2 = self.get_shape_canvas_coords(
                     self.variables.current_shape_id)
                 select_xul = min(select_x1, select_x2)
@@ -1020,6 +1014,58 @@ class ImageCanvas(basic_widgets.Canvas):
                 else:
                     self.config(cursor="arrow")
                     self.variables.active_tool = None
+            elif vector_object.type == SHAPE_TYPES.LINE or vector_object.type == SHAPE_TYPES.ARROW:
+                canvas_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+                x_coords = canvas_coords[0::2]
+                y_coords = canvas_coords[1::2]
+                distance_to_vertex = numpy.sqrt(numpy.square(event.x - x_coords[0]) +
+                                                numpy.square(event.y - y_coords[0]))
+                p2 = numpy.asarray((x_coords[1], y_coords[1]))
+                p1 = numpy.asarray((x_coords[0], y_coords[0]))
+                p3 = numpy.asarray((event.x, event.y))
+                distance_to_line = norm(numpy.cross(p2 - p1, p1 - p3)) / norm(p2 - p1)
+                for xy in zip(x_coords, y_coords):
+                    vertex_distance = numpy.sqrt(numpy.square(event.x - xy[0]) + numpy.square(event.y - xy[1]))
+                    if vertex_distance < distance_to_vertex:
+                        distance_to_vertex = vertex_distance
+
+                if distance_to_vertex < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="target")
+                    self.variables.active_tool = TOOLS.EDIT_SHAPE_COORDS_TOOL
+                elif distance_to_line < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="fleur")
+                    self.variables.active_tool = TOOLS.TRANSLATE_SHAPE_TOOL
+                else:
+                    self.config(cursor="arrow")
+                    self.variables.active_tool = None
+            elif vector_object.type == SHAPE_TYPES.LINE or vector_object.type == SHAPE_TYPES.POLYGON:
+                canvas_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+                x_coords = canvas_coords[0::2]
+                y_coords = canvas_coords[1::2]
+                xy_points = [xy for xy in zip(x_coords, y_coords)]
+                distance_to_vertex = numpy.sqrt(numpy.square(event.x - x_coords[0]) +
+                                                numpy.square(event.y - y_coords[0]))
+                for xy in zip(x_coords, y_coords):
+                    vertex_distance = numpy.sqrt(numpy.square(event.x - xy[0]) + numpy.square(event.y - xy[1]))
+                    if vertex_distance < distance_to_vertex:
+                        distance_to_vertex = vertex_distance
+
+                if distance_to_vertex < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="target")
+                    self.variables.active_tool = TOOLS.EDIT_SHAPE_COORDS_TOOL
+                elif polygon_utils.point_inside_polygon(event.x, event.y, xy_points):
+                    self.config(cursor="fleur")
+                    self.variables.active_tool = TOOLS.TRANSLATE_SHAPE_TOOL
+                else:
+                    self.config(cursor="arrow")
+                    self.variables.active_tool = None
+            elif vector_object.type == SHAPE_TYPES.POINT:
+                canvas_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+                distance_to_point = numpy.sqrt(numpy.square(event.x - canvas_coords[0]) +
+                                               numpy.square(event.y - canvas_coords[1]))
+                if distance_to_point < self.variables.vertex_selector_pixel_threshold:
+                    self.config(cursor="fleur")
+                    self.variables.active_tool = TOOLS.TRANSLATE_SHAPE_TOOL
 
     def callback_handle_left_mouse_motion(self, event):
         """
@@ -1034,6 +1080,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        vector_object = self.get_vector_object(self.variables.current_shape_id)
         if self.variables.active_tool == TOOLS.PAN_TOOL:
             x_dist = event.x - self.variables.tmp_anchor_point[0]
             y_dist = event.y - self.variables.tmp_anchor_point[1]
@@ -1043,29 +1090,28 @@ class ImageCanvas(basic_widgets.Canvas):
             x_dist = event.x - self.variables.tmp_anchor_point[0]
             y_dist = event.y - self.variables.tmp_anchor_point[1]
             t_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
-            new_x1 = min(t_coords[0] + x_dist, t_coords[2] + x_dist)
-            new_x2 = max(t_coords[0] + x_dist, t_coords[2] + x_dist)
-            new_y1 = min(t_coords[1] + y_dist, t_coords[3] + y_dist)
-            new_y2 = max(t_coords[1] + y_dist, t_coords[3] + y_dist)
-            width = new_x2 - new_x1
-            height = new_y2 - new_y1
-
-            if str(self.variables.current_shape_id) in self.variables.shape_drag_xy_limits.keys():
-                drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = self.variables.shape_drag_xy_limits[str(self.variables.current_shape_id)]
-                if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.RECT:
-                    if new_x1 < drag_x_lim_1:
-                        new_x1 = drag_x_lim_1
-                        new_x2 = new_x1 + width
-                    if new_x2 > drag_x_lim_2:
-                        new_x2 = drag_x_lim_2
-                        new_x1 = new_x2 - width
-                    if new_y1 < drag_y_lim_1:
-                        new_y1 = drag_y_lim_1
-                        new_y2 = new_y1 + height
-                    if new_y2 > drag_y_lim_2:
-                        new_y2 = drag_y_lim_2
-                        new_y1 = new_y2 - height
-            self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, (new_x1, new_y1, new_x2, new_y2), update_pixel_coords=True)
+            new_coords = numpy.asarray(t_coords) + x_dist
+            new_coords_y = numpy.asarray(t_coords) + y_dist
+            new_coords[1::2] = new_coords_y[1::2]
+            if vector_object.image_drag_limits:
+                canvas_limits = self.image_coords_to_canvas_coords(vector_object.image_drag_limits)
+                x_vertices = new_coords[0::2]
+                y_vertices = new_coords[1::2]
+                within_x_limits = True
+                within_y_limits = True
+                for x_vertex in x_vertices:
+                    if canvas_limits[2] < x_vertex or x_vertex < canvas_limits[0]:
+                        within_x_limits = False
+                for y_vertex in y_vertices:
+                    if y_vertex < canvas_limits[1] or y_vertex > canvas_limits[3]:
+                        within_y_limits = False
+                if not within_x_limits:
+                    new_coords[0::2] = t_coords[0::2]
+                if not within_y_limits:
+                    new_coords[1::2] = t_coords[1::2]
+            self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id,
+                                                           new_coords,
+                                                           update_pixel_coords=True)
             self.variables.tmp_anchor_point = event.x, event.y
         elif self.variables.active_tool == TOOLS.EDIT_SHAPE_COORDS_TOOL:
             previous_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
@@ -1074,8 +1120,9 @@ class ImageCanvas(basic_widgets.Canvas):
             new_coords = list(previous_coords)
             new_coords[coord_x_index] = event.x
             new_coords[coord_y_index] = event.y
-            if str(self.variables.current_shape_id) in self.variables.shape_drag_xy_limits.keys():
-                drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = self.variables.shape_drag_xy_limits[str(self.variables.current_shape_id)]
+            if vector_object.image_drag_limits:
+                drag_x_lim_1, drag_y_lim_1, drag_x_lim_2, drag_y_lim_2 = \
+                    self.image_coords_to_canvas_coords(vector_object.image_drag_limits)
                 if new_coords[coord_x_index] < drag_x_lim_1:
                     new_coords[coord_x_index] = drag_x_lim_1
                 if new_coords[coord_x_index] > drag_x_lim_2:
@@ -1114,7 +1161,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        original_color = self._get_shape_property(shape_id, SHAPE_PROPERTIES.COLOR)
+        original_color = self.get_vector_object(shape_id).color
         colors = color_utils.get_full_hex_palette(self.variables.highlight_color_palette, self.variables.highlight_n_colors_cycle)
         for color in colors:
             self.change_shape_color(shape_id, color)
@@ -1186,6 +1233,9 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.variables.canvas_width = width_npix
         self.variables.canvas_height = height_npix
+        if self.variables.canvas_image_object is not None:
+            self.variables.canvas_image_object.canvas_nx = width_npix
+            self.variables.canvas_image_object.canvas_ny = height_npix
         self.config(width=width_npix, height=height_npix)
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
@@ -1202,18 +1252,17 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        if self.get_shape_type(shape_id) == SHAPE_TYPES.POINT:
-            point_size = self._get_shape_property(shape_id, SHAPE_PROPERTIES.POINT_SIZE)
+        vector_object = self.get_vector_object(shape_id)
+        if vector_object.type == SHAPE_TYPES.POINT:
+            point_size = vector_object.point_size
             x1, y1 = (new_coords[0] - point_size), (new_coords[1] - point_size)
             x2, y2 = (new_coords[0] + point_size), (new_coords[1] + point_size)
             canvas_drawing_coords = (x1, y1, x2, y2)
         else:
             canvas_drawing_coords = tuple(new_coords)
         self.coords(shape_id, canvas_drawing_coords)
-        self.set_shape_canvas_coords(shape_id, new_coords)
         if update_pixel_coords:
-            self.set_shape_pixel_coords_from_canvas_coords(shape_id)
+            self.set_shape_pixel_coords_from_canvas_coords(shape_id, new_coords)
 
     def modify_existing_shape_using_image_coords(self, shape_id, image_coords):
         """
@@ -1230,7 +1279,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.set_shape_pixel_coords(shape_id, image_coords)
-        canvas_coords = self.image_coords_to_canvas_coords(shape_id)
+        canvas_coords = self.image_coords_to_canvas_coords(image_coords)
         self.modify_existing_shape_using_canvas_coords(shape_id, canvas_coords, update_pixel_coords=False)
 
     def event_drag_multipoint_line(self, event):
@@ -1252,8 +1301,8 @@ class ImageCanvas(basic_widgets.Canvas):
             event_y_pos = self.canvasy(event.y)
             coords = self.coords(self.variables.current_shape_id)
             new_coords = list(coords[0:-2]) + [event_x_pos, event_y_pos]
-            if self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.ARROW or \
-                    self.get_shape_type(self.variables.current_shape_id) == SHAPE_TYPES.LINE:
+            vector_object = self.get_vector_object(self.variables.current_shape_id)
+            if vector_object.type == SHAPE_TYPES.ARROW or vector_object.type == SHAPE_TYPES.LINE:
                 self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         else:
             pass
@@ -1272,9 +1321,21 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         if self.variables.current_shape_id:
-            self.show_shape(self.variables.current_shape_id)
             event_x_pos = self.canvasx(event.x)
             event_y_pos = self.canvasy(event.y)
+            drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+            if drag_lims:
+                canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+                if event_x_pos < canvas_lims[0]:
+                    event_x_pos = canvas_lims[0]
+                elif event_x_pos > canvas_lims[2]:
+                    event_x_pos = canvas_lims[2]
+                if event_y_pos < canvas_lims[1]:
+                    event_y_pos = canvas_lims[1]
+                elif event_y_pos > canvas_lims[3]:
+                    event_y_pos = canvas_lims[3]
+
+            self.show_shape(self.variables.current_shape_id)
             coords = self.coords(self.variables.current_shape_id)
             new_coords = list(coords[0:-2]) + [event_x_pos, event_y_pos]
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
@@ -1298,26 +1359,22 @@ class ImageCanvas(basic_widgets.Canvas):
             self.show_shape(self.variables.current_shape_id)
             event_x_pos = self.canvasx(event.x)
             event_y_pos = self.canvasy(event.y)
+            if self.get_vector_object(self.variables.current_shape_id).image_drag_limits:
+                drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+                canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+                if event_x_pos < canvas_lims[0]:
+                    event_x_pos = canvas_lims[0]
+                elif event_x_pos > canvas_lims[2]:
+                    event_x_pos = canvas_lims[2]
+                if event_y_pos < canvas_lims[1]:
+                    event_y_pos = canvas_lims[1]
+                elif event_y_pos > canvas_lims[3]:
+                    event_y_pos = canvas_lims[3]
             self.modify_existing_shape_using_canvas_coords(
                 self.variables.current_shape_id,
                 (self.variables.current_shape_canvas_anchor_point_xy[0],
                  self.variables.current_shape_canvas_anchor_point_xy[1],
                  event_x_pos, event_y_pos))
-
-    def event_drag_rect(self, event):
-        """
-        Drag a rectangle callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.event_drag_line(event)  # identical actions for line.
 
     def event_click_line(self, event):
         """
@@ -1331,13 +1388,25 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
+        event_x_pos = self.canvasx(event.x)
+        event_y_pos = self.canvasy(event.y)
+        if self.get_vector_object(self.variables.current_shape_id).image_drag_limits:
+            drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+            canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+            if event_x_pos < canvas_lims[0]:
+                event_x_pos = canvas_lims[0]
+            elif event_x_pos > canvas_lims[2]:
+                event_x_pos = canvas_lims[2]
+            if event_y_pos < canvas_lims[1]:
+                event_y_pos = canvas_lims[1]
+            elif event_y_pos > canvas_lims[3]:
+                event_y_pos = canvas_lims[3]
         if self.variables.actively_drawing_shape:
             old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
-            new_coords = tuple(list(old_coords) + [event.x, event.y])
+            new_coords = tuple(list(old_coords) + [event_x_pos, event_y_pos])
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         else:
-            new_coords = (event.x, event.y, event.x+1, event.y+1)
+            new_coords = (event_x_pos, event_y_pos, event_x_pos + 1, event_y_pos + 1)
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
             self.variables.actively_drawing_shape = True
 
@@ -1355,6 +1424,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.shape_ids.remove(shape_id)
+        del self.variables.vector_objects[str(shape_id)]
         self.delete(shape_id)
         if shape_id == self.variables.current_shape_id:
             self.variables.current_shape_id = None
@@ -1372,23 +1442,48 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        event_x_pos = self.canvasx(event.x)
+        event_y_pos = self.canvasy(event.y)
+        drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+        if drag_lims:
+            canvas_lims = self.image_coords_to_canvas_coords(drag_lims)
+            if event_x_pos < canvas_lims[0]:
+                event_x_pos = canvas_lims[0]
+            elif event_x_pos > canvas_lims[2]:
+                event_x_pos = canvas_lims[2]
+            if event_y_pos < canvas_lims[1]:
+                event_y_pos = canvas_lims[1]
+            elif event_y_pos > canvas_lims[3]:
+                event_y_pos = canvas_lims[3]
+
         if self.variables.actively_drawing_shape:
             old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
-            new_coords = list(old_coords) + [event.x, event.y]
+            new_coords = list(old_coords) + [event_x_pos, event_y_pos]
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
         # re-initialize shape if we're not actively drawing
         else:
-            new_coords = (event.x, event.y, event.x+1, event.y+1)
+            new_coords = (event.x, event.y, event_x_pos+1, event_y_pos+1)
             self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
             self.variables.actively_drawing_shape = True
 
-    def create_new_rect(self, coords, **options):
+    def create_new_text(self, *args, **kw):
+        """Create text with coordinates x1,y1."""
+        shape_id = self._create('text', args, kw)
+        self.variables.shape_ids.append(shape_id)
+        canvas_coords = args[0]
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.TEXT, None)
+        self.variables.shape_ids.append(shape_id)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id, canvas_coords)
+        self.variables.current_shape_id = shape_id
+        return shape_id
+
+    def create_new_rect(self, canvas_coords, **options):
         """
         Create a new rectangle.
 
         Parameters
         ----------
-        coords : Tuple|List
+        canvas_coords : Tuple|List
         options
             Optional Keyword arguments.
 
@@ -1401,13 +1496,10 @@ class ImageCanvas(basic_widgets.Canvas):
             options['outline'] = self.variables.foreground_color
         if 'width' not in options:
             options['width'] = self.variables.rect_border_width
-        shape_id = self.create_rectangle(*coords, **options)
-
+        shape_id = self.create_rectangle(*canvas_coords, **options)
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.RECT, options)
         self.variables.shape_ids.append(shape_id)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.RECT)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['outline'])
-        self.set_shape_canvas_coords(shape_id, coords)
-        self.set_shape_pixel_coords_from_canvas_coords(shape_id)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id, canvas_coords)
         self.variables.current_shape_id = shape_id
         return shape_id
 
@@ -1434,12 +1526,9 @@ class ImageCanvas(basic_widgets.Canvas):
             options['fill'] = ''
 
         shape_id = self.create_polygon(*coords, **options)
-
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.POLYGON, options)
         self.variables.shape_ids.append(shape_id)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.POLYGON)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['outline'])
-        self.set_shape_canvas_coords(shape_id, coords)
-        self.set_shape_pixel_coords_from_canvas_coords(shape_id)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id, coords)
         self.variables.current_shape_id = shape_id
         return shape_id
 
@@ -1458,20 +1547,17 @@ class ImageCanvas(basic_widgets.Canvas):
         int
         """
 
-        if 'outline' not in options:
-            options['outline'] = self.variables.foreground_color
+        if 'fill' not in options:
+            options['fill'] = self.variables.foreground_color
         if 'width' not in options:
             options['width'] = self.variables.line_width
         if 'arrow' not in options:
             options['arrow'] = tkinter.LAST
 
         shape_id = self.create_line(*coords, **options)
-
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.ARROW, options)
         self.variables.shape_ids.append(shape_id)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.ARROW)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['outline'])
-        self.set_shape_canvas_coords(shape_id, coords)
-        self.set_shape_pixel_coords_from_canvas_coords(shape_id)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id, coords)
         self.variables.current_shape_id = shape_id
         return shape_id
 
@@ -1496,12 +1582,9 @@ class ImageCanvas(basic_widgets.Canvas):
             options['width'] = self.variables.line_width
 
         shape_id = self.create_line(*coords, **options)
-
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.LINE, options)
         self.variables.shape_ids.append(shape_id)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.LINE)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['fill'])
-        self.set_shape_canvas_coords(shape_id, coords)
-        self.set_shape_pixel_coords_from_canvas_coords(shape_id)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id, coords)
         self.variables.current_shape_id = shape_id
         return shape_id
 
@@ -1526,13 +1609,10 @@ class ImageCanvas(basic_widgets.Canvas):
         x1, y1 = (coords[0] - self.variables.point_size), (coords[1] - self.variables.point_size)
         x2, y2 = (coords[0] + self.variables.point_size), (coords[1] + self.variables.point_size)
         shape_id = self.create_oval(x1, y1, x2, y2, **options)
-
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.POINT, options)
+        self.variables.vector_objects[str(shape_id)].point_size = self.variables.point_size
         self.variables.shape_ids.append(shape_id)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.POINT_SIZE, self.variables.point_size)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.SHAPE_TYPE, SHAPE_TYPES.POINT)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, options['fill'])
-        self.set_shape_canvas_coords(shape_id, coords)
-        self.set_shape_pixel_coords_from_canvas_coords(shape_id)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id, coords)
         self.variables.current_shape_id = shape_id
         return shape_id
 
@@ -1549,33 +1629,16 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        shape_type = self.get_shape_type(shape_id)
-        if shape_type == SHAPE_TYPES.RECT:
+        vector_object = self.get_vector_object(shape_id)
+        shape_type = vector_object.type
+        if shape_type == SHAPE_TYPES.RECT or shape_type == SHAPE_TYPES.POLYGON:
             self.itemconfig(shape_id, outline=color)
-        elif shape_type == SHAPE_TYPES.POLYGON:
-            self.itemconfig(shape_id, outline=color)
+            vector_object.tkinter_options['outline'] = color
         else:
             self.itemconfig(shape_id, fill=color)
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.COLOR, color)
+            vector_object.tkinter_options['fill'] = color
 
-    def set_shape_canvas_coords(self, shape_id, coords):
-        """
-        Sets the shape canvas coordinates.
-
-        Parameters
-        ----------
-        shape_id : int
-        coords : Tuple|List
-
-        Returns
-        -------
-        None
-        """
-
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.CANVAS_COORDS, coords)
-
-    def set_shape_pixel_coords_from_canvas_coords(self, shape_id):
+    def set_shape_pixel_coords_from_canvas_coords(self, shape_id, coords):
         """
         Sets the shape pixel coordinates from the canvas coordinates.
 
@@ -1588,11 +1651,9 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if self.variables.canvas_image_object is None:
-            self._set_shape_property(shape_id, SHAPE_PROPERTIES.IMAGE_COORDS, None)
-        else:
-            image_coords = self.canvas_shape_coords_to_image_coords(shape_id)
-            self._set_shape_property(shape_id, SHAPE_PROPERTIES.IMAGE_COORDS, image_coords)
+        if self.variables.canvas_image_object:
+            image_coords = self.canvas_coords_to_image_coords(coords)
+            self.set_shape_pixel_coords(shape_id, image_coords)
 
     def set_shape_pixel_coords(self, shape_id, image_coords):
         """
@@ -1608,22 +1669,22 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self._set_shape_property(shape_id, SHAPE_PROPERTIES.IMAGE_COORDS, image_coords)
+        vector_object = self.get_vector_object(shape_id)
+        vector_object.image_coords = image_coords
 
-    def canvas_shape_coords_to_image_coords(self, shape_id):
+    def canvas_coords_to_image_coords(self, canvas_coords):
         """
         Converts the canvas coordinates to image coordinates.
 
         Parameters
         ----------
-        shape_id : int
+        canvas_coords : tuple
 
         Returns
         -------
-        None
+        tuple
         """
 
-        canvas_coords = self.get_shape_canvas_coords(shape_id)
         return self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_coords)
 
     def get_shape_canvas_coords(self, shape_id):
@@ -1639,7 +1700,7 @@ class ImageCanvas(basic_widgets.Canvas):
         Tuple
         """
 
-        return self._get_shape_property(shape_id, SHAPE_PROPERTIES.CANVAS_COORDS)
+        return self.image_coords_to_canvas_coords(self.get_vector_object(shape_id).image_coords)
 
     def get_shape_image_coords(self, shape_id):
         """
@@ -1654,9 +1715,9 @@ class ImageCanvas(basic_widgets.Canvas):
         Tuple
         """
 
-        return self._get_shape_property(shape_id, SHAPE_PROPERTIES.IMAGE_COORDS)
+        return self.get_vector_object(shape_id).image_coords
 
-    def image_coords_to_canvas_coords(self, shape_id):
+    def shape_image_coords_to_canvas_coords(self, shape_id):
         """
         Converts the image coordinates to the shapoe coordinates.
 
@@ -1670,6 +1731,21 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.get_shape_image_coords(shape_id)
+        return self.variables.canvas_image_object.full_image_yx_to_canvas_coords(image_coords)
+
+    def image_coords_to_canvas_coords(self, image_coords):
+        """
+        Converts the image coordinates to the shapoe coordinates.
+
+        Parameters
+        ----------
+        image_coords : tuple
+
+        Returns
+        -------
+        Tuple
+        """
+
         return self.variables.canvas_image_object.full_image_yx_to_canvas_coords(image_coords)
 
     def get_image_data_in_canvas_rect_by_id(self, rect_id, decimation=None):
@@ -1697,13 +1773,14 @@ class ImageCanvas(basic_widgets.Canvas):
         if decimation is None:
             decimation = self.variables.canvas_image_object.\
                 get_decimation_factor_from_full_image_rect(tmp_image_coords)
+        tmp_image_coords = (int(tmp_image_coords[0]), int(tmp_image_coords[1]), int(tmp_image_coords[2]), int(tmp_image_coords[3]))
         image_data_in_rect = self.variables.canvas_image_object.\
             get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
         return image_data_in_rect
 
     def zoom_to_selection(self, canvas_rect, animate=False):
         """
-        Zoom to the selection.
+        Zoom to the selection using canvas coordinates.
 
         Parameters
         ----------
@@ -1718,9 +1795,23 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.the_canvas_is_currently_zooming = True
         # fill up empty canvas space due to inconsistent ratios between the canvas rect and the canvas dimensions
         image_coords = self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_rect)
+        self.zoom_to_full_image_selection(image_coords, animate=animate)
 
-        zoomed_image_height = image_coords[2] - image_coords[0]
-        zoomed_image_width = image_coords[3] - image_coords[1]
+    def zoom_to_full_image_selection(self, image_rect, animate=False):
+        """
+        Zoom to the selection using image coordinates.
+
+        Parameters
+        ----------
+        image_rect_rect : Tuple|List
+        animate : bool
+
+        Returns
+        -------
+        None
+        """
+        zoomed_image_height = image_rect[2] - image_rect[0]
+        zoomed_image_width = image_rect[3] - image_rect[1]
 
         canvas_height_width_ratio = self.variables.canvas_height / self.variables.canvas_width
         zoomed_image_height_width_ratio = zoomed_image_height / zoomed_image_width
@@ -1729,38 +1820,40 @@ class ImageCanvas(basic_widgets.Canvas):
         new_image_height = zoomed_image_width * canvas_height_width_ratio
 
         if zoomed_image_height_width_ratio > canvas_height_width_ratio:
-            image_zoom_point_center = (image_coords[3] + image_coords[1]) / 2
-            image_coords[1] = image_zoom_point_center - new_image_width/2
-            image_coords[3] = image_zoom_point_center + new_image_width/2
+            image_zoom_point_center = (image_rect[3] + image_rect[1]) / 2
+            image_rect[1] = image_zoom_point_center - new_image_width / 2
+            image_rect[3] = image_zoom_point_center + new_image_width / 2
         else:
-            image_zoom_point_center = (image_coords[2] + image_coords[0]) / 2
-            image_coords[0] = image_zoom_point_center - new_image_height / 2
-            image_coords[2] = image_zoom_point_center + new_image_height / 2
+            image_zoom_point_center = (image_rect[2] + image_rect[0]) / 2
+            image_rect[0] = image_zoom_point_center - new_image_height / 2
+            image_rect[2] = image_zoom_point_center + new_image_height / 2
 
         # keep the rect within the image bounds
-        image_y_ul = max(image_coords[0], 0)
-        image_x_ul = max(image_coords[1], 0)
-        image_y_br = min(image_coords[2], self.variables.canvas_image_object.image_reader.full_image_ny)
-        image_x_br = min(image_coords[3], self.variables.canvas_image_object.image_reader.full_image_nx)
+        image_y_ul = max(image_rect[0], 0)
+        image_x_ul = max(image_rect[1], 0)
+        image_y_br = min(image_rect[2], self.variables.canvas_image_object.image_reader.full_image_ny)
+        image_x_br = min(image_rect[3], self.variables.canvas_image_object.image_reader.full_image_nx)
 
         # re-adjust if we ran off one of the edges
         if image_x_ul == 0:
-            image_coords[3] = new_image_width
+            image_rect[3] = new_image_width
         if image_x_br == self.variables.canvas_image_object.image_reader.full_image_nx:
-            image_coords[1] = self.variables.canvas_image_object.image_reader.full_image_nx - new_image_width
+            image_rect[1] = self.variables.canvas_image_object.image_reader.full_image_nx - new_image_width
         if image_y_ul == 0:
-            image_coords[2] = new_image_height
+            image_rect[2] = new_image_height
         if image_y_br == self.variables.canvas_image_object.image_reader.full_image_ny:
-            image_coords[0] = self.variables.canvas_image_object.image_reader.full_image_ny - new_image_height
+            image_rect[0] = self.variables.canvas_image_object.image_reader.full_image_ny - new_image_height
 
         # keep the rect within the image bounds
-        image_y_ul = max(image_coords[0], 0)
-        image_x_ul = max(image_coords[1], 0)
-        image_y_br = min(image_coords[2], self.variables.canvas_image_object.image_reader.full_image_ny)
-        image_x_br = min(image_coords[3], self.variables.canvas_image_object.image_reader.full_image_nx)
+        image_y_ul = max(image_rect[0], 0)
+        image_x_ul = max(image_rect[1], 0)
+        image_y_br = min(image_rect[2], self.variables.canvas_image_object.image_reader.full_image_ny)
+        image_x_br = min(image_rect[3], self.variables.canvas_image_object.image_reader.full_image_nx)
 
-        new_canvas_rect = self.variables.canvas_image_object.full_image_yx_to_canvas_coords((image_y_ul, image_x_ul, image_y_br, image_x_br))
-        new_canvas_rect = (int(new_canvas_rect[0]), int(new_canvas_rect[1]), int(new_canvas_rect[2]), int(new_canvas_rect[3]))
+        new_canvas_rect = self.variables.canvas_image_object.full_image_yx_to_canvas_coords(
+            (image_y_ul, image_x_ul, image_y_br, image_x_br))
+        new_canvas_rect = (
+        int(new_canvas_rect[0]), int(new_canvas_rect[1]), int(new_canvas_rect[2]), int(new_canvas_rect[3]))
 
         background_image = self.variables.canvas_image_object.display_image
         self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(new_canvas_rect)
@@ -1769,7 +1862,7 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             new_image = PIL.Image.fromarray(self.variables.canvas_image_object.canvas_decimated_image)
         if animate is True:
-            #create frame sequence
+            # create frame sequence
             n_animations = self.variables.n_zoom_animations
             background_image = background_image / 2
             background_image = numpy.asarray(background_image, dtype=numpy.uint8)
@@ -1783,10 +1876,10 @@ class ImageCanvas(basic_widgets.Canvas):
             pil_background_image = PIL.Image.fromarray(background_image)
             frame_sequence = []
             for i in range(n_animations):
-                new_x_ul = int(display_x_ul * (1 - i/(n_animations-1)))
-                new_y_ul = int(display_y_ul * (1 - i/(n_animations-1)))
-                new_size_x = int((display_x_br - display_x_ul) + x_diff * (i/(n_animations-1)))
-                new_size_y = int((display_y_br - display_y_ul) + y_diff * (i/(n_animations-1)))
+                new_x_ul = int(display_x_ul * (1 - i / (n_animations - 1)))
+                new_y_ul = int(display_y_ul * (1 - i / (n_animations - 1)))
+                new_size_x = int((display_x_br - display_x_ul) + x_diff * (i / (n_animations - 1)))
+                new_size_y = int((display_y_br - display_y_ul) + y_diff * (i / (n_animations - 1)))
                 resized_zoom_image = new_image.resize((new_size_x, new_size_y))
                 animation_image = pil_background_image.copy()
                 animation_image.paste(resized_zoom_image, (new_x_ul, new_y_ul))
@@ -1811,9 +1904,10 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         rect = (0, 0, self.variables.canvas_width, self.variables.canvas_height)
-        self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(rect)
-        self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
-        self.update()
+        if self.variables.canvas_image_object is not None:
+            self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(rect)
+            self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
+            self.update()
 
     def redraw_all_shapes(self):
         """
@@ -1825,9 +1919,9 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         for shape_id in self.variables.shape_ids:
-            pixel_coords = self._get_shape_property(shape_id, SHAPE_PROPERTIES.IMAGE_COORDS)
+            pixel_coords = self.get_vector_object(shape_id).image_coords
             if pixel_coords:
-                new_canvas_coords = self.image_coords_to_canvas_coords(shape_id)
+                new_canvas_coords = self.shape_image_coords_to_canvas_coords(shape_id)
                 self.modify_existing_shape_using_canvas_coords(shape_id, new_canvas_coords, update_pixel_coords=False)
 
     def set_current_tool_to_select_closest_shape(self):
@@ -2104,61 +2198,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.image_id = self.create_image(0, 0, anchor="nw", image=self.variables._tk_im)
         self.tag_lower(self.variables.image_id)
 
-    def _get_shape_property(self, shape_id, shape_property):
-        """
-        Fetch the shape property.
-
-        Parameters
-        ----------
-        shape_id : int
-        shape_property : str
-
-        Returns
-        -------
-
-        """
-
-        properties = self.variables.shape_properties[str(shape_id)]
-        return properties[shape_property]
-
-    def _set_shape_property(self, shape_id, shape_property, val):
-        """
-        Sets a shape property.
-
-        Parameters
-        ----------
-        shape_id : int
-        shape_property : str
-        val
-            The new value.
-
-        Returns
-        -------
-        None
-        """
-
-        if not str(shape_id) in self.variables.shape_properties.keys():
-            self.variables.shape_properties[str(shape_id)] = {}
-        self.variables.shape_properties[str(shape_id)][shape_property] = val
-
-    def _update_shape_properties(self, shape_id, properties):
-        """
-        Update shape properties from a dictionary.
-
-        Parameters
-        ----------
-        shape_id : int
-        properties : Dict[str, str]
-
-        Returns
-        -------
-        None
-        """
-
-        for key in properties.keys():
-            val = properties[key]
-            self._set_shape_property(shape_id, key, val)
-
     def _pan(self, event):
         """
         A pan event.
@@ -2182,6 +2221,7 @@ class ImageCanvas(basic_widgets.Canvas):
         image_x_ul = image_coords[1]
         image_y_br = image_coords[2]
         image_x_br = image_coords[3]
+        # TODO: fix this, it just snaps back to the original position if the x or y coords are less than zero
         if image_y_ul < 0:
             new_canvas_y_ul = 0
             new_canvas_y_br = self.variables.canvas_height
@@ -2242,11 +2282,12 @@ class ImageCanvas(basic_widgets.Canvas):
 
         # put a sleep in here in case there is a dialog covering the screen
         # before this method is called.
-        time.sleep(0.2)
+        time.sleep(0.1)
         # TODO: are we missing a PIL.Image conversion here?
         im = self.save_currently_displayed_canvas_to_numpy_array()
         im.save(output_fname)
 
+    # TODO: figure out proper offsets, the current solution is close but not perfect
     def save_currently_displayed_canvas_to_numpy_array(self):
         """
         Export the currently displayed canvas as a numpy array.
@@ -2256,9 +2297,9 @@ class ImageCanvas(basic_widgets.Canvas):
         numpy.ndarray
         """
 
-        # TODO: are we mssing a conversion to numpy?
         x_ul = self.winfo_rootx() + 1
         y_ul = self.winfo_rooty() + 1
+
         x_lr = x_ul + self.variables.canvas_width
         y_lr = y_ul + self.variables.canvas_height
         im = ImageGrab.grab()
@@ -2297,10 +2338,9 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         int
         """
-
-        shape_type = self.get_shape_type(self.variables.current_shape_id)
+        vector_object = self.get_vector_object(self.variables.current_shape_id)
         coords = self.get_shape_canvas_coords(shape_id)
-        if shape_type == SHAPE_TYPES.RECT:
+        if vector_object.type == SHAPE_TYPES.RECT:
             select_x1, select_y1, select_x2, select_y2 = coords
             select_xul = min(select_x1, select_x2)
             select_xlr = max(select_x1, select_x2)
@@ -2379,13 +2419,12 @@ class ImageCanvas(basic_widgets.Canvas):
 
     def get_non_tool_shape_ids(self):
         """
-        Gets the shape ids for the everything except the tool?
+        Gets the shape ids for the everything except shapes assigned to tools, such as the zoom and selection shapes
 
         Returns
         -------
         List
         """
-        # TODO: fix this docstring
 
         all_shape_ids = self.variables.shape_ids
         tool_shape_ids = self.get_tool_shape_ids()
@@ -2397,7 +2436,9 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-        Tuple
+        List
         """
 
-        return self.variables.zoom_rect_id, self.variables.select_rect_id
+        tool_shape_ids = [self.variables.zoom_rect_id,
+                          self.variables.select_rect_id]
+        return tool_shape_ids

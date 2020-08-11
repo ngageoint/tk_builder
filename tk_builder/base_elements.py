@@ -262,7 +262,7 @@ def _verify_int_tuple(val, default, name, instance, length=None):
     except Exception:
         raise
 
-    if _validate_tuple_length(len(temp), length, name, instance):
+    if not _validate_tuple_length(len(temp), length, name, instance):
         raise ValueError('The length of value cannot be validated appropriately')
     return tuple(temp)
 
@@ -298,7 +298,80 @@ def _verify_float_tuple(val, default, name, instance, length=None):
     except Exception:
         raise
 
-    if _validate_tuple_length(len(temp), length, name, instance):
+    if not _validate_tuple_length(len(temp), length, name, instance):
+        raise ValueError('The length of value cannot be validated appropriately')
+    return tuple(temp)
+
+
+def _verify_string_tuple(val, default, name, instance, length=None):
+    """
+    Convert and/or validate the input as a tuple of strings.
+    This will make a copy of the input.
+
+    Parameters
+    ----------
+    val
+        The prospective value.
+    default : None|tuple
+    name : str
+        The bound variable name.
+    instance
+        The instance to which the variable belongs.
+    length : None|int|tuple|list
+        See _validate_tuple_length for description.
+
+    Returns
+    -------
+    Tuple
+    """
+
+    if val is None:
+        return default
+    try:
+        temp = []
+        for entry in val:
+            temp.append(str(entry))
+    except Exception:
+        raise
+
+    if not _validate_tuple_length(len(temp), length, name, instance):
+        raise ValueError('The length of value cannot be validated appropriately')
+    return tuple(temp)
+
+
+def _verify_typed_tuple(val, default, name, instance, length=None):
+    """
+    Convert and/or validate the input as a tuple of strings.
+    This will make a copy of the input.
+
+    Parameters
+    ----------
+    val
+        The prospective value.
+    default : None|tuple
+    name : str
+        The bound variable name.
+    instance
+        The instance to which the variable belongs.
+    length : None|int|tuple|list
+        See _validate_tuple_length for description.
+
+    Returns
+    -------
+    Tuple
+    """
+
+    if val is None:
+        return default
+    # TODO: replace try except with something to check the type
+    try:
+        temp = []
+        for entry in val:
+            temp.append(entry)
+    except Exception:
+        raise
+
+    if not _validate_tuple_length(len(temp), length, name, instance):
         raise ValueError('The length of value cannot be validated appropriately')
     return tuple(temp)
 
@@ -600,6 +673,33 @@ class FloatTupleDescriptor(BasicDescriptor):
         self.data[instance] = iv
 
 
+class StringTupleDescriptor(BasicDescriptor):
+    """
+        A descriptor for a tuple of string type.
+        """
+
+    _typ_string = 'tuple:'
+
+    def __init__(self, name, length=None, default_value=None, docstring=None):
+        self._length = length
+        self._default_value = default_value
+        super(StringTupleDescriptor, self).__init__(name, docstring=docstring)
+
+    def _get_default(self, instance):
+        return self._default_value
+
+    def _docstring_suffix(self):
+        if self._default_value is not None:
+            return ' Default value is :code:`{}`.'.format(self._default_value)
+
+    def __set__(self, instance, value):
+        if super(StringTupleDescriptor, self).__set__(instance, value):
+            return
+
+        iv = _verify_string_tuple(value, self._default_value, self.name, instance, length=self._length)
+        self.data[instance] = iv
+
+
 class TypedDescriptor(BasicDescriptor):
     """
     A descriptor for a specified type.
@@ -623,4 +723,31 @@ class TypedDescriptor(BasicDescriptor):
             return
 
         iv = _verify_type(value, self._default_value, self.the_type, self.name, instance)
+        self.data[instance] = iv
+
+
+class TypedTupleDescriptor(BasicDescriptor):
+    """
+    A descriptor for a specified type.
+    """
+    _typ_string = 'tuple:'
+
+    def __init__(self, name, the_type, length=None, default_value=None, docstring=None):
+        self.the_type = the_type
+        self._length = length
+        self._default_value = default_value
+        super(TypedTupleDescriptor, self).__init__(name, docstring=docstring)
+
+    def _get_default(self, instance):
+        return self._default_value
+
+    def _docstring_suffix(self):
+        if self._default_value is not None:
+            return ' Default value is :code:`{}`.'.format(self._default_value)
+
+    def __set__(self, instance, value):
+        if super(TypedTupleDescriptor, self).__set__(instance, value):
+            return
+
+        iv = _verify_typed_tuple(value, self._default_value, self.name, instance, length=self._length)
         self.data[instance] = iv

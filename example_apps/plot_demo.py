@@ -1,36 +1,57 @@
 import tkinter
-from tk_builder.panel_templates.pyplot_panel.pyplot_panel import PyplotPanel
-from tk_builder.example_apps.plot_demo.panels.plot_demo_button_panel import ButtonPanel
-from tk_builder.panel_templates.widget_panel.widget_panel import AbstractWidgetPanel
+from tk_builder.panels.pyplot_panel import PyplotPanel
+from tk_builder.panel_builder import WidgetPanel
+from tk_builder.widgets import widget_descriptors
 import numpy as np
 
 
-class PlotDemo(AbstractWidgetPanel):
+class ButtonPanel(WidgetPanel):
     """
-    Basic plot demo gui.
+    Basic button panel.
     """
+    _widget_list = ("single_plot", "multi_plot", "animated_plot")
+    single_plot = widget_descriptors.ButtonDescriptor("single_plot")
+    multi_plot = widget_descriptors.ButtonDescriptor("multi_plot")
+    animated_plot = widget_descriptors.ButtonDescriptor("animated_plot")
 
-    button_panel = ButtonPanel          # type: ButtonPanel
-    pyplot_panel = PyplotPanel      # type: PyplotPanel
-
-    def __init__(self, master):
+    def __init__(self, parent):
         """
 
         Parameters
         ----------
-        master
-            The master widget.
+        parent
+            The parent widget.
         """
 
-        # set the master frame
-        master_frame = tkinter.Frame(master)
-        AbstractWidgetPanel.__init__(self, master_frame)
-        widget_list = ["pyplot_panel", "button_panel"]
-        self.init_w_vertical_layout(widget_list)
+        WidgetPanel.__init__(self, parent)
+        self.init_w_horizontal_layout()
 
-        # need to pack both master frame and self, since this is the main app window.
-        master_frame.pack()
-        self.pack()
+
+class PlotDemo(WidgetPanel):
+    """
+    Basic plot demo gui.
+    """
+    _widget_list = ("button_panel", "pyplot_panel")
+    button_panel = widget_descriptors.PanelDescriptor(
+        "button_panel", ButtonPanel, default_text="plot buttons")    # type: ButtonPanel
+    pyplot_panel = widget_descriptors.PyplotPanelDescriptor("pyplot_panel")      # type: PyplotPanel
+
+    def __init__(self, primary):
+        """
+
+        Parameters
+        ----------
+        primary
+            The primary widget.
+        """
+
+        # set the primary frame
+        primary_frame = tkinter.Frame(primary)
+        WidgetPanel.__init__(self, primary_frame)
+        self.init_w_vertical_layout()
+
+        # need to pack both primary frame and self, since this is the main app window.
+        primary_frame.pack()
 
         # set up event listeners
         self.button_panel.single_plot.on_left_mouse_click(self.callback_single_plot)
