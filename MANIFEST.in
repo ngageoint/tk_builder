@@ -1,0 +1,6 @@
+recursive-exclude example_apps* *
+recursive-exclude *example_apps *
+recursive-exclude *example_apps.* *
+prune example_apps*
+prune *example_apps
+prune *example_apps.*

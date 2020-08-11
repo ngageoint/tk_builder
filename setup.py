@@ -32,7 +32,7 @@ setup(name=parameters['__title__'],
       description=parameters['__summary__'],
       long_description=long_description,
       long_description_content_type='text/markdown',
-      packages=find_packages(exclude=('*tests*', )),
+      packages=find_packages(exclude=('*tests*', '*example_apps*')),
       package_data={'tk_builder': ['*.xsd']},  # Schema files for SICD standard(s)
       url=parameters['__url__'],
       author=parameters['__author__'],
