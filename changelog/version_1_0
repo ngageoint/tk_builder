@@ -1,0 +1,5 @@
+# This details the important differences introduced in tk_builder 1.0
+# NB: bump the version number in __about__.py to reflect the below.
+
+* .1 - Updates to vector drawing and dragging limits within an image
+* .0 - Updates to initializing panels.
