@@ -1080,6 +1080,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        # TODO: update this for the case where there is no current shape id
         vector_object = self.get_vector_object(self.variables.current_shape_id)
         if self.variables.active_tool == TOOLS.PAN_TOOL:
             x_dist = event.x - self.variables.tmp_anchor_point[0]

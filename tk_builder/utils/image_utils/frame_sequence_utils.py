@@ -1,5 +1,4 @@
 import PIL.Image
-from numpy import ndarray
 
 
 def save_numpy_frame_sequence_to_animated_gif(frame_sequence, fname, fps=15, loop_animation=True):
