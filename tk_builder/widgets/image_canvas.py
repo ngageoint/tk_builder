@@ -571,6 +571,7 @@ class ToolConstants:
     ZOOM_OUT_TOOL = "zoom out"
     DRAW_RECT_BY_DRAGGING = "draw rect by dragging"
     DRAW_RECT_BY_CLICKING = "draw rect by clicking"
+    DRAW_ELLIPSE_BY_DRAGGING = "draw ellipse by dragging"
     DRAW_LINE_BY_DRAGGING = "draw line by dragging"
     DRAW_LINE_BY_CLICKING = "draw line by clicking"
     DRAW_ARROW_BY_DRAGGING = "draw arrow by dragging"
@@ -597,6 +598,7 @@ class ShapeTypeConstants:
     POINT = "point"
     LINE = "line"
     RECT = "rect"
+    ELLIPSE = "ellipse"
     ARROW = "arrow"
     POLYGON = "polygon"
     TEXT = "text"
@@ -905,6 +907,8 @@ class ImageCanvas(basic_widgets.Canvas):
                 elif self.variables.active_tool == TOOLS.DRAW_RECT_BY_CLICKING:
                     self.create_new_rect(coords)
                     self.variables.actively_drawing_shape = True
+                elif self.variables.active_tool == TOOLS.DRAW_ELLIPSE_BY_DRAGGING:
+                    self.create_new_ellipse(coords)
                 elif self.variables.active_tool == TOOLS.DRAW_POINT_BY_CLICKING:
                     self.create_new_point((start_x, start_y))
                 elif self.variables.active_tool == TOOLS.DRAW_POLYGON_BY_CLICKING:
@@ -983,7 +987,7 @@ class ImageCanvas(basic_widgets.Canvas):
                 self.event_drag_line(event)
         elif self.variables.current_tool == TOOLS.EDIT_SHAPE_TOOL:
             vector_object = self.get_vector_object(self.variables.current_shape_id)
-            if vector_object.type == SHAPE_TYPES.RECT:
+            if vector_object.type == SHAPE_TYPES.RECT or vector_object.type == SHAPE_TYPES.ELLIPSE:
                 select_x1, select_y1, select_x2, select_y2 = self.get_shape_canvas_coords(
                     self.variables.current_shape_id)
                 select_xul = min(select_x1, select_x2)
@@ -1141,6 +1145,8 @@ class ImageCanvas(basic_widgets.Canvas):
         elif self.variables.active_tool == TOOLS.SELECT_TOOL:
             self.event_drag_line(event)
         elif self.variables.active_tool == TOOLS.DRAW_RECT_BY_DRAGGING:
+            self.event_drag_line(event)
+        elif self.variables.active_tool == TOOLS.DRAW_ELLIPSE_BY_DRAGGING:
             self.event_drag_line(event)
         elif self.variables.active_tool == TOOLS.DRAW_LINE_BY_DRAGGING:
             self.event_drag_line(event)
@@ -1498,6 +1504,32 @@ class ImageCanvas(basic_widgets.Canvas):
         if 'width' not in options:
             options['width'] = self.variables.rect_border_width
         shape_id = self.create_rectangle(*canvas_coords, **options)
+        self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.RECT, options)
+        self.variables.shape_ids.append(shape_id)
+        self.set_shape_pixel_coords_from_canvas_coords(shape_id, canvas_coords)
+        self.variables.current_shape_id = shape_id
+        return shape_id
+
+    def create_new_ellipse(self, canvas_coords, **options):
+        """
+        Create a new rectangle.
+
+        Parameters
+        ----------
+        canvas_coords : Tuple|List
+        options
+            Optional Keyword arguments.
+
+        Returns
+        -------
+        int
+        """
+
+        if 'outline' not in options:
+            options['outline'] = self.variables.foreground_color
+        if 'width' not in options:
+            options['width'] = self.variables.rect_border_width
+        shape_id = self.create_oval(*canvas_coords, **options)
         self.variables.vector_objects[str(shape_id)] = VectorObject(SHAPE_TYPES.RECT, options)
         self.variables.shape_ids.append(shape_id)
         self.set_shape_pixel_coords_from_canvas_coords(shape_id, canvas_coords)
@@ -1980,6 +2012,24 @@ class ImageCanvas(basic_widgets.Canvas):
         self.show_shape(rect_id)
         self.variables.active_tool = TOOLS.DRAW_RECT_BY_DRAGGING
         self.variables.current_tool = TOOLS.DRAW_RECT_BY_DRAGGING
+
+    def set_current_tool_to_draw_ellipse(self, ellipse_id=None):
+        """
+        Sets the current tool to draw rectangle.
+
+        Parameters
+        ----------
+        rect_id : int|None
+
+        Returns
+        -------
+        None
+        """
+
+        self.variables.current_shape_id = ellipse_id
+        self.show_shape(ellipse_id)
+        self.variables.active_tool = TOOLS.DRAW_ELLIPSE_BY_DRAGGING
+        self.variables.current_tool = TOOLS.DRAW_ELLIPSE_BY_DRAGGING
 
     def set_current_tool_to_draw_rect_by_clicking(self, rect_id=None):
         """
