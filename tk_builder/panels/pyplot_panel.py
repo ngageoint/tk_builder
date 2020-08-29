@@ -11,12 +11,13 @@ except ImportError:
 
 from matplotlib.collections import LineCollection
 import time
-import numpy as np
+import numpy
 
 from tk_builder.widgets import basic_widgets
 from tk_builder.panels.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets.pyplot_canvas import PyplotCanvas
 
 SCALE_Y_AXIS_PER_FRAME_TRUE = "scale y axis per frame"
 SCALE_Y_AXIS_PER_FRAME_FALSE = "don't scale y axis per frame"
@@ -59,6 +60,9 @@ class PyplotControlPanel(WidgetPanel):
 
 class AppVariables():
     def __init__(self):
+        self.title = None       # type: str
+        self.x_label = None     # type: str
+        self.y_label = None     # type: str
         self.x_axis = None  # type: np.ndarray
         self.plot_data = None  # type: np.ndarray
 
@@ -78,7 +82,7 @@ class AppVariables():
 
 
 class PyplotPanel(WidgetPanel):
-    _widget_list = ("pyplot_canvas", "control_panel")
+    _widget_list = ("pyplot_canvas", "control_panel", )
     pyplot_canvas = widget_descriptors.PyplotCanvasDescriptor("pyplot_canvas")           # type: PyplotCanvas
     control_panel = widget_descriptors.PanelDescriptor("control_panel", PyplotControlPanel)  # type: PyplotControlPanel
 
@@ -104,12 +108,29 @@ class PyplotPanel(WidgetPanel):
         # set listeners
         self.control_panel.scale.on_left_mouse_motion(self.callback_update_from_slider)
         self.control_panel.rescale_y_axis_per_frame.on_selection(self.callback_set_y_rescale)
-        self.control_panel.animate.on_left_mouse_click(self.callback_animate)
+        self.control_panel.animate.config(command=self.animate)
         self.control_panel.color_palette.on_selection(self.callback_update_plot_colors)
         self.control_panel.n_colors.on_enter_or_return_key(self.callback_update_n_colors)
-        self.control_panel.n_colors.on_left_mouse_release(self.callback_spinbox_update_n_colors)
+        self.control_panel.n_colors.config(command=self.update_n_colors)
 
-        self.hide_animation_related_controls()
+        # self.hide_animation_related_controls()
+        self.hide_control_panel()
+
+    @property
+    def title(self):
+        return self.variables.title
+
+    @title.setter
+    def title(self, val):
+        self.variables.title = val
+        self.pyplot_canvas.axes.set_title(val)
+        self.update_plot()
+
+    def hide_control_panel(self):
+        self.control_panel.pack_forget()
+
+    def show_control_panel(self):
+        self.control_panel.pack()
 
     def hide_animation_related_controls(self):
         for widget in self.variables.animation_related_controls:
@@ -125,30 +146,42 @@ class PyplotPanel(WidgetPanel):
         self.variables.y_margin = percent_0_to_100 * 0.01
 
     def set_data(self, plot_data, x_axis=None):
+        """
+
+
+        Parameters
+        ----------
+        plot_data : numpy.ndarray
+        x_axis : numpy.ndarray
+
+        Returns
+        -------
+
+        """
         x = x_axis
         n_frames = 1
         if len(plot_data.shape) == 1:
             self.hide_animation_related_controls()
             nx = len(plot_data)
-            segments = np.zeros((1, nx, 2))
+            segments = numpy.zeros((1, nx, 2))
             segments[0, :, 1] = plot_data
         elif len(plot_data.shape) == 2:
             self.hide_animation_related_controls()
             nx = len(plot_data[:, 0])
             n_overplots = len(plot_data[0])
-            segments = np.zeros((n_overplots, nx, 2))
+            segments = numpy.zeros((n_overplots, nx, 2))
             for i in range(n_overplots):
                 segments[i, :, 1] = plot_data[:, i]
         elif len(plot_data.shape) == 3:
             self.show_animation_related_controls()
-            nx = np.shape(plot_data)[0]
-            n_overplots = np.shape(plot_data)[1]
-            n_frames = np.shape(plot_data)[2]
-            segments = np.zeros((n_overplots, nx, 2))
+            nx = numpy.shape(plot_data)[0]
+            n_overplots = numpy.shape(plot_data)[1]
+            n_frames = numpy.shape(plot_data)[2]
+            segments = numpy.zeros((n_overplots, nx, 2))
             for i in range(n_overplots):
                 segments[i, :, 1] = plot_data[:, i, 0]
         if x is None:
-            x = np.arange(nx)
+            x = numpy.arange(nx)
         segments[:, :, 0] = x
 
         self.variables.xmin = x.min()
@@ -170,9 +203,9 @@ class PyplotPanel(WidgetPanel):
             self.update_plot_animation(0)
 
         else:
-            self.pyplot_canvas.ax.clear()
-            self.pyplot_canvas.ax.plot(self.variables.plot_data)
-            self.pyplot_canvas.ax.set_ylim(self.variables.ymin, self.variables.ymax)
+            self.pyplot_canvas.axes.clear()
+            self.pyplot_canvas.axes.plot(self.variables.plot_data)
+            self.pyplot_canvas.axes.set_ylim(self.variables.ymin, self.variables.ymax)
             self.pyplot_canvas.canvas.draw()
 
     def update_plot_animation(self, animation_index):
@@ -184,7 +217,7 @@ class PyplotPanel(WidgetPanel):
         self.variables.animation_index = animation_index
 
     def callback_update_from_slider(self, event):
-        self.variables.animation_index = int(np.round(self.control_panel.scale.get()))
+        self.variables.animation_index = int(numpy.round(self.control_panel.scale.get()))
         self.update_plot()
 
     # define custom callbacks here
@@ -199,25 +232,23 @@ class PyplotPanel(WidgetPanel):
             self.variables.ymax = self.variables.plot_data.max() + y_range * self.variables.y_margin
         self.update_plot()
 
-    def animate(self, start_frame, stop_frame, fps):
-        time_between_frames = 1/fps
+    def animate(self):
+        start_frame = 0
+        stop_frame = self.variables.n_frames
+        fps = float(self.control_panel.fps_entry.get())
+
+        time_between_frames = 1 / fps
 
         for i in range(start_frame, stop_frame):
             tic = time.time()
             self.update_animation_index(i)
             self.update_plot()
             toc = time.time()
-            time_to_update_plot = toc-tic
+            time_to_update_plot = toc - tic
             if time_between_frames > time_to_update_plot:
                 time.sleep(time_between_frames - time_to_update_plot)
             else:
                 pass
-
-    def callback_animate(self, event):
-        start_frame = 0
-        stop_frame = self.variables.n_frames
-        fps = float(self.control_panel.fps_entry.get())
-        self.animate(start_frame, stop_frame, fps)
 
     def callback_update_plot_colors(self, event):
         color_palette_text = self.control_panel.color_palette.get()
@@ -229,20 +260,24 @@ class PyplotPanel(WidgetPanel):
         self.pyplot_utils.set_n_colors(n_colors)
         self.update_plot()
 
-    def callback_spinbox_update_n_colors(self, event):
-        self.after(100, self.update_plot())
+    def update_n_colors(self):
+        n_colors = int(self.control_panel.n_colors.get())
+        self.pyplot_utils.set_n_colors(n_colors)
+        self.update_plot()
 
     def update_plot(self):
-        # time.sleep(1)
-        if self.variables.plot_data is not None:
-            n_overplots = np.shape(self.variables.segments)[0]
+        if len(self.variables.plot_data.shape) < 3:
+            self.pyplot_canvas.canvas.draw()
+        elif self.variables.plot_data is not None:
+            n_overplots = numpy.shape(self.variables.segments)[0]
             animation_index = int(self.control_panel.scale.get())
+
             for i in range(n_overplots):
                 self.variables.segments[i, :, 1] = self.variables.plot_data[:, i, animation_index]
 
-            self.pyplot_canvas.ax.clear()
+            self.pyplot_canvas.axes.clear()
 
-            self.pyplot_canvas.ax.set_xlim(self.variables.xmin, self.variables.xmax)
+            self.pyplot_canvas.axes.set_xlim(self.variables.xmin, self.variables.xmax)
             line_segments = LineCollection(self.variables.segments,
                                            self.pyplot_utils.linewidths,
                                            linestyle=self.pyplot_utils.linestyle)
@@ -252,9 +287,9 @@ class PyplotPanel(WidgetPanel):
                 y_range = plot_data.max() - plot_data.min()
                 self.variables.ymin = plot_data.min() - y_range * self.variables.y_margin
                 self.variables.ymax = plot_data.max() + y_range * self.variables.y_margin
-            self.pyplot_canvas.ax.set_ylim(self.variables.ymin, self.variables.ymax)
+            self.pyplot_canvas.axes.set_ylim(self.variables.ymin, self.variables.ymax)
 
-            self.pyplot_canvas.ax.add_collection(line_segments)
+            self.pyplot_canvas.axes.add_collection(line_segments)
             self.pyplot_canvas.canvas.draw()
         else:
             pass

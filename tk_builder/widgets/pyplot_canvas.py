@@ -1,4 +1,3 @@
-import tkinter
 import logging
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -8,14 +7,22 @@ except ImportError:
                   'backend support enabled. No functionality for the pyplot panel '
                   'will be functional.')
     FigureCanvasTkAgg = None
-from matplotlib.figure import Figure
+
+import matplotlib.pyplot as plt
+import tkinter
 
 
-class PyplotCanvas(tkinter.LabelFrame):
-    def __init__(self, primary):
-        tkinter.LabelFrame.__init__(self, primary)
-        fig = Figure()
-        self.ax = fig.add_subplot(111)
+class PyplotCanvas(tkinter.Frame):
+    def __init__(self, parent, canvas_width=600, canvas_height=400):
+        tkinter.Frame.__init__(self, parent)
 
-        self.canvas = FigureCanvasTkAgg(fig, primary)
+        self.plt = plt
+        # default dpi is 100, so npix will be 100 times the numbers passed to figsize
+        self.fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
+        plt.plot(0)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(fill='both')
+
+    @property
+    def axes(self):
+        return self.fig.axes[0]

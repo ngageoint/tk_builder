@@ -2,6 +2,7 @@ import tkinter
 from tk_builder.panels.pyplot_panel import PyplotPanel
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
+from tk_builder.widgets import basic_widgets
 import numpy as np
 
 
@@ -10,9 +11,9 @@ class ButtonPanel(WidgetPanel):
     Basic button panel.
     """
     _widget_list = ("single_plot", "multi_plot", "animated_plot")
-    single_plot = widget_descriptors.ButtonDescriptor("single_plot")
-    multi_plot = widget_descriptors.ButtonDescriptor("multi_plot")
-    animated_plot = widget_descriptors.ButtonDescriptor("animated_plot")
+    single_plot = widget_descriptors.ButtonDescriptor("single_plot")  # type: basic_widgets.Button
+    multi_plot = widget_descriptors.ButtonDescriptor("multi_plot")  # type: basic_widgets.Button
+    animated_plot = widget_descriptors.ButtonDescriptor("animated_plot")  # type: basic_widgets.Button
 
     def __init__(self, parent):
         """
@@ -54,14 +55,18 @@ class PlotDemo(WidgetPanel):
         primary_frame.pack()
 
         # set up event listeners
-        self.button_panel.single_plot.on_left_mouse_click(self.callback_single_plot)
-        self.button_panel.multi_plot.on_left_mouse_click(self.callback_multi_plot)
-        self.button_panel.animated_plot.on_left_mouse_click(self.callback_animated_plot)
+        self.button_panel.single_plot.config(command=self.single_plot)
+        self.button_panel.multi_plot.config(command=self.multi_plot)
+        self.button_panel.animated_plot.config(command=self.animated_plot)
 
         self.pyplot_panel.set_y_margin_percent(5)
         self.pyplot_panel.variables.set_y_margins_per_frame = True
 
-    def callback_single_plot(self, event):
+        self.single_plot()
+
+        self.pyplot_panel.show_control_panel()
+
+    def single_plot(self):
         """
         A single plot callback.
 
@@ -76,8 +81,9 @@ class PlotDemo(WidgetPanel):
 
         plot_data = self.mockup_animation_data_1()
         self.pyplot_panel.set_data(plot_data)
+        self.pyplot_panel.title = "single plot"
 
-    def callback_multi_plot(self, event):
+    def multi_plot(self):
         """
         A multiplot callback.
 
@@ -99,7 +105,7 @@ class PlotDemo(WidgetPanel):
         print("and " + str(n_overplots) + " overplots")
         self.pyplot_panel.set_data(plot_data)
 
-    def callback_animated_plot(self, event):
+    def animated_plot(self):
         """
         Animated callback plot.
 
