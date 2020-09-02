@@ -126,6 +126,26 @@ class PyplotPanel(WidgetPanel):
         self.pyplot_canvas.axes.set_title(val)
         self.update_plot()
 
+    @property
+    def y_label(self):
+        return self.variables.y_label
+
+    @y_label.setter
+    def y_label(self, val):
+        self.variables.y_label = val
+        self.pyplot_canvas.axes.set_ylabel(val)
+        self.update_plot()
+
+    @property
+    def x_label(self):
+        return self.variables.y_label
+
+    @x_label.setter
+    def x_label(self, val):
+        self.variables.x_label = val
+        self.pyplot_canvas.axes.set_xlabel(val)
+        self.update_plot()
+
     def hide_control_panel(self):
         self.control_panel.pack_forget()
 

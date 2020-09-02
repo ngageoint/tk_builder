@@ -8,8 +8,9 @@ except ImportError:
                   'will be functional.')
     FigureCanvasTkAgg = None
 
-import matplotlib.pyplot as plt
 import tkinter
+
+import matplotlib.pyplot as plt
 
 
 class PyplotCanvas(tkinter.Frame):
@@ -22,6 +23,7 @@ class PyplotCanvas(tkinter.Frame):
         plt.plot(0)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(fill='both')
+        toolbar = self.canvas.toolbar
 
     @property
     def axes(self):
