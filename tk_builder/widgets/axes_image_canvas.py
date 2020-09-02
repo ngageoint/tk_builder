@@ -4,7 +4,7 @@ from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.image_canvas import AppVariables as CanvasAppVariables
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 import numpy
-from tk_builder.base_elements import IntegerDescriptor, StringDescriptor, BooleanDescriptor
+from tk_builder.base_elements import IntegerDescriptor, StringDescriptor, FloatDescriptor
 
 
 class AppVariables(CanvasAppVariables):
@@ -15,10 +15,10 @@ class AppVariables(CanvasAppVariables):
     title = StringDescriptor('title', default_value="", docstring='')  # type: str
     x_label = StringDescriptor('x_label', default_value="", docstring='')  # type: str
     y_label = StringDescriptor('y_label', default_value="", docstring='')  # type: str
-    image_x_start = IntegerDescriptor('image_x_start', default_value=None)  # type: int
-    image_x_end = IntegerDescriptor('image_x_end', default_value=None)  # type: int
-    image_y_start = IntegerDescriptor('image_y_start', default_value=None)  # type: int
-    image_y_end = IntegerDescriptor('image_y_end', default_value=None)  # type: int
+    image_x_start = FloatDescriptor('image_x_start', default_value=None)  # type: int
+    image_x_end = FloatDescriptor('image_x_end', default_value=None)  # type: int
+    image_y_start = FloatDescriptor('image_y_start', default_value=None)  # type: int
+    image_y_end = FloatDescriptor('image_y_end', default_value=None)  # type: int
     top_margin = IntegerDescriptor('top_margin', default_value=0)  # type: int
     bottom_margin = IntegerDescriptor('bottom_margin', default_value=0)  # type: int
     left_margin = IntegerDescriptor('left_margin', default_value=0)  # type: int
@@ -40,9 +40,9 @@ class AxesImageCanvas(ImageCanvas):
         inner_canvas_width = int(self.variables.canvas_width / 2)
         self.canvas.set_canvas_size(inner_canvas_width, inner_canvas_height)
         canvas_image = numpy.zeros((self.variables.canvas_height,
-                                    self.variables.canvas_width), dtype=int)
+                                    self.variables.canvas_width), dtype=numpy.uint8)
         background_image = numpy.ones((self.variables.canvas_height,
-                                       self.variables.canvas_width), dtype=int) * 255
+                                       self.variables.canvas_width), dtype=numpy.uint8) * 255
         background_reader = NumpyImageReader(background_image)
         canvas_reader = NumpyImageReader(canvas_image)
         self.canvas._set_image_reader(canvas_reader)
@@ -190,7 +190,7 @@ class AxesImageCanvas(ImageCanvas):
         for x in x_axis_positions:
             tick_positions.append((x, bottom_pixel_index))
 
-        if self.variables.image_x_start and self.variables.image_x_end:
+        if self.variables.image_x_start is not None and self.variables.image_x_end is not None:
             m = (self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
             b = self.variables.image_x_start
 
