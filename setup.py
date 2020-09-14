@@ -20,7 +20,7 @@ with open(os.path.join(here, 'tk_builder', '__about__.py'), 'r') as f:
     exec(f.read(), parameters)
 
 
-install_requires = ['numpy>=1.9.0', 'matplotlib', 'pillow']
+install_requires = ['numpy>=1.9.0', 'matplotlib', 'pillow', 'pyscreenshot']
 tests_require = []
 if sys.version_info[0] < 3:
     # unittest2 only for Python2.7, we rely on subTest usage
