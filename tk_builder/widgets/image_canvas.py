@@ -3,6 +3,7 @@
 This module provides functionality for
 """
 
+import io
 import PIL.Image
 from PIL import ImageTk
 import platform
@@ -21,11 +22,6 @@ from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.utils.color_utils import color_utils
 from tk_builder.image_readers.image_reader import ImageReader
 from tk_builder.utils.geometry_utils import polygon_utils
-
-if platform.system() == "Linux":
-    import pyscreenshot as ImageGrab
-else:
-    from PIL import ImageGrab
 
 
 class CanvasImage(object):
@@ -2331,14 +2327,10 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        # put a sleep in here in case there is a dialog covering the screen
-        # before this method is called.
-        time.sleep(0.1)
-        # TODO: are we missing a PIL.Image conversion here?
-        im = self.save_currently_displayed_canvas_to_numpy_array()
-        im.save(output_fname)
+        image_data = self.save_currently_displayed_canvas_to_numpy_array()
+        pil_image = PIL.Image.fromarray(image_data)
+        pil_image.save(output_fname)
 
-    # TODO: figure out proper offsets, the current solution is close but not perfect
     def save_currently_displayed_canvas_to_numpy_array(self):
         """
         Export the currently displayed canvas as a numpy array.
@@ -2348,14 +2340,14 @@ class ImageCanvas(basic_widgets.Canvas):
         numpy.ndarray
         """
 
-        x_ul = self.winfo_rootx() + 1
-        y_ul = self.winfo_rooty() + 1
-
-        x_lr = x_ul + self.variables.canvas_width
-        y_lr = y_ul + self.variables.canvas_height
-        im = ImageGrab.grab()
-        im = im.crop((x_ul, y_ul, x_lr, y_lr))
-        return im
+        ps = self.postscript(colormode='color')
+        img = PIL.Image.open(io.BytesIO(ps.encode('utf-8')))
+        scale = 4
+        img.load(scale=scale)
+        new_width = self.winfo_width()
+        new_height = self.winfo_height()
+        resized = img.resize((new_width, new_height), PIL.Image.BILINEAR)
+        return numpy.array(resized)
 
     # noinspection PyUnusedLocal
     def activate_color_selector(self, event):

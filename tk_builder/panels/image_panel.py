@@ -14,6 +14,8 @@ from tk_builder.widgets.axes_image_canvas import AppVariables as CanvasAppVariab
 from tk_builder.widgets.image_canvas import ToolConstants
 from tk_builder.base_elements import BooleanDescriptor
 
+import PIL.Image
+
 
 class AppVariables(CanvasAppVariables):
     """
@@ -90,8 +92,8 @@ class ImagePanel(WidgetPanel):
         self.toolbar.title_label.master.forget()
 
         # set up callbacks
-        self.toolbar.save_canvas.on_left_mouse_click(self.callback_save_canvas)
-        self.toolbar.save_image.on_left_mouse_click(self.callback_save_image)
+        self.toolbar.save_canvas.config(command=self.callback_save_canvas)
+        self.toolbar.save_image.config(command=self.callback_save_image)
 
         self.toolbar.left_margin.on_enter_or_return_key(self.callback_update_axes)
         self.toolbar.right_margin.on_enter_or_return_key(self.callback_update_axes)
@@ -123,17 +125,19 @@ class ImagePanel(WidgetPanel):
     def callback_set_to_pan(self, event):
         self.current_tool = ToolConstants.PAN_TOOL
 
-    def callback_save_canvas(self, event):
+    def callback_save_canvas(self):
         save_fname = asksaveasfilename()
         if "." not in os.path.basename(save_fname):
             save_fname = save_fname + ".png"
         self.axes_canvas.save_full_canvas_as_png(save_fname)
 
-    def callback_save_image(self, event):
+    def callback_save_image(self):
         save_fname = asksaveasfilename()
         if "." not in os.path.basename(save_fname):
             save_fname = save_fname + ".png"
-        self.canvas.save_full_canvas_as_png(save_fname)
+        image_data = self.canvas.variables.canvas_image_object.display_image
+        pil_image = PIL.Image.fromarray(image_data)
+        pil_image.save(save_fname)
 
     def callback_hide_show_margins(self):
         show_margins = self.toolbar.margins_checkbox.is_selected()
