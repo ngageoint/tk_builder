@@ -2252,7 +2252,7 @@ class ImageCanvas(basic_widgets.Canvas):
             vector_object = self.get_vector_object(self.variables.current_shape_id)
             shape_type = vector_object.type
             if shape_type == SHAPE_TYPES.RECT or shape_type == SHAPE_TYPES.POLYGON:
-                self.itemconfig(self.variables.current_shape_id, dash=(6, 6))
+                self.itemconfig(self.variables.current_shape_id, dash=(10, 10))
 
     def deactivate_shape_edit_mode(self):
         for shape_id in self.get_non_tool_shape_ids():
