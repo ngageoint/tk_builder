@@ -21,7 +21,6 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.utils.color_utils import color_utils
 from tk_builder.image_readers.image_reader import ImageReader
-from tk_builder.utils.geometry_utils import polygon_utils
 from sarpy.geometry.geometry_elements import Polygon
 
 
@@ -2370,6 +2369,13 @@ class ImageCanvas(basic_widgets.Canvas):
     def save_currently_displayed_canvas_to_numpy_array(self):
         """
         Export the currently displayed canvas as a numpy array.
+
+        This method exports a tkinter canvas to postscript, generates an oversampled image based on the postscript
+        output, and then rescales the oversampled image to match the dimensions of the canvas displayed on the screen.
+        This means that both image data and vector data that are displayed on an image canvas are rasterized to
+        a numpy array.
+        Tkinter accomplishes this by using ghostscript under the hood, so ghostscript must be installed as a
+        dependency to use this method.
 
         Returns
         -------

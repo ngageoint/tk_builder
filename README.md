@@ -13,6 +13,13 @@ GUI frameworks like QT, WX, or GTK. This provides a set tools for simple creatio
 user interfaces for Python based on the tkinter library. The main focus for the GUIs is assumed 
 to be on overhead imaging applications.
 
+The `ImagePanel` and `ImageCanvas` classes contain functionality to save figures to numpy arrays
+and to disk.  For many user facing applications this would be accomplished by using the `save canvas`
+button provided in an `ImagePanel`.  This features saved all image and vector data displayed within
+an image panel.  If a user wishes to save figures this way then `ghostscript` must be installed on their
+system.  This can be accomplished using Anaconda or other installation method listed below in the
+Dependencies section.
+
 Origins
 -------
 This was developed to enable simple prototyping of graphical user interfaces useful in conjunction 
@@ -21,8 +28,8 @@ The software use, modification, and distribution rights are stipulated within th
 
 Dependencies
 ------------
-The core library functionality depends only on `numpy >= 1.9.0`, `pillow`, and
-`matplotlib`, all of which can (now) be installed using conda or pip.
+The core library functionality depends only on `numpy >= 1.9.0`, `pillow`,
+`matplotlib`, `scipy` and `ghostscript`, all of which can (now) be installed using conda or pip.
 
 Python 2.7
 ----------
