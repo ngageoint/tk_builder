@@ -38,8 +38,6 @@ class GeotiffViewer(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
 
         self.init_w_horizontal_layout()
-
-        self.geotiff_image_panel.set_canvas_size(800, 1080)
         self.geotiff_image_panel.canvas.set_current_tool_to_pan()
 
         menubar = Menu()

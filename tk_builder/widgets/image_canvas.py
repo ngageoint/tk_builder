@@ -10,7 +10,7 @@ import platform
 import time
 import tkinter
 import tkinter.colorchooser as colorchooser
-from typing import Union, Tuple, List, Dict
+from typing import Union, Tuple, List
 
 import numpy
 from scipy.linalg import norm
@@ -21,6 +21,7 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.utils.color_utils import color_utils
 from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder.utils.color_utils.color_cycler import ColorCycler
 from sarpy.geometry.geometry_elements import Polygon
 
 
@@ -441,10 +442,10 @@ class AppVariables(object):
     """
 
     canvas_height = IntegerDescriptor(
-        'canvas_height', default_value=200,
+        'canvas_height', default_value=400,
         docstring='The default canvas height, in pixels.')  # type: int
     canvas_width = IntegerDescriptor(
-        'canvas_width', default_value=300,
+        'canvas_width', default_value=600,
         docstring='The default canvas width, in pixels.')  # type: int
     rect_border_width = IntegerDescriptor(
         'rect_border_width', default_value=2,
@@ -644,6 +645,8 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.variables.active_tool = None
         self.variables.current_shape_id = None
+
+        self._color_cycler = ColorCycler(n_colors=10)
 
     def _set_image_reader(self, image_reader):
         """
@@ -1160,6 +1163,13 @@ class ImageCanvas(basic_widgets.Canvas):
             elif self.variables.active_tool == TOOLS.DRAW_POINT_BY_CLICKING:
                 self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, (event.x, event.y))
 
+    @property
+    def color_cycler(self):
+        return self._color_cycler
+
+    def set_color_cycler(self, n_colors, hex_color_palette):
+        self._color_cycler = ColorCycler(n_colors, hex_color_palette)
+
     def highlight_existing_shape(self, shape_id):
         """
         Highlights an existing shape, according to provided id.
@@ -1248,6 +1258,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if self.variables.canvas_image_object is not None:
             self.variables.canvas_image_object.canvas_nx = width_npix
             self.variables.canvas_image_object.canvas_ny = height_npix
+            self.update_current_image()
         self.config(width=width_npix, height=height_npix)
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
@@ -2018,6 +2029,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if rect_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = rect_id
         self.show_shape(rect_id)
@@ -2036,6 +2049,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if ellipse_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = ellipse_id
         self.show_shape(ellipse_id)
@@ -2054,6 +2069,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if rect_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = rect_id
         self.show_shape(rect_id)
@@ -2085,6 +2102,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if line_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = line_id
         self.show_shape(line_id)
@@ -2103,6 +2122,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if line_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = line_id
         self.show_shape(line_id)
@@ -2121,6 +2142,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if arrow_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = arrow_id
         self.show_shape(arrow_id)
@@ -2139,6 +2162,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if arrow_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = arrow_id
         self.show_shape(arrow_id)
@@ -2157,6 +2182,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if polygon_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = polygon_id
         self.show_shape(polygon_id)
@@ -2175,6 +2202,8 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+        if point_id is None:
+            self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = point_id
         self.show_shape(point_id)
@@ -2251,14 +2280,20 @@ class ImageCanvas(basic_widgets.Canvas):
         if self.variables.current_shape_id is not None:
             vector_object = self.get_vector_object(self.variables.current_shape_id)
             shape_type = vector_object.type
-            if shape_type == SHAPE_TYPES.RECT or shape_type == SHAPE_TYPES.POLYGON:
+            if shape_type == SHAPE_TYPES.RECT or \
+                    shape_type == SHAPE_TYPES.POLYGON or \
+                    shape_type == SHAPE_TYPES.LINE or \
+                    shape_type == SHAPE_TYPES.ARROW:
                 self.itemconfig(self.variables.current_shape_id, dash=(10, 10))
 
     def deactivate_shape_edit_mode(self):
         for shape_id in self.get_non_tool_shape_ids():
             vector_object = self.get_vector_object(shape_id)
             shape_type = vector_object.type
-            if shape_type == SHAPE_TYPES.RECT or shape_type == SHAPE_TYPES.POLYGON:
+            if shape_type == SHAPE_TYPES.RECT or \
+                    shape_type == SHAPE_TYPES.POLYGON or \
+                    shape_type == SHAPE_TYPES.LINE or \
+                    shape_type == SHAPE_TYPES.ARROW:
                 self.itemconfig(shape_id, dash=())
 
     def _set_image_from_pil_image(self, pil_image):
@@ -2392,7 +2427,7 @@ class ImageCanvas(basic_widgets.Canvas):
         return numpy.array(resized)
 
     # noinspection PyUnusedLocal
-    def activate_color_selector(self, event):
+    def activate_color_selector(self):
         """
         The activate color selector callback function.
 

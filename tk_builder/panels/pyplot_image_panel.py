@@ -24,11 +24,14 @@ class PyplotImagePanel(tkinter.LabelFrame):
         self.image_data = np.zeros((canvas_height, canvas_width))
 
         # default dpi is 100, so npix will be 100 times the numbers passed to figsize
-        fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
+        # fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
+        fig = plt.figure()
+
         plt.imshow(self.image_data)
         self.canvas = FigureCanvasTkAgg(fig, master=self)
-        self.canvas.get_tk_widget().pack()
+        self.canvas.get_tk_widget().pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.update_image(self.image_data)
+        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
     def update_image(self, image_data):
         self.image_data = image_data

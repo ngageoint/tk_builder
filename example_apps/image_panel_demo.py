@@ -48,7 +48,6 @@ class CanvasResize(WidgetPanel):
 
         self.init_w_horizontal_layout()
 
-        self.image_panel.image_frame.set_canvas_size(800, 600)
         self.image_panel.resizeable = True
 
         image_npix_x = 1200
@@ -73,7 +72,6 @@ class CanvasResize(WidgetPanel):
         self.image_panel.axes_canvas.image_y_max_val = 2000
 
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.image_panel.canvas.set_canvas_size(800, 800)
 
         self.button_panel.draw_rect.on_left_mouse_click(self.callback_draw_rect)
         self.button_panel.draw_line.on_left_mouse_click(self.callback_draw_line)
