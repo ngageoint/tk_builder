@@ -59,11 +59,6 @@ class AxesImageCanvas(ImageCanvas):
     @top_margin_pixels.setter
     def top_margin_pixels(self, value):
         self.variables.top_margin = value
-        self.create_window(self.left_margin_pixels,
-                           self.top_margin_pixels,
-                           anchor=tkinter.NW,
-                           window=self.canvas)
-        print(self.top_margin_pixels)
 
     @property
     def left_margin_pixels(self):
@@ -72,11 +67,6 @@ class AxesImageCanvas(ImageCanvas):
     @left_margin_pixels.setter
     def left_margin_pixels(self, value):
         self.variables.left_margin = value
-        self.create_window(self.left_margin_pixels,
-                           self.top_margin_pixels,
-                           anchor=tkinter.NW,
-                           window=self.canvas)
-        print(self.left_margin_pixels)
 
     @property
     def bottom_margin_pixels(self):
@@ -101,8 +91,6 @@ class AxesImageCanvas(ImageCanvas):
     @title.setter
     def title(self, value):
         self.variables.title = value
-        if value != "" or value is not None:
-            self.top_margin_pixels = 30
 
     @property
     def x_label(self):
@@ -111,8 +99,6 @@ class AxesImageCanvas(ImageCanvas):
     @x_label.setter
     def x_label(self, value):
         self.variables.x_label = value
-        if value != "0" or value is not None:
-            self.bottom_margin_pixels = 100
 
     @property
     def y_label(self):
@@ -121,8 +107,6 @@ class AxesImageCanvas(ImageCanvas):
     @y_label.setter
     def y_label(self, value):
         self.variables.y_label = " " + value
-        if value != "0" or value is not None:
-            self.left_margin_pixels = 100
 
     @property
     def image_x_min_val(self):

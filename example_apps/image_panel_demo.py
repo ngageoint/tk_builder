@@ -1,7 +1,4 @@
-import os
 import tkinter
-from tkinter import Menu
-
 import numpy
 
 from tk_builder.panel_builder import WidgetPanel
@@ -9,17 +6,18 @@ from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants
-from tk_builder.widgets.basic_widgets import Button
+from tk_builder.widgets.basic_widgets import Button, CheckButton
 
 
 class Buttons(WidgetPanel):
-    _widget_list = ("draw_rect", "draw_line", "draw_arrow", "draw_point", "draw_polygon", "edit_shape")
+    _widget_list = ("draw_rect", "draw_line", "draw_arrow", "draw_point", "draw_polygon", "edit_shape", "resizeable")
     draw_rect = widget_descriptors.ButtonDescriptor("draw_rect", default_text="rect")  # type: Button
     draw_line = widget_descriptors.ButtonDescriptor("draw_line", default_text="line")  # type: Button
     draw_arrow = widget_descriptors.ButtonDescriptor("draw_arrow", default_text="arrow")  # type: Button
     draw_point = widget_descriptors.ButtonDescriptor("draw_point", default_text="point")  # type: Button
     draw_polygon = widget_descriptors.ButtonDescriptor("draw_polygon", default_text="polygon")  # type: Button
     edit_shape = widget_descriptors.ButtonDescriptor("edit_shape", default_text="edit")  # type: Button
+    resizeable = widget_descriptors.CheckButtonDescriptor("resizeable", default_text="resizeable")  # type: CheckButton
 
     def __init__(self, primary):
         self.primary = primary
@@ -50,16 +48,18 @@ class CanvasResize(WidgetPanel):
 
         self.image_panel.resizeable = True
 
-        image_npix_x = 1200
-        image_npix_y = 500
+        image_npix_x = 2000
+        image_npix_y = 1500
 
-        image_data = numpy.random.random((image_npix_y, image_npix_x))
-        image_data = image_data * 255
+        self.image_panel.set_max_canvas_size(image_npix_x, image_npix_y)
+
+        image_data = numpy.linspace(0, 255, image_npix_x*image_npix_y)
+        image_data = numpy.reshape(image_data, (image_npix_y, image_npix_x))
         image_reader = NumpyImageReader(image_data)
         self.image_panel.set_image_reader(image_reader)
 
-        self.drag_xlim_1 = image_npix_x * 0.25
-        self.drag_xlim_2 = image_npix_x * 0.75
+        self.drag_xlim_1 = image_npix_x * 0.1
+        self.drag_xlim_2 = image_npix_x * 0.9
         self.drag_ylim_1 = image_npix_y * 0.1
         self.drag_ylim_2 = image_npix_y * 0.9
 
@@ -79,6 +79,7 @@ class CanvasResize(WidgetPanel):
         self.button_panel.draw_point.on_left_mouse_click(self.callback_draw_point)
         self.button_panel.draw_polygon.on_left_mouse_click(self.callback_draw_polygon)
         self.button_panel.edit_shape.on_left_mouse_click(self.callback_edit_shape)
+        self.button_panel.resizeable.config(command=self.toggle_resizeable)
         self.image_panel.canvas.on_left_mouse_release(self.callback_on_left_mouse_release)
 
     def callback_draw_rect(self, event):
@@ -97,7 +98,11 @@ class CanvasResize(WidgetPanel):
         self.image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking(self.polygon_id)
 
     def callback_edit_shape(self, event):
-        self.image_panel.canvas.set_current_tool_to_edit_shape()
+        self.image_panel.canvas.set_current_tool_to_edit_shape(select_closest_first=True)
+
+    def toggle_resizeable(self):
+        value = self.button_panel.resizeable.is_selected()
+        self.image_panel.resizeable = value
 
     def callback_on_left_mouse_release(self, event):
         self.image_panel.canvas.callback_handle_left_mouse_release(event)
@@ -126,5 +131,5 @@ class CanvasResize(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = CanvasResize(root)
-    root.after(100, app.image_panel.update_everything)
+    # root.after(100, app.image_panel.update_everything)
     root.mainloop()

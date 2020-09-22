@@ -10,18 +10,9 @@ from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.widgets.image_frame import ImageFrame
 from tk_builder.widgets import widget_descriptors
-from tk_builder.widgets.axes_image_canvas import AppVariables as CanvasAppVariables
 from tk_builder.widgets.image_canvas import ToolConstants
-from tk_builder.base_elements import BooleanDescriptor
 
 import PIL.Image
-
-
-class AppVariables(CanvasAppVariables):
-    """
-    The canvas image application variables.
-    """
-    resizeable = BooleanDescriptor('resizeable', default_value=True)  # type: bool
 
 
 class Toolbar(WidgetPanel):
@@ -91,7 +82,6 @@ class ImagePanel(WidgetPanel):
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.variables = AppVariables()
         self.init_w_vertical_layout()
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
         self.toolbar.left_margin.config(width=5)
@@ -128,9 +118,44 @@ class ImagePanel(WidgetPanel):
         self.toolbar.canvas_size_checkbox.config(command=self.callback_hide_show_canvas_size_controls)
 
         self.toolbar.pack(expand=tkinter.YES, fill=tkinter.X)
+        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
         self.canvas = self.image_frame.outer_canvas.canvas
         self.axes_canvas = self.image_frame.outer_canvas
+
+        self.canvas.on_mouse_wheel(self.callback_canvas_mouse_zoom)
+        self._resizeable = False
+
+    def hide_zoom_in(self):
+        self.toolbar.zoom_in.pack_forget()
+
+    def hide_zoom_out(self):
+        self.toolbar.zoom_out.pack_forget()
+
+    def hide_pan(self):
+        self.toolbar.pan.pack_forget()
+
+    def hide_margin_controls(self):
+        self.toolbar.margins_checkbox.pack_forget()
+
+    def hide_axes_controls(self):
+        self.toolbar.axes_labels_checkbox.pack_forget()
+
+    def hide_save_canvas(self):
+        self.toolbar.save_canvas.pack_forget()
+
+    def hide_save_image(self):
+        self.toolbar.save_image.pack_forget()
+
+    def hide_canvas_size_controls(self):
+        self.toolbar.canvas_size_checkbox.pack_forget()
+
+    def show_canvas_size_controls(self):
+        self.toolbar.canvas_size_checkbox.pack()
+
+    def callback_canvas_mouse_zoom(self, event):
+        self.canvas.callback_mouse_zoom(event)
+        self.update_everything()
 
     def callback_set_to_zoom_in(self, event):
         self.current_tool = ToolConstants.ZOOM_IN_TOOL
@@ -181,15 +206,6 @@ class ImagePanel(WidgetPanel):
         self.axes_canvas.x_label = self.toolbar.x.get()
         self.axes_canvas.y_label = self.toolbar.y.get()
 
-        if self.toolbar.top_margin.get() == "0":
-            self.toolbar.top_margin.set_text(str(self.axes_canvas.top_margin_pixels))
-        if self.toolbar.bottom_margin.get() == "0":
-            self.toolbar.bottom_margin.set_text(str(self.axes_canvas.bottom_margin_pixels))
-        if self.toolbar.left_margin.get() == "0":
-            self.toolbar.left_margin.set_text(str(self.axes_canvas.left_margin_pixels))
-        if self.toolbar.right_margin.get() == "0":
-            self.toolbar.right_margin.set_text(str(self.axes_canvas.right_margin_pixels))
-
         self.axes_canvas.left_margin_pixels = int(self.toolbar.left_margin.get())
         self.axes_canvas.right_margin_pixels = int(self.toolbar.right_margin.get())
         self.axes_canvas.top_margin_pixels = int(self.toolbar.top_margin.get())
@@ -200,23 +216,35 @@ class ImagePanel(WidgetPanel):
     def callback_update_canvas_size(self, event):
         width = int(self.toolbar.canvas_width.get())
         height = int(self.toolbar.canvas_height.get())
+        self.config(width=width+20)
+        self.toolbar.config(width=width)
+        self.toolbar.pack(expand=True)
+        self.pack(expand=True)
+        self.image_frame.config(width=width, height=height)
         self.axes_canvas.set_canvas_size(width, height)
-        self.canvas.set_canvas_size(width, height)
+        self.canvas.set_canvas_size(width - self.axes_canvas.left_margin_pixels - self.axes_canvas.right_margin_pixels,
+                                    height - self.axes_canvas.top_margin_pixels - self.axes_canvas.bottom_margin_pixels)
+        self.update_everything()
 
     def set_image_reader(self, image_reader):
         self.image_frame.outer_canvas.set_image_reader(image_reader)
 
+    def do_nothing(self, event):
+        pass
+
     @property
     def resizeable(self):
-        return self.variables.resizeable
+        return self._resizeable
 
     @resizeable.setter
     def resizeable(self, value):
-        self.variables.resizeable = value
+        self._resizeable = value
         if value is False:
-            self.pack(expand=tkinter.NO)
-            self.image_frame.resizeable = False
-        if self.resizeable:
+            # self.image_frame.resizeable = False
+            self.show_canvas_size_controls()
+            self.on_resize(self.do_nothing)
+        else:
+            self.hide_canvas_size_controls()
             self.on_resize(self.callback_resize)
 
     @property
@@ -242,9 +270,6 @@ class ImagePanel(WidgetPanel):
         elif value == ToolConstants.DRAW_RECT_BY_DRAGGING:
             self.canvas.set_current_tool_to_draw_rect()
 
-    def callback_resize(self, event):
-        self.update_everything()
-
     def set_min_canvas_size(self, x, y):
         self.axes_canvas.variables.min_width = x
         self.axes_canvas.variables.min_height = y
@@ -252,6 +277,9 @@ class ImagePanel(WidgetPanel):
     def set_max_canvas_size(self, x, y):
         self.axes_canvas.variables.max_width = x
         self.axes_canvas.variables.max_height = y
+
+    def callback_resize(self, event):
+        self.update_everything()
 
     def update_everything(self):
         if self.resizeable:
@@ -308,7 +336,7 @@ class ImagePanel(WidgetPanel):
                     self.canvas.variables.canvas_image_object.display_image)
 
                 self.axes_canvas.set_canvas_size(display_image_dims[1] + self.axes_canvas.right_margin_pixels + self.axes_canvas.left_margin_pixels,
-                                                              display_image_dims[0] + self.axes_canvas.top_margin_pixels + self.axes_canvas.bottom_margin_pixels + 5)
+                                                 display_image_dims[0] + self.axes_canvas.top_margin_pixels + self.axes_canvas.bottom_margin_pixels + 5)
                 self.canvas.set_canvas_size(self.axes_canvas.variables.canvas_width -
                                                                      self.axes_canvas.left_margin_pixels -
                                                                      self.axes_canvas.right_margin_pixels,
@@ -332,5 +360,29 @@ class ImagePanel(WidgetPanel):
             self.axes_canvas._update_x_axis()
             self.axes_canvas._update_x_label()
         else:
-            pass
-            #self.canvas.update_current_image()
+            self.axes_canvas.delete("all")
+
+            self.canvas.set_canvas_size(self.axes_canvas.variables.canvas_width -
+                                        self.axes_canvas.left_margin_pixels -
+                                        self.axes_canvas.right_margin_pixels,
+                                        self.axes_canvas.variables.canvas_height -
+                                        self.axes_canvas.top_margin_pixels -
+                                        self.axes_canvas.bottom_margin_pixels)
+
+            self.canvas.update_current_image()
+
+            print("canvas height")
+            print(self.canvas.variables.canvas_height)
+
+            self.image_frame.create_window(0, 0, anchor=tkinter.NW, window=self.axes_canvas)
+            self.axes_canvas.create_window(self.axes_canvas.left_margin_pixels,
+                                           self.axes_canvas.top_margin_pixels,
+                                           anchor=tkinter.NW,
+                                           window=self.axes_canvas.canvas)
+            self.canvas.redraw_all_shapes()
+
+            self.axes_canvas._update_y_axis()
+            self.axes_canvas._update_y_label()
+            self.axes_canvas._update_title()
+            self.axes_canvas._update_x_axis()
+            self.axes_canvas._update_x_label()
