@@ -246,7 +246,7 @@ class CanvasImage(object):
 
     def update_canvas_display_image_from_canvas_rect(self, canvas_rect):
         """
-        Update the canvas to the given camvas rectangle.
+        Update the canvas to the given canvas rectangle.
 
         Parameters
         ----------
@@ -447,6 +447,18 @@ class AppVariables(object):
     canvas_width = IntegerDescriptor(
         'canvas_width', default_value=600,
         docstring='The default canvas width, in pixels.')  # type: int
+    max_height = IntegerDescriptor('max_height',
+                                   default_value=800,
+                                   docstring='The maximum canvas height, in pixels.')  # type: int
+    max_width = IntegerDescriptor('max_width',
+                                   default_value=800,
+                                   docstring='The maximum canvas height, in pixels.')  # type: int
+    min_height = IntegerDescriptor('min_height',
+                                   default_value=100,
+                                   docstring='The minimum canvas width, in pixels.')  # type: int
+    min_width = IntegerDescriptor('min_width',
+                                  default_value=100,
+                                  docstring='The minimum canvas width, in pixels.')  # type: int
     rect_border_width = IntegerDescriptor(
         'rect_border_width', default_value=2,
         docstring='The (margin) rectangular border width, in pixels.')  # type: int
@@ -647,6 +659,12 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.current_shape_id = None
 
         self._color_cycler = ColorCycler(n_colors=10)
+
+    def disable_mouse_zoom(self):
+        self.on_mouse_wheel(self.do_nothing)
+
+    def do_nothing(self, event):
+        pass
 
     def _set_image_reader(self, image_reader):
         """

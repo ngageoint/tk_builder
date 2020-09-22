@@ -246,8 +246,6 @@ class ImagePanel(WidgetPanel):
         self.update_everything()
 
     def update_everything(self):
-        self.image_frame.outer_canvas.delete("all")
-
         if self.resizeable:
             width = self.winfo_width()
             height = self.winfo_height()
@@ -274,7 +272,18 @@ class ImagePanel(WidgetPanel):
             adjusted_canvas_width = width - width_offset
             adjusted_canvas_height = height - height_offset
 
+            if adjusted_canvas_height < self.canvas.variables.min_height:
+                adjusted_canvas_height = self.canvas.variables.min_height
+            if adjusted_canvas_height > self.canvas.variables.max_height:
+                adjusted_canvas_height = self.canvas.variables.max_height
+
+            if adjusted_canvas_width < self.canvas.variables.min_width:
+                adjusted_canvas_width = self.canvas.variables.min_width
+            if adjusted_canvas_width > self.canvas.variables.max_width:
+                adjusted_canvas_width = self.canvas.variables.max_width
+
             if parent_geom_width > 1 and outer_canvas_width > 1:
+                self.image_frame.outer_canvas.delete("all")
                 self.image_frame.set_canvas_size(adjusted_canvas_width, adjusted_canvas_height)
 
                 self.axes_canvas.set_canvas_size(adjusted_canvas_width, adjusted_canvas_height)
@@ -315,4 +324,5 @@ class ImagePanel(WidgetPanel):
             self.axes_canvas._update_x_axis()
             self.axes_canvas._update_x_label()
         else:
-            self.canvas.update_current_image()
+            pass
+            #self.canvas.update_current_image()
