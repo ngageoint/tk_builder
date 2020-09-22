@@ -156,14 +156,6 @@ class AxesImageCanvas(ImageCanvas):
     def image_y_max_val(self, value):
         self.variables.image_y_end = value
 
-    def set_min_canvas_size(self, x, y):
-        self.variables.min_width = x
-        self.variables.min_height = y
-
-    def set_max_canvas_size(self, x, y):
-        self.variables.max_width = x
-        self.variables.max_height = y
-
     def _update_title(self):
         display_image = self.canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)

@@ -245,6 +245,14 @@ class ImagePanel(WidgetPanel):
     def callback_resize(self, event):
         self.update_everything()
 
+    def set_min_canvas_size(self, x, y):
+        self.axes_canvas.variables.min_width = x
+        self.axes_canvas.variables.min_height = y
+
+    def set_max_canvas_size(self, x, y):
+        self.axes_canvas.variables.max_width = x
+        self.axes_canvas.variables.max_height = y
+
     def update_everything(self):
         if self.resizeable:
             width = self.winfo_width()
@@ -272,15 +280,15 @@ class ImagePanel(WidgetPanel):
             adjusted_canvas_width = width - width_offset
             adjusted_canvas_height = height - height_offset
 
-            if adjusted_canvas_height < self.canvas.variables.min_height:
-                adjusted_canvas_height = self.canvas.variables.min_height
-            if adjusted_canvas_height > self.canvas.variables.max_height:
-                adjusted_canvas_height = self.canvas.variables.max_height
+            if adjusted_canvas_height < self.axes_canvas.variables.min_height:
+                adjusted_canvas_height = self.axes_canvas.variables.min_height
+            if adjusted_canvas_height > self.axes_canvas.variables.max_height:
+                adjusted_canvas_height = self.axes_canvas.variables.max_height
 
-            if adjusted_canvas_width < self.canvas.variables.min_width:
-                adjusted_canvas_width = self.canvas.variables.min_width
-            if adjusted_canvas_width > self.canvas.variables.max_width:
-                adjusted_canvas_width = self.canvas.variables.max_width
+            if adjusted_canvas_width < self.axes_canvas.variables.min_width:
+                adjusted_canvas_width = self.axes_canvas.variables.min_width
+            if adjusted_canvas_width > self.axes_canvas.variables.max_width:
+                adjusted_canvas_width = self.axes_canvas.variables.max_width
 
             if parent_geom_width > 1 and outer_canvas_width > 1:
                 self.image_frame.outer_canvas.delete("all")
