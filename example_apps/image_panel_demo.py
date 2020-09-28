@@ -71,6 +71,8 @@ class CanvasResize(WidgetPanel):
         self.image_panel.axes_canvas.image_y_min_val = 5000
         self.image_panel.axes_canvas.image_y_max_val = 2000
 
+        self.image_panel.set_min_canvas_size(100, 100)
+
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
         self.button_panel.draw_rect.on_left_mouse_click(self.callback_draw_rect)
