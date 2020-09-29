@@ -2,6 +2,7 @@ from tk_builder.image_readers.image_reader import ImageReader
 import numpy
 import gdal
 from PIL import Image
+from typing import Union
 
 gdal_to_numpy_data_types = {
     "Byte": numpy.uint8,
@@ -46,12 +47,30 @@ class GeotiffImageReader(ImageReader):
         self.full_image_nx = self._dset.RasterXSize
         self.n_bands = self._dset.RasterCount
         self.n_overviews = self._dset.GetRasterBand(1).GetOverviewCount()
-        self.numpy_data_type = self.get_numpy_data_type()
+        self._max_dynamic_range_clip = None  # type: Union[float, (float, float, float)]
+        self._min_dynamic_range_clip = None  # type: Union[float, (float, float, float)]
 
         if self.n_bands == 1:
             self.display_bands = [0]
 
-    def get_numpy_data_type(self):
+    @property
+    def max_dynamic_range_clip(self):
+        return self._max_dynamic_range_clip
+
+    @max_dynamic_range_clip.setter
+    def max_dynamic_range_clip(self, value):
+        self._max_dynamic_range_clip = value
+
+    @property
+    def min_dynamic_range_clip(self):
+        return self._min_dynamic_range_clip
+
+    @min_dynamic_range_clip.setter
+    def min_dynamic_range_clip(self, value):
+        self._min_dynamic_range_clip = value
+
+    @property
+    def numpy_data_type(self):
         """
         Get dataset type mapped to a numpy type.
 
@@ -101,7 +120,7 @@ class GeotiffImageReader(ImageReader):
         if self.n_overviews == 0:
             if self.all_image_data is None:
                 self.all_image_data = self.read_full_display_image_data_from_disk(self.display_bands)
-            return self.all_image_data[key]
+                image_data = self.all_image_data[key]
         else:
             full_image_step_y = key[0].step
             full_image_step_x = key[1].step
@@ -147,5 +166,5 @@ class GeotiffImageReader(ImageReader):
 
             pil_image = Image.fromarray(d)
             resized_pil_image = Image.Image.resize(pil_image, (x_resize, y_resize))
-            resized_numpy_image = numpy.array(resized_pil_image)
-            return resized_numpy_image
+            image_data = numpy.array(resized_pil_image)
+            return image_data

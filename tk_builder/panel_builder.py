@@ -166,9 +166,9 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
 
 class RadioButtonPanel(WidgetPanel):
-    _selection_dict = {}
 
     def __init__(self, parent):
+        self._selection_dict = {}
         self.parent = parent
         WidgetPanel.__init__(self, parent)
         self._selected_value = tkinter.IntVar()
@@ -206,3 +206,6 @@ class RadioButtonPanel(WidgetPanel):
     def selection(self):
         val = self._selected_value.get()
         return self._selection_dict[str(val)]
+
+    def set_selection(self, value):
+        self._selected_value.set(value)

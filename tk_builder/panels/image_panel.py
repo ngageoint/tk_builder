@@ -124,7 +124,8 @@ class ImagePanel(WidgetPanel):
         self.axes_canvas = self.image_frame.outer_canvas
 
         self.canvas.on_mouse_wheel(self.callback_canvas_mouse_zoom)
-        self._resizeable = False
+        self.set_max_canvas_size(1920, 1080)
+        self.resizeable = False
 
     def hide_zoom_in(self):
         self.toolbar.zoom_in.pack_forget()
@@ -240,7 +241,6 @@ class ImagePanel(WidgetPanel):
     def resizeable(self, value):
         self._resizeable = value
         if value is False:
-            # self.image_frame.resizeable = False
             self.show_canvas_size_controls()
             self.on_resize(self.do_nothing)
         else:
@@ -370,9 +370,6 @@ class ImagePanel(WidgetPanel):
                                         self.axes_canvas.bottom_margin_pixels)
 
             self.canvas.update_current_image()
-
-            print("canvas height")
-            print(self.canvas.variables.canvas_height)
 
             self.image_frame.create_window(0, 0, anchor=tkinter.NW, window=self.axes_canvas)
             self.axes_canvas.create_window(self.axes_canvas.left_margin_pixels,
