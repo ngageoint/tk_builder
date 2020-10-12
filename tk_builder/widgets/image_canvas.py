@@ -974,7 +974,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         if self.variables.active_tool == TOOLS.PAN_TOOL:
-            self._pan(event)
+            self._pan_finish(event)
         if self.variables.active_tool == TOOLS.ZOOM_IN_TOOL:
             rect_coords = self.coords(self.variables.zoom_rect_id)
             self.zoom_to_selection(rect_coords, self.variables.animate_zoom)
@@ -1110,14 +1110,14 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-        if self.variables.current_shape_id is not None:
+        if self.variables.active_tool == TOOLS.PAN_TOOL:
+            x_dist = event.x - self.variables.tmp_anchor_point[0]
+            y_dist = event.y - self.variables.tmp_anchor_point[1]
+            self.move(self.variables.image_id, x_dist, y_dist)
+            self.variables.tmp_anchor_point = event.x, event.y
+        elif self.variables.current_shape_id is not None:
             vector_object = self.get_vector_object(self.variables.current_shape_id)
-            if self.variables.active_tool == TOOLS.PAN_TOOL:
-                x_dist = event.x - self.variables.tmp_anchor_point[0]
-                y_dist = event.y - self.variables.tmp_anchor_point[1]
-                self.move(self.variables.image_id, x_dist, y_dist)
-                self.variables.tmp_anchor_point = event.x, event.y
-            elif self.variables.active_tool == TOOLS.TRANSLATE_SHAPE_TOOL:
+            if self.variables.active_tool == TOOLS.TRANSLATE_SHAPE_TOOL:
                 x_dist = event.x - self.variables.tmp_anchor_point[0]
                 y_dist = event.y - self.variables.tmp_anchor_point[1]
                 t_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
@@ -2333,7 +2333,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.image_id = self.create_image(0, 0, anchor="nw", image=self.variables._tk_im)
         self.tag_lower(self.variables.image_id)
 
-    def _pan(self, event):
+    def _pan_finish(self, event):
         """
         A pan event.
 

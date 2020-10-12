@@ -21,7 +21,7 @@ gdal_to_numpy_data_types = {
 
 class GeotiffImageReader(ImageReader):
     """
-    Prototype geotiff reader.
+    Prototype geotiff reader.  If the geotiff is a single channel image the "red" band will be used for display
     """
 
     fname = None
@@ -29,7 +29,7 @@ class GeotiffImageReader(ImageReader):
     full_image_ny = int
     n_bands = int
 
-    display_bands = [0, 1, 2]        # type: [int, int, int]
+    display_bands = [0, 1, 2, 3]        # type: [int, int, int, int]
     all_image_data = None           # type: numpy.ndarray
 
     _dset = None
@@ -47,9 +47,12 @@ class GeotiffImageReader(ImageReader):
         self.full_image_nx = self._dset.RasterXSize
         self.n_bands = self._dset.RasterCount
         self.n_overviews = self._dset.GetRasterBand(1).GetOverviewCount()
-        self._max_dynamic_range_clip = None  # type: Union[float, (float, float, float)]
-        self._min_dynamic_range_clip = None  # type: Union[float, (float, float, float)]
-
+        if self.n_bands == 1:
+            self._max_dynamic_range_clip = 255.0
+            self._min_dynamic_range_clip = 0.0
+        else:
+            self._max_dynamic_range_clip = (255.0, 255.0, 255.0)
+            self._min_dynamic_range_clip = (0.0, 0.0, 0.0)
         if self.n_bands == 1:
             self.display_bands = [0]
 
@@ -58,7 +61,9 @@ class GeotiffImageReader(ImageReader):
         return self._max_dynamic_range_clip
 
     @max_dynamic_range_clip.setter
-    def max_dynamic_range_clip(self, value):
+    def max_dynamic_range_clip(self,
+                               value,  # type: Union[(float, float, float), float]
+                               ):
         self._max_dynamic_range_clip = value
 
     @property
@@ -66,7 +71,9 @@ class GeotiffImageReader(ImageReader):
         return self._min_dynamic_range_clip
 
     @min_dynamic_range_clip.setter
-    def min_dynamic_range_clip(self, value):
+    def min_dynamic_range_clip(self,
+                               value,  # type: Union[(float, float, float), float]
+                               ):
         self._min_dynamic_range_clip = value
 
     @property
@@ -117,10 +124,36 @@ class GeotiffImageReader(ImageReader):
         return image_data
 
     def __getitem__(self, key):
+        if self.n_bands > 1:
+            red_band_range = self._max_dynamic_range_clip[0] - self._min_dynamic_range_clip[0]
+            green_band_range = self._max_dynamic_range_clip[1] - self._min_dynamic_range_clip[1]
+            blue_band_range = self._max_dynamic_range_clip[2] - self._min_dynamic_range_clip[2]
+        else:
+            red_band_range = self._max_dynamic_range_clip - self._min_dynamic_range_clip
         if self.n_overviews == 0:
             if self.all_image_data is None:
-                self.all_image_data = self.read_full_display_image_data_from_disk(self.display_bands)
+                self.all_image_data = self.read_full_display_image_data_from_disk(range(self.n_bands))
+
+            if self.n_bands > 1:
+                image_data = self.all_image_data[key][:, :, self.display_bands]
+                image_data = numpy.array(image_data, dtype=float)
+
+                image_data[:, :, 0] = ((image_data[:, :, 0] - self._min_dynamic_range_clip[0]) / red_band_range) * 255
+                image_data[:, :, 1] = ((image_data[:, :, 1] - self._min_dynamic_range_clip[1]) / green_band_range) * 255
+                image_data[:, :, 2] = ((image_data[:, :, 2] - self._min_dynamic_range_clip[2]) / blue_band_range) * 255
+                image_data[numpy.where(image_data < 0)] = 0
+                image_data[numpy.where(image_data > 255)] = 255
+                image_data = numpy.asarray(image_data, dtype=numpy.uint8)
+                return image_data
+            else:
                 image_data = self.all_image_data[key]
+                image_data = numpy.array(image_data, dtype=numpy.float)
+
+                image_data = ((image_data - self._min_dynamic_range_clip) / red_band_range) * 255
+                image_data[numpy.where(image_data < 0)] = 0
+                image_data[numpy.where(image_data > 255)] = 255
+                image_data = numpy.asarray(image_data, dtype=numpy.uint8)
+                return image_data
         else:
             full_image_step_y = key[0].step
             full_image_step_x = key[1].step
@@ -143,10 +176,14 @@ class GeotiffImageReader(ImageReader):
             overview_x_size = overview_stop_x - overview_start_x - 1
             overview_y_size = overview_stop_y - overview_start_y - 1
 
-            n_display_bands = len(self.display_bands)
+            n_display_bands = 3
+            if self.n_bands > 3:
+                n_display_bands = 4
+            if self.n_bands == 1:
+                n_display_bands = 1
             d = numpy.zeros((overview_y_size, overview_x_size, n_display_bands), dtype=self.numpy_data_type)
             if overview_level >= 0:
-                for i in range(n_display_bands):
+                for i in range(len(self.display_bands)):
                     d[:, :, i] = self._dset.GetRasterBand(self.display_bands[i] + 1).\
                         GetOverview(overview_level).ReadAsArray(overview_start_x,
                                                                 overview_start_y,
@@ -164,7 +201,32 @@ class GeotiffImageReader(ImageReader):
             y_resize = int(numpy.ceil((full_image_stop_y - full_image_start_y) / full_image_step_y))
             x_resize = int(numpy.ceil((full_image_stop_x - full_image_start_x) / full_image_step_x))
 
-            pil_image = Image.fromarray(d)
-            resized_pil_image = Image.Image.resize(pil_image, (x_resize, y_resize))
-            image_data = numpy.array(resized_pil_image)
-            return image_data
+            image_data = numpy.array(d, dtype=float)
+            if len(self.display_bands) == 3:
+                image_data = image_data[:, :, 0:3]
+
+            if self.n_bands > 1:
+                image_data[:, :, 0] = ((image_data[:, :, 0] - self._min_dynamic_range_clip[0]) / red_band_range) * 255
+                image_data[:, :, 1] = ((image_data[:, :, 1] - self._min_dynamic_range_clip[1]) / green_band_range) * 255
+                image_data[:, :, 2] = ((image_data[:, :, 2] - self._min_dynamic_range_clip[2]) / blue_band_range) * 255
+                image_data[numpy.where(image_data < 0)] = 0
+                image_data[numpy.where(image_data > 255)] = 255
+                image_data = numpy.asarray(image_data, dtype=numpy.uint8)
+
+                pil_image = Image.fromarray(image_data)
+                resized_pil_image = Image.Image.resize(pil_image, (x_resize, y_resize))
+                image_data = numpy.array(resized_pil_image)
+
+                return image_data
+            else:
+                image_data = ((image_data - self._min_dynamic_range_clip) / red_band_range) * 255
+                image_data[numpy.where(image_data < 0)] = 0
+                image_data[numpy.where(image_data > 255)] = 255
+                image_data = numpy.asarray(image_data, dtype=numpy.uint8)
+                image_data = numpy.squeeze(image_data)
+
+                pil_image = Image.fromarray(image_data)
+                resized_pil_image = Image.Image.resize(pil_image, (x_resize, y_resize))
+                image_data = numpy.array(resized_pil_image)
+
+                return image_data
