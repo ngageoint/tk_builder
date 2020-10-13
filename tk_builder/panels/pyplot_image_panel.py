@@ -9,11 +9,16 @@ except ImportError:
     FigureCanvasTkAgg = None
 
 import matplotlib.pyplot as plt
-import numpy as np
+import numpy
+from numpy import ndarray
 import tkinter
 
 
 class PyplotImagePanel(tkinter.LabelFrame):
+    """
+    Pyplot Image Panel class.  This essentially provides a widget that allows users to embed pyplot images into
+    an application.
+    """
     def __init__(self, parent, canvas_width=600, canvas_height=400):
         tkinter.LabelFrame.__init__(self, parent)
         self.config(highlightbackground="black")
@@ -21,7 +26,7 @@ class PyplotImagePanel(tkinter.LabelFrame):
         self.config(borderwidth=5)
 
         # this is a dummy placeholder for now
-        self.image_data = np.zeros((canvas_height, canvas_width))
+        self.image_data = numpy.zeros((canvas_height, canvas_width))
 
         # default dpi is 100, so npix will be 100 times the numbers passed to figsize
         # fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
@@ -34,6 +39,18 @@ class PyplotImagePanel(tkinter.LabelFrame):
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
     def update_image(self, image_data):
+        """
+        Updates the displayed image.  Image data should be an ndarray of dimensions: [ny, nx] for a grayscale image
+        or [ny, nx, 3] for a 3 color RGB image.
+
+        Parameters
+        ----------
+        image_data: ndarray
+
+        Returns
+        -------
+        str
+        """
         self.image_data = image_data
         plt.imshow(self.image_data)
         self.canvas.draw()

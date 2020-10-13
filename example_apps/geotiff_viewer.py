@@ -65,7 +65,8 @@ class BandSelection(WidgetPanel):
 
 class GeotiffViewer(WidgetPanel):
     """
-    A geotiff viewer prototype.
+    A geotiff viewer prototype.  This is meant to demonstrate the image panel and image canvas funcationalities
+    of tk_builder.
     """
     _widget_list = ("band_selection_panel", "geotiff_image_panel",)
     geotiff_image_panel = widget_descriptors.ImagePanelDescriptor("geotiff_image_panel")  # type: ImagePanel

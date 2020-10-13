@@ -74,6 +74,13 @@ class Toolbar(WidgetPanel):
 
 
 class ImagePanel(WidgetPanel):
+    """
+    ImagePanel class.  This class utilizes the ImageCanvas to display raster and vector data.  A toolbar is
+    provided with common tools such as pan and zoom functionality.  Mouse zoom operations using the
+    mouse wheel are enabled by default.
+    Other functionality includes axes and margins in the case the user wishes to display X/Y axes, titles, etc
+    for 2 dimensional data displays or plots.
+    """
     _widget_list = ("toolbar", "image_frame",)
     image_frame = widget_descriptors.PanelDescriptor("image_frame", ImageFrame)  # type: ImageFrame
     toolbar = widget_descriptors.PanelDescriptor("toolbar", Toolbar)  # type: Toolbar
@@ -109,9 +116,9 @@ class ImagePanel(WidgetPanel):
         self.toolbar.canvas_width.on_enter_or_return_key(self.callback_update_canvas_size)
         self.toolbar.canvas_height.on_enter_or_return_key(self.callback_update_canvas_size)
 
-        self.toolbar.zoom_in.on_left_mouse_click(self.callback_set_to_zoom_in)
-        self.toolbar.zoom_out.on_left_mouse_click(self.callback_set_to_zoom_out)
-        self.toolbar.pan.on_left_mouse_click(self.callback_set_to_pan)
+        self.toolbar.zoom_in.config(command=self.callback_set_to_zoom_in)
+        self.toolbar.zoom_out.config(command=self.callback_set_to_zoom_out)
+        self.toolbar.pan.config(command=self.callback_set_to_pan)
 
         self.toolbar.margins_checkbox.config(command=self.callback_hide_show_margins)
         self.toolbar.axes_labels_checkbox.config(command=self.callback_hide_show_axes_controls)
@@ -128,52 +135,98 @@ class ImagePanel(WidgetPanel):
         self.resizeable = False
 
     def hide_zoom_in(self):
+        """
+        Hides the zoom in button in the toolbar
+        """
         self.toolbar.zoom_in.pack_forget()
 
     def hide_zoom_out(self):
+        """
+        Hides the zoom out button in the toolbar
+        """
         self.toolbar.zoom_out.pack_forget()
 
     def hide_pan(self):
+        """
+        Hides the pan button in the toolbar
+        """
         self.toolbar.pan.pack_forget()
 
     def hide_margin_controls(self):
+        """
+        Hides the margin controls checkbox in the toolbar
+        """
         self.toolbar.margins_checkbox.pack_forget()
 
     def hide_axes_controls(self):
+        """
+        Hides the axes labels checkbox in the toolbar
+        """
         self.toolbar.axes_labels_checkbox.pack_forget()
 
     def hide_save_canvas(self):
+        """
+        Hides the save canvas button in the toolbar
+        """
         self.toolbar.save_canvas.pack_forget()
 
     def hide_save_image(self):
+        """
+        Hides the save image button in the toolbar
+        """
         self.toolbar.save_image.pack_forget()
 
     def hide_canvas_size_controls(self):
+        """
+        Hides the canvas size controls checkbox in the toolbar
+        """
         self.toolbar.canvas_size_checkbox.pack_forget()
 
     def show_canvas_size_controls(self):
+        """
+        Shows / unhides the canvas size controls checkbox in the toolbar
+        """
         self.toolbar.canvas_size_checkbox.pack()
 
     def callback_canvas_mouse_zoom(self, event):
+        """
+        Handles the canvas zoom event then updates axes
+        """
         self.canvas.callback_mouse_zoom(event)
         self.update_everything()
 
-    def callback_set_to_zoom_in(self, event):
+    def callback_set_to_zoom_in(self):
+        """
+        Sets current tool to zoom in
+        """
         self.current_tool = ToolConstants.ZOOM_IN_TOOL
 
-    def callback_set_to_zoom_out(self, event):
+    def callback_set_to_zoom_out(self):
+        """
+        Sets current tool to zoom out
+        """
         self.current_tool = ToolConstants.ZOOM_OUT_TOOL
 
-    def callback_set_to_pan(self, event):
+    def callback_set_to_pan(self):
+        """
+        Sets current tool to pan
+        """
         self.current_tool = ToolConstants.PAN_TOOL
 
     def callback_save_canvas(self):
+        """
+        Saves the image canvas as a png image.  This will save the entire canvas, including axes labels and titles.
+        """
         save_fname = asksaveasfilename()
         if "." not in os.path.basename(save_fname):
             save_fname = save_fname + ".png"
         self.axes_canvas.save_full_canvas_as_png(save_fname)
 
     def callback_save_image(self):
+        """
+        Saves the currently displayed image in the image canvas.  This will save the image only, and will not save
+        any axes, axes labels, or titles.
+        """
         save_fname = asksaveasfilename()
         if "." not in os.path.basename(save_fname):
             save_fname = save_fname + ".png"
@@ -182,6 +235,11 @@ class ImagePanel(WidgetPanel):
         pil_image.save(save_fname)
 
     def callback_hide_show_margins(self):
+        """
+        Allows the user to toggle the margins settings in the toolbar.  The margins will be shown if the
+        margins checkbox is selected in the toolbar.  If the margins checkbox is unselected the margins settings
+        will become hidden.
+        """
         show_margins = self.toolbar.margins_checkbox.is_selected()
         if show_margins is False:
             self.toolbar.left_margin_label.master.forget()
@@ -189,6 +247,11 @@ class ImagePanel(WidgetPanel):
             self.toolbar.left_margin_label.master.pack()
 
     def callback_hide_show_axes_controls(self):
+        """
+        Allows the user to toggle the axes controls settings in the toolbar.  The axes controls will be shown if
+        the axes labels checkbox is selected in the toolbar.  If the axes labels checkbox is unselected the axes
+        controls will be hidden.
+        """
         show_axes_controls = self.toolbar.axes_labels_checkbox.is_selected()
         if show_axes_controls is False:
             self.toolbar.title_label.master.forget()
@@ -196,6 +259,11 @@ class ImagePanel(WidgetPanel):
             self.toolbar.title_label.master.pack()
 
     def callback_hide_show_canvas_size_controls(self):
+        """
+        Allows the user to toggle the canvas size controls.  This option is available by default if the image panel
+        is set up to not allow dynamic resizing.  In this case, the user can set the canvas size using the
+        canvas size controls.
+        """
         show_canvas_size_controls = self.toolbar.canvas_size_checkbox.is_selected()
         if show_canvas_size_controls:
             self.toolbar.canvas_width_label.master.pack()
@@ -203,6 +271,9 @@ class ImagePanel(WidgetPanel):
             self.toolbar.canvas_width_label.master.forget()
 
     def callback_update_axes(self, event):
+        """
+        Updates all canvas titles, x axis labels, y axis labels, and margin settings
+        """
         self.axes_canvas.title = self.toolbar.title.get()
         self.axes_canvas.x_label = self.toolbar.x.get()
         self.axes_canvas.y_label = self.toolbar.y.get()
@@ -215,6 +286,10 @@ class ImagePanel(WidgetPanel):
         self.update_everything()
 
     def callback_update_canvas_size(self, event):
+        """
+        Updates the canvas size.  This is generally done explicitly by the user using the toolbar settings when
+        dynamic resizing has been disabled.
+        """
         width = int(self.toolbar.canvas_width.get())
         height = int(self.toolbar.canvas_height.get())
         self.config(width=width+20)
@@ -228,9 +303,26 @@ class ImagePanel(WidgetPanel):
         self.update_everything()
 
     def set_image_reader(self, image_reader):
+        """
+        Sets the image reader.  The image reader should be a subclass of the "ImageReader" class.
+
+        Parameters
+        ----------
+        image_reader : ImageReader
+
+        Returns
+        -------
+        None
+        """
         self.image_frame.outer_canvas.set_image_reader(image_reader)
 
     def do_nothing(self, event):
+        """
+        Does nothing.  This is used when we need to explicitly disable a callback.  For instance, when dynamic resizing
+        is enabled a callback is assigned to "on_resize".  When we want to disable dynamic resizing that callback must
+        be disabled.  Assigning the "do_nothing" callback to "on_resize" disables the resize callback, eliminating
+        a resize response when the window size changes, and allows the user to resize the image canvas manually.
+        """
         pass
 
     @property
@@ -239,6 +331,17 @@ class ImagePanel(WidgetPanel):
 
     @resizeable.setter
     def resizeable(self, value):
+        """
+        Enables or disables dynamic resizing of the image canvas.
+
+        Parameters
+        ----------
+        value : bool
+
+        Returns
+        -------
+        None
+        """
         self._resizeable = value
         if value is False:
             self.show_canvas_size_controls()
@@ -253,6 +356,18 @@ class ImagePanel(WidgetPanel):
 
     @current_tool.setter
     def current_tool(self, value):
+        """
+        Sets the image canvases current tool.  The value should be one of the strings defined in the ToolConstants
+        class in "image_canvas.py"
+
+        Parameters
+        ----------
+        value : str
+
+        Returns
+        -------
+        None
+        """
         if value is None:
             self.canvas.set_current_tool_to_none()
         elif value == ToolConstants.EDIT_SHAPE_TOOL:
@@ -271,10 +386,38 @@ class ImagePanel(WidgetPanel):
             self.canvas.set_current_tool_to_draw_rect()
 
     def set_min_canvas_size(self, x, y):
+        """
+        minimum canvas size.  When dynamic resizing is enabled the canvas will stop resizing after the minimum
+        dimensions are reached.
+
+        Parameters
+        ----------
+        x : int
+        y: int
+
+        Returns
+        -------
+        None
+        """
+
         self.axes_canvas.variables.min_width = x
         self.axes_canvas.variables.min_height = y
 
     def set_max_canvas_size(self, x, y):
+        """
+        maximum canvas size.  When dynamic resizing is enabled the canvas will stop resizing after the maximum
+        dimensions are reached.
+
+        Parameters
+        ----------
+        x : int
+        y: int
+
+        Returns
+        -------
+        None
+        """
+
         self.axes_canvas.variables.max_width = x
         self.axes_canvas.variables.max_height = y
 
@@ -282,6 +425,10 @@ class ImagePanel(WidgetPanel):
         self.update_everything()
 
     def update_everything(self):
+        """
+        Attempts to update all aspects of what is supposed to be displayed, including the image in the image canvas,
+        axes, titles, margins, etc.
+        """
         if self.resizeable:
             width = self.winfo_width()
             height = self.winfo_height()

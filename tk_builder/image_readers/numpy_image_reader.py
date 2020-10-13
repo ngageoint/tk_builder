@@ -10,6 +10,11 @@ class NumpyImageReader(ImageReader):
 
     def __init__(self, numpy_image_data):
         """
+        This is an sublass and implementation of ImageReader.  When initializing, numpy_image_data should be an
+        array of dimensions:
+        [ny, nx] - for a grayscale image
+        [ny, nx, 3] - for a 3 color RGB image
+        [ny, nx, 4] - for a 4 channel RGBA image (3 color RGB with alpha layer)
 
         Parameters
         ----------

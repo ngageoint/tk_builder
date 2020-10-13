@@ -5,6 +5,23 @@ from tk_builder.widgets import basic_widgets
 
 
 class WidgetPanel(basic_widgets.LabelFrame):
+    """
+    This is the WidgetPanel class, which is used to create panels consisting of multiple widgets that can be
+    placed and nested within applications.  When building a panel a subclass of WidgetPanel should be created.
+    When creating the subclass definition the following variable should be set:
+    _widget_list
+    which should be a tuple of strings that define the widgets that will be incorporated into the panel.
+    Next, descriptors should created that correspond to the elements within _widget_list.  The descriptor definitions
+    are located in:
+    tk_builder.widgets.widget_descriptors
+    Each descriptor should have a variable name that matches a string within _widget_list.
+    The panel will be constructed by calling one of the following methods:
+    init_w_horizontal_layout
+    init_w_vertical_layout
+    init_w_rows
+    init_w_box_layout
+    init_w_basic_widget_list
+    """
     _widget_list = ()  # the list of names of the widget element variables
     padx = 5
     pady = 5
@@ -20,13 +37,28 @@ class WidgetPanel(basic_widgets.LabelFrame):
         self.parent.withdraw()
 
     def init_w_horizontal_layout(self):
+        """
+        Creates the layout of the panel with all widgets laid out horizontally
+        """
         self.init_w_basic_widget_list(n_rows=1, n_widgets_per_row_list=[len(self._widget_list), ])
 
     def init_w_vertical_layout(self):
+        """
+        Creates the layout of the panel with all widgets laid out vertically
+        """
         self.init_w_basic_widget_list(n_rows=len(self._widget_list),
                                       n_widgets_per_row_list=[1, ] * len(self._widget_list))
 
     def init_w_rows(self):
+        """
+        Creates the layout of the panel with all widgets laid out corresponding to the structure of _widget_list.
+        In this case _widget_list would consist of nested tuples.  The outer elements would represent each row,
+        and the nested elements would represent the number of columns within each row.  For example:
+        _widget_list = (("one", "two", ), ("three", "four", "five"))
+        When initialized with init_w_rows, the layout would be two rows, the top row would consist of widgets
+        "one" and "two", laid out horizontally.  The bottom row would consist of widgets "three", "four" and "five",
+        laid out horizontally.
+        """
         flattened_list = []
         widgets_per_row = []
         for widget_list in self._widget_list:
@@ -41,6 +73,13 @@ class WidgetPanel(basic_widgets.LabelFrame):
                           column_widths=None,  # type: Union[int, list]
                           row_heights=None,  # type: Union[int, list]
                           ):
+        """
+        Create the layout of the panel with a box layout defined by a certain number of columns.  elements of
+        _widget_list are defined sequenctially, and the layout is defined across columns first.  For example
+        if _widget_list = ("one", "two", "three", "four", "five" "six"), and is initialized with init_w_box_layout,
+        The layout would be 2 columns 3 rows, the first row containing "one", "two", the second row containing
+        "three", "four", the 3rd row containing "five", "six", all laid out horizontally.
+        """
         n_total_widgets = len(self._widget_list)
         n_rows = int(np.ceil(n_total_widgets / n_columns))
         n_widgets_per_row = []
@@ -134,25 +173,44 @@ class WidgetPanel(basic_widgets.LabelFrame):
                                        expand=tkinter.YES)
 
     def unpress_all_buttons(self):
+        """
+        restores the state of all buttons in a panel to be raised.  Can be used if some buttons are configured
+        to look depressed based on some previous actions within the application.
+        """
         for widget in self._widget_list:
             if isinstance(getattr(self, widget), basic_widgets.Button):
                 getattr(self, widget).config(relief="raised")
 
     def press_all_buttons(self):
+        """
+        makes all buttons within a panel appear to be pressed.
+        """
         for widget in self._widget_list:
             if isinstance(getattr(self, widget), basic_widgets.Button):
                 getattr(self, widget).config(relief="sunken")
 
     def enable_all_buttons(self):
+        """
+        enables all buttons in a panel.  This is useful if some buttons have been disabled at some point during
+        the runtime of an application and for some action all buttons within a panel should be restored to being
+        enabled.
+        """
         for widget in self._widget_list:
             if isinstance(getattr(self, widget), basic_widgets.Button):
                 getattr(self, widget).config(state="normal")
 
     def disable_all_widgets(self):
+        """
+        disables all widgets.  This might want to be called as a first step of an application if the user is required
+        to do some things like select a file before fields should become populated or editable.
+        """
         for widget in self._widget_list:
             getattr(self, widget).configure(state="disabled")
 
     def enable_all_widgets(self):
+        """
+        enables all widgets within a panel, not just buttons
+        """
         for widget in self._widget_list:
             getattr(self, widget).config(state="normal")
 
@@ -166,6 +224,10 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
 
 class RadioButtonPanel(WidgetPanel):
+    """
+    This is a WidgetPanel specifically for building panels that contain radio buttons.  A subclass of RadioButtonPanel
+    should be created to create a custom panel of radiobuttons.
+    """
 
     def __init__(self, parent):
         self._selection_dict = {}

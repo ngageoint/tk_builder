@@ -1,4 +1,3 @@
-
 import logging
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -82,6 +81,9 @@ class AppVariables():
 
 
 class PyplotPanel(WidgetPanel):
+    """
+    Panel that displays pyplot plots and plot animations.
+    """
     _widget_list = ("pyplot_canvas", "control_panel", )
     pyplot_canvas = widget_descriptors.PyplotCanvasDescriptor("pyplot_canvas")           # type: PyplotCanvas
     control_panel = widget_descriptors.PanelDescriptor("control_panel", PyplotControlPanel)  # type: PyplotControlPanel
@@ -106,14 +108,13 @@ class PyplotPanel(WidgetPanel):
         self.control_panel.n_colors.set_text(self.pyplot_utils.n_color_bins)
 
         # set listeners
-        self.control_panel.scale.on_left_mouse_motion(self.callback_update_from_slider)
-        self.control_panel.rescale_y_axis_per_frame.on_selection(self.callback_set_y_rescale)
+        self.control_panel.scale.on_left_mouse_motion(self._callback_update_from_slider)
+        self.control_panel.rescale_y_axis_per_frame.on_selection(self._callback_set_y_rescale)
         self.control_panel.animate.config(command=self.animate)
         self.control_panel.color_palette.on_selection(self.callback_update_plot_colors)
         self.control_panel.n_colors.on_enter_or_return_key(self.callback_update_n_colors)
         self.control_panel.n_colors.config(command=self.update_n_colors)
 
-        # self.hide_animation_related_controls()
         self.hide_control_panel()
 
     @property
@@ -122,6 +123,17 @@ class PyplotPanel(WidgetPanel):
 
     @title.setter
     def title(self, val):
+        """
+        sets the plot's title
+
+        Parameters
+        ----------
+        val: str
+
+        Returns
+        -------
+        """
+
         self.variables.title = val
         self.pyplot_canvas.axes.set_title(val)
         self.update_plot()
@@ -132,6 +144,16 @@ class PyplotPanel(WidgetPanel):
 
     @y_label.setter
     def y_label(self, val):
+        """
+        sets the plot's y label
+
+        Parameters
+        ----------
+        val: str
+
+        Returns
+        -------
+        """
         self.variables.y_label = val
         self.pyplot_canvas.axes.set_ylabel(val)
         self.update_plot()
@@ -142,32 +164,64 @@ class PyplotPanel(WidgetPanel):
 
     @x_label.setter
     def x_label(self, val):
+        """
+        sets the plot's x label
+
+        Parameters
+        ----------
+        val: str
+
+        Returns
+        -------
+        """
         self.variables.x_label = val
         self.pyplot_canvas.axes.set_xlabel(val)
         self.update_plot()
 
     def hide_control_panel(self):
+        """
+        hides the control panel
+        """
         self.control_panel.pack_forget()
 
     def show_control_panel(self):
+        """
+        shows / unhides the control panel
+        """
         self.control_panel.pack()
 
     def hide_animation_related_controls(self):
+        """
+        hides all controls related to animation settings.  Used by default when non time-series data is displayed.
+        """
         for widget in self.variables.animation_related_controls:
             widget.pack_forget()
 
     def show_animation_related_controls(self):
+        """
+        shows / unhides animation related controls.  Used by default when time-series data is displayed.
+        """
         for widget in self.variables.animation_related_controls:
             widget.pack()
 
     def set_y_margin_percent(self,
                              percent_0_to_100=5          # type: float
                              ):
+        """
+        sets the y margin
+        """
         self.variables.y_margin = percent_0_to_100 * 0.01
 
     def set_data(self, plot_data, x_axis=None):
         """
 
+        sets the data to be displayed.  Data can be in following formats:
+        1d: single plot to be displayed
+        2d: several plots to be displayed as overplots.  The length of first dimension is the total length of each plot
+        The length of the second dimension is the total number of plots to be displayed
+        3d: time series of overplots.  Ex1: data of shape [100, 1, 50] would represent a single plot of length 100 with
+        50 time series steps.  Ex2: data of shape[100, 10, 50] would represent 10 overplots, each of length 100, with
+        50 times series steps.
 
         Parameters
         ----------
@@ -229,19 +283,27 @@ class PyplotPanel(WidgetPanel):
             self.pyplot_canvas.canvas.draw()
 
     def update_plot_animation(self, animation_index):
-        self.update_animation_index(animation_index)
-        self.update_plot()
+        """
+        Updates the plot based on the time series / animation index
 
-    def update_animation_index(self, animation_index):
+        Parameters
+        ----------
+        animation_index: int
+
+        Returns
+        -------
+        str
+        """
         self.control_panel.scale.set(animation_index)
         self.variables.animation_index = animation_index
+        self.update_plot()
 
-    def callback_update_from_slider(self, event):
+    def _callback_update_from_slider(self, event):
         self.variables.animation_index = int(numpy.round(self.control_panel.scale.get()))
         self.update_plot()
 
     # define custom callbacks here
-    def callback_set_y_rescale(self, event):
+    def _callback_set_y_rescale(self, event):
         selection = self.control_panel.rescale_y_axis_per_frame.get()
         if selection == SCALE_Y_AXIS_PER_FRAME_TRUE:
             self.variables.set_y_margins_per_frame = True
@@ -253,6 +315,10 @@ class PyplotPanel(WidgetPanel):
         self.update_plot()
 
     def animate(self):
+        """
+        Animates the plot based on the plot data's time series. and other inputs supplied in the control panel,
+        such as fps
+        """
         start_frame = 0
         stop_frame = self.variables.n_frames
         fps = float(self.control_panel.fps_entry.get())
@@ -261,8 +327,7 @@ class PyplotPanel(WidgetPanel):
 
         for i in range(start_frame, stop_frame):
             tic = time.time()
-            self.update_animation_index(i)
-            self.update_plot()
+            self.update_plot_animation(i)
             toc = time.time()
             time_to_update_plot = toc - tic
             if time_between_frames > time_to_update_plot:
@@ -271,21 +336,33 @@ class PyplotPanel(WidgetPanel):
                 pass
 
     def callback_update_plot_colors(self, event):
+        """
+        Updates the plot colors based on the color palette selected in the control panel
+        """
         color_palette_text = self.control_panel.color_palette.get()
         self.pyplot_utils.set_palette_by_name(color_palette_text)
         self.update_plot()
 
     def callback_update_n_colors(self, event):
+        """
+        Updates the number of colors to cycle through based on the selection in the control panel
+        """
         n_colors = int(self.control_panel.n_colors.get())
         self.pyplot_utils.set_n_colors(n_colors)
         self.update_plot()
 
     def update_n_colors(self):
+        """
+        sets number of colors to run through in the pyplot color cycler.
+        """
         n_colors = int(self.control_panel.n_colors.get())
         self.pyplot_utils.set_n_colors(n_colors)
         self.update_plot()
 
     def update_plot(self):
+        """
+        clears canvas and updates plot based on the animation index
+        """
         if len(self.variables.plot_data.shape) < 3:
             self.pyplot_canvas.canvas.draw()
         elif self.variables.plot_data is not None:

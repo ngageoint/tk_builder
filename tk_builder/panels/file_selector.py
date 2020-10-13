@@ -8,7 +8,9 @@ from tk_builder.widgets import widget_descriptors
 
 class FileSelector(WidgetPanel):
     """
-    File selector interface.
+    File selector interface.  Provides a button for for the user to press to select a filename.
+    The filename is stored in the class variable "fname".
+    A label is also provided in this GUI widget that displays the name of the selected file for reference.
     """
     _widget_list = ("select_file", "fname_label")
     select_file = widget_descriptors.ButtonDescriptor(
@@ -32,7 +34,7 @@ class FileSelector(WidgetPanel):
         self.init_w_horizontal_layout()
         self.fname_filters = [('All files', '*')]
         # in practice this would be overridden if the user wants more things to happen after selecting a file.
-        self.select_file.on_left_mouse_click(self.event_select_file)
+        self.select_file.config(command=self.select_file_command)
         self.initialdir = os.path.expanduser("~")
         self.fname_label.config(state='disabled')
 
@@ -78,6 +80,19 @@ class FileSelector(WidgetPanel):
         str
         """
 
+        self.select_file_command()
+
+    def select_file_command(self):
+        """
+        select file command
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        str
+        """
         self.fname = askopenfilename(initialdir=self.initialdir, filetypes=self.fname_filters)
         self.fname_label.set_text(self.fname)
         return self.fname
