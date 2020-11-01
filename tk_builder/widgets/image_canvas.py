@@ -1270,14 +1270,14 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        self.variables.canvas_width = width_npix
-        self.variables.canvas_height = height_npix
-        if self.variables.canvas_image_object is not None:
-            self.variables.canvas_image_object.canvas_nx = width_npix
-            self.variables.canvas_image_object.canvas_ny = height_npix
-            self.update_current_image()
-        self.config(width=width_npix, height=height_npix)
+        pass
+        # self.variables.canvas_width = width_npix
+        # self.variables.canvas_height = height_npix
+        # if self.variables.canvas_image_object is not None:
+        #     self.variables.canvas_image_object.canvas_nx = width_npix
+        #     self.variables.canvas_image_object.canvas_ny = height_npix
+        #     self.update_current_image()
+        # self.config(width=width_npix, height=height_npix)
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
         """

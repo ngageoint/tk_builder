@@ -3,8 +3,10 @@ import tkinter
 from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.image_canvas import AppVariables as CanvasAppVariables
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
+from tk_builder.utils.image_utils.create_checkerboard import create_checkerboard
 import numpy
 from tk_builder.base_elements import IntegerDescriptor, StringDescriptor, FloatDescriptor
+from PIL import Image
 
 
 class AppVariables(CanvasAppVariables):
@@ -25,6 +27,7 @@ class AppVariables(CanvasAppVariables):
     right_margin = IntegerDescriptor('right_margin', default_value=0)  # type: int
     n_x_axis_ticks = IntegerDescriptor('n_x_axis_ticks', default_value=5)  # type: int
     n_y_axis_ticks = IntegerDescriptor('n_y_axis_ticks', default_value=5)  # type: int
+    resizeable = False  # type: bool
 
 
 class AxesImageCanvas(ImageCanvas):
@@ -34,20 +37,43 @@ class AxesImageCanvas(ImageCanvas):
         ImageCanvas.__init__(self, parent)
 
         self.variables = AppVariables()
-        self.canvas = ImageCanvas(self)
-        self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
-        inner_canvas_height = int(self.variables.canvas_height / 2)
-        inner_canvas_width = int(self.variables.canvas_width / 2)
-        self.canvas.set_canvas_size(inner_canvas_width, inner_canvas_height)
-        canvas_image = numpy.zeros((self.variables.canvas_height,
-                                    self.variables.canvas_width), dtype=numpy.uint8)
-        background_image = numpy.ones((self.variables.canvas_height,
-                                       self.variables.canvas_width), dtype=numpy.uint8) * 255
-        background_reader = NumpyImageReader(background_image)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        square_size = 50
+        n_squares_x = 20
+        n_squares_y = 20
+        canvas_height = square_size * n_squares_y
+        canvas_width = square_size * n_squares_x
+        self.set_canvas_size(canvas_width, canvas_height)
+        canvas_image = create_checkerboard(square_size, n_squares_x, n_squares_y) * 255
+        canvas_image = numpy.asarray(canvas_image, dtype=numpy.uint8)
         canvas_reader = NumpyImageReader(canvas_image)
-        self.canvas._set_image_reader(canvas_reader)
-        self._set_image_reader(background_reader)
-        self.canvas.pack(fill=tkinter.BOTH, expand=tkinter.NO)
+        self._set_image_reader(canvas_reader)
+        self.on_resize(self.callback_resize)
+        self.height = self.winfo_reqheight()
+        self.width = self.winfo_reqwidth()
+
+    @property
+    def resizeable(self):
+        return self.variables.resizeable
+
+    @resizeable.setter
+    def resizeable(self, value):
+        self.variables.resizeable = True
+        self.on_resize(self.callback_resize)
+
+    def callback_resize(self, event):
+        print(str(event.width) + "    " + str(event.height))
+        image_data = self.variables.canvas_image_object.image_reader[:, :]
+        pil_image = Image.fromarray(image_data)
+        scaled_image_data = pil_image.resize((event.width, event.height))
+        self._set_image_from_pil_image(scaled_image_data)
+        # # determine the ratio of old width/height to new width/height
+        # wscale = float(event.width) / self.width
+        # hscale = float(event.height) / self.height
+        # # resize the canvas
+        # self.config(width=self.width, height=self.height)
+        # # rescale all the objects tagged with the "all" tag
+        # self.scale("all", 0, 0, wscale, hscale)
 
     def zoom_to_selection(self, canvas_rect, animate=False):
         pass

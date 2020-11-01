@@ -1,10 +1,9 @@
 import os
 import tkinter
 from tkinter import Menu
-import numpy
 
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.panels.image_panel import ImagePanel
+from tk_builder.panels.image_panel_2 import ImagePanel
 from tk_builder.image_readers.geotiff_reader import GeotiffImageReader
 from tk_builder.widgets import widget_descriptors
 from tkinter import filedialog
@@ -88,12 +87,12 @@ class GeotiffViewer(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
 
         self.init_w_horizontal_layout()
-        self.geotiff_image_panel.canvas.set_current_tool_to_pan()
-        self.geotiff_image_panel.canvas.set_canvas_size(800, 600)
-        self.geotiff_image_panel.set_max_canvas_size(2000, 2000)
+        # self.geotiff_image_panel.canvas.set_current_tool_to_pan()
+        # self.geotiff_image_panel.canvas.set_canvas_size(800, 600)
+        # self.geotiff_image_panel.set_max_canvas_size(2000, 2000)
         self.geotiff_image_panel.resizeable = True
         self.geotiff_image_panel.pack(expand=True, fill=tkinter.BOTH)
-        self.band_selection_panel.pack(expand=False, fill=tkinter.X)
+        self.band_selection_panel.pack(expand=False, fill=tkinter.BOTH)
         primary_frame.pack(expand=True, fill=tkinter.BOTH)
 
         menubar = Menu()

@@ -84,7 +84,6 @@ class ImagePanel(WidgetPanel):
     _widget_list = ("toolbar", "image_frame",)
     image_frame = widget_descriptors.PanelDescriptor("image_frame", ImageFrame)  # type: ImageFrame
     toolbar = widget_descriptors.PanelDescriptor("toolbar", Toolbar)  # type: Toolbar
-    canvas = widget_descriptors.ImageCanvasDescriptor("canvas")  # type: ImageCanvas
     axes_canvas = widget_descriptors.AxesImageCanvasDescriptor("axes_canvas")  # type: AxesImageCanvas
 
     def __init__(self, parent):
@@ -127,8 +126,10 @@ class ImagePanel(WidgetPanel):
         self.toolbar.pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
 
+        self.canvas = self.image_frame.outer_canvas.canvas
         self.axes_canvas = self.image_frame.outer_canvas
 
+        self.canvas.on_mouse_wheel(self.callback_canvas_mouse_zoom)
         self.set_max_canvas_size(1920, 1080)
         self.resizeable = False
 
@@ -325,7 +326,7 @@ class ImagePanel(WidgetPanel):
 
     @property
     def resizeable(self):
-        return self._resizeable
+        return self.axes_canvas.resizeable
 
     @resizeable.setter
     def resizeable(self, value):
@@ -347,6 +348,9 @@ class ImagePanel(WidgetPanel):
         else:
             self.hide_canvas_size_controls()
             self.on_resize(self.callback_resize)
+
+    def callback_resize(self, event):
+        print(str(event.x) + "      " + str(event.y))
 
     @property
     def current_tool(self):
@@ -420,4 +424,113 @@ class ImagePanel(WidgetPanel):
         self.axes_canvas.variables.max_height = y
 
     def callback_resize(self, event):
-        pass
+        self.update_everything()
+
+    def update_everything(self):
+        """
+        Attempts to update all aspects of what is supposed to be displayed, including the image in the image canvas,
+        axes, titles, margins, etc.
+        """
+        if self.resizeable:
+            width = self.winfo_width()
+            height = self.winfo_height()
+
+            parent_geometry = self.image_frame.master.winfo_geometry()
+            outer_canvas_geometry = self.image_frame.winfo_geometry()
+
+            parent_geom_width = int(parent_geometry.split("x")[0])
+            parent_geom_height = int(parent_geometry.split("x")[1].split("+")[0])
+            parent_geom_pad_x = int(parent_geometry.split("+")[1])
+            parent_geom_pad_y = int(parent_geometry.split("+")[2])
+
+            outer_canvas_width = int(outer_canvas_geometry.split("x")[0])
+            outer_canvas_height = int(outer_canvas_geometry.split("x")[1].split("+")[0])
+            outer_canvas_pad_x = int(outer_canvas_geometry.split("+")[1])
+            outer_canvas_pad_y = int(outer_canvas_geometry.split("+")[2])
+
+            constant_offset_x = WidgetPanel.padx
+            constant_offset_y = WidgetPanel.pady
+
+            width_offset = parent_geom_width - outer_canvas_width + outer_canvas_pad_x + parent_geom_pad_x - constant_offset_x
+            height_offset = parent_geom_height - outer_canvas_height + outer_canvas_pad_y + parent_geom_pad_y - constant_offset_y
+
+            adjusted_canvas_width = width - width_offset
+            adjusted_canvas_height = height - height_offset
+
+            if adjusted_canvas_height < self.axes_canvas.variables.min_height:
+                adjusted_canvas_height = self.axes_canvas.variables.min_height
+            if adjusted_canvas_height > self.axes_canvas.variables.max_height:
+                adjusted_canvas_height = self.axes_canvas.variables.max_height
+
+            if adjusted_canvas_width < self.axes_canvas.variables.min_width:
+                adjusted_canvas_width = self.axes_canvas.variables.min_width
+            if adjusted_canvas_width > self.axes_canvas.variables.max_width:
+                adjusted_canvas_width = self.axes_canvas.variables.max_width
+
+            if parent_geom_width > 1 and outer_canvas_width > 1:
+                self.image_frame.outer_canvas.delete("all")
+                self.image_frame.set_canvas_size(adjusted_canvas_width, adjusted_canvas_height)
+
+                self.axes_canvas.set_canvas_size(adjusted_canvas_width, adjusted_canvas_height)
+                self.canvas.set_canvas_size(self.axes_canvas.variables.canvas_width -
+                                                                     self.axes_canvas.left_margin_pixels -
+                                                                     self.axes_canvas.right_margin_pixels,
+                                                                     self.axes_canvas.variables.canvas_height -
+                                                                     self.axes_canvas.top_margin_pixels -
+                                                                     self.axes_canvas.bottom_margin_pixels)
+
+                self.canvas.update_current_image()
+
+                display_image_dims = numpy.shape(
+                    self.canvas.variables.canvas_image_object.display_image)
+
+                self.axes_canvas.set_canvas_size(display_image_dims[1] + self.axes_canvas.right_margin_pixels + self.axes_canvas.left_margin_pixels,
+                                                 display_image_dims[0] + self.axes_canvas.top_margin_pixels + self.axes_canvas.bottom_margin_pixels + 5)
+                self.canvas.set_canvas_size(self.axes_canvas.variables.canvas_width -
+                                                                     self.axes_canvas.left_margin_pixels -
+                                                                     self.axes_canvas.right_margin_pixels,
+                                                                     self.axes_canvas.variables.canvas_height -
+                                                                     self.axes_canvas.top_margin_pixels -
+                                                                     self.axes_canvas.bottom_margin_pixels)
+                # self.canvas.update_current_image()
+                self.axes_canvas.update_current_image()
+
+            self.axes_canvas.delete("all")
+
+            self.image_frame.create_window(0, 0, anchor=tkinter.NW, window=self.axes_canvas)
+            self.axes_canvas.create_window(self.axes_canvas.left_margin_pixels,
+                                           self.axes_canvas.top_margin_pixels,
+                                           anchor=tkinter.NW,
+                                           window=self.axes_canvas.canvas)
+            self.canvas.redraw_all_shapes()
+
+            self.axes_canvas._update_y_axis()
+            self.axes_canvas._update_y_label()
+            self.axes_canvas._update_title()
+            self.axes_canvas._update_x_axis()
+            self.axes_canvas._update_x_label()
+        else:
+            self.axes_canvas.delete("all")
+
+            self.canvas.set_canvas_size(self.axes_canvas.variables.canvas_width -
+                                        self.axes_canvas.left_margin_pixels -
+                                        self.axes_canvas.right_margin_pixels,
+                                        self.axes_canvas.variables.canvas_height -
+                                        self.axes_canvas.top_margin_pixels -
+                                        self.axes_canvas.bottom_margin_pixels)
+
+            # self.canvas.update_current_image()
+            self.axes_canvas.update_current_image()
+
+            self.image_frame.create_window(0, 0, anchor=tkinter.NW, window=self.axes_canvas)
+            self.axes_canvas.create_window(self.axes_canvas.left_margin_pixels,
+                                           self.axes_canvas.top_margin_pixels,
+                                           anchor=tkinter.NW,
+                                           window=self.axes_canvas.canvas)
+            self.canvas.redraw_all_shapes()
+
+            self.axes_canvas._update_y_axis()
+            self.axes_canvas._update_y_label()
+            self.axes_canvas._update_title()
+            self.axes_canvas._update_x_axis()
+            self.axes_canvas._update_x_label()
