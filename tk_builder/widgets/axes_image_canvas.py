@@ -1,11 +1,14 @@
 import tkinter
 
+import numpy
+
 from tk_builder.widgets.image_canvas import ImageCanvas
+from tk_builder.widgets.basic_widgets import Frame
 from tk_builder.widgets.image_canvas import AppVariables as CanvasAppVariables
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.utils.image_utils.create_checkerboard import create_checkerboard
-import numpy
 from tk_builder.base_elements import IntegerDescriptor, StringDescriptor, FloatDescriptor
+from tk_builder.image_readers.image_reader import ImageReader
 from PIL import Image
 
 
@@ -27,6 +30,8 @@ class AppVariables(CanvasAppVariables):
     right_margin = IntegerDescriptor('right_margin', default_value=0)  # type: int
     n_x_axis_ticks = IntegerDescriptor('n_x_axis_ticks', default_value=5)  # type: int
     n_y_axis_ticks = IntegerDescriptor('n_y_axis_ticks', default_value=5)  # type: int
+    outer_canvas_reader = None  # type: ImageReader
+    inner_canvas_reader = None  # type: ImageReader
     resizeable = False  # type: bool
 
 
@@ -38,6 +43,10 @@ class AxesImageCanvas(ImageCanvas):
 
         self.variables = AppVariables()
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.inner_frame = Frame(self)
+        self.inner_canvas = ImageCanvas(self)
+        self.inner_frame.pack()
+        self.inner_canvas.pack()
         square_size = 50
         n_squares_x = 20
         n_squares_y = 20
@@ -46,8 +55,10 @@ class AxesImageCanvas(ImageCanvas):
         self.set_canvas_size(canvas_width, canvas_height)
         canvas_image = create_checkerboard(square_size, n_squares_x, n_squares_y) * 255
         canvas_image = numpy.asarray(canvas_image, dtype=numpy.uint8)
-        canvas_reader = NumpyImageReader(canvas_image)
-        self._set_image_reader(canvas_reader)
+        outer_canvas_reader = NumpyImageReader(canvas_image)
+        inner_canvas_reader = NumpyImageReader(canvas_image)
+        self.set_image_reader(outer_canvas_reader)
+        self.inner_canvas.set_image_reader(inner_canvas_reader)
         self.on_resize(self.callback_resize)
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
@@ -62,18 +73,25 @@ class AxesImageCanvas(ImageCanvas):
         self.on_resize(self.callback_resize)
 
     def callback_resize(self, event):
-        print(str(event.width) + "    " + str(event.height))
         image_data = self.variables.canvas_image_object.image_reader[:, :]
         pil_image = Image.fromarray(image_data)
         scaled_image_data = pil_image.resize((event.width, event.height))
+
+        inner_rect_width = int(event.width) - self.left_margin_pixels - self.right_margin_pixels
+        inner_rect_height = int(event.height) - self.top_margin_pixels - self.bottom_margin_pixels
+
+        self.inner_canvas.set_canvas_size(inner_rect_width, inner_rect_height)
+
+        self.inner_canvas.config(width=inner_rect_width, height=inner_rect_height)
+        self.create_window(self.left_margin_pixels, self.top_margin_pixels, anchor=tkinter.NW, window=self.inner_canvas)
+
+        full_image_rect = [0,
+                           0,
+                           self.inner_canvas.variables.canvas_image_object.image_reader.full_image_ny,
+                           self.inner_canvas.variables.canvas_image_object.image_reader.full_image_nx]
+        self.inner_canvas.zoom_to_full_image_selection(full_image_rect)
+
         self._set_image_from_pil_image(scaled_image_data)
-        # # determine the ratio of old width/height to new width/height
-        # wscale = float(event.width) / self.width
-        # hscale = float(event.height) / self.height
-        # # resize the canvas
-        # self.config(width=self.width, height=self.height)
-        # # rescale all the objects tagged with the "all" tag
-        # self.scale("all", 0, 0, wscale, hscale)
 
     def zoom_to_selection(self, canvas_rect, animate=False):
         pass
@@ -288,5 +306,5 @@ class AxesImageCanvas(ImageCanvas):
                          angle=90,
                          justify="right")
 
-    def set_image_reader(self, image_reader):
-        self.canvas._set_image_reader(image_reader)
+    # def set_image_reader(self, image_reader):
+    #     self.canvas._set_image_reader(image_reader)

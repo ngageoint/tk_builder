@@ -666,7 +666,7 @@ class ImageCanvas(basic_widgets.Canvas):
     def do_nothing(self, event):
         pass
 
-    def _set_image_reader(self, image_reader):
+    def set_image_reader(self, image_reader):
         """
         Set the image reader.
 
@@ -1270,14 +1270,14 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-        pass
-        # self.variables.canvas_width = width_npix
-        # self.variables.canvas_height = height_npix
-        # if self.variables.canvas_image_object is not None:
-        #     self.variables.canvas_image_object.canvas_nx = width_npix
-        #     self.variables.canvas_image_object.canvas_ny = height_npix
-        #     self.update_current_image()
-        # self.config(width=width_npix, height=height_npix)
+        # pass
+        self.variables.canvas_width = width_npix
+        self.variables.canvas_height = height_npix
+        if self.variables.canvas_image_object is not None:
+            self.variables.canvas_image_object.canvas_nx = width_npix
+            self.variables.canvas_image_object.canvas_ny = height_npix
+            self.update_current_image()
+        self.config(width=width_npix, height=height_npix)
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
         """
@@ -1876,7 +1876,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Parameters
         ----------
-        image_rect_rect : Tuple|List
+        image_rect : Tuple|List
         animate : bool
 
         Returns
