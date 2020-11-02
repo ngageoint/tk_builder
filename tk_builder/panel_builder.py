@@ -106,7 +106,10 @@ class WidgetPanel(basic_widgets.LabelFrame):
                 row_height = row_heights[row_num]
                 getattr(self, widget).config(height=row_height)
 
-    def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
+    def init_w_basic_widget_list(self,
+                                 n_rows,  # type: int
+                                 n_widgets_per_row_list,  # type: int
+                                 ):
         """
         This is a convenience method to initialize a basic widget panel.  To use this first make a subclass
         This should also be the primary method to initialize a panel.  Other convenience methods can be made

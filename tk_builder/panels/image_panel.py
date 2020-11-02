@@ -2,13 +2,9 @@ import os
 import tkinter
 from tkinter.filedialog import asksaveasfilename
 
-import numpy
-
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
-from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
-from tk_builder.widgets.image_frame import ImageFrame
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants
 
@@ -81,21 +77,16 @@ class ImagePanel(WidgetPanel):
     Other functionality includes axes and margins in the case the user wishes to display X/Y axes, titles, etc
     for 2 dimensional data displays or plots.
     """
-    _widget_list = ("toolbar", "image_frame",)
-    image_frame = widget_descriptors.PanelDescriptor("image_frame", ImageFrame)  # type: ImageFrame
-    toolbar = widget_descriptors.PanelDescriptor("toolbar", Toolbar)  # type: Toolbar
-    canvas = widget_descriptors.ImageCanvasDescriptor("canvas")  # type: ImageCanvas
-    axes_canvas = widget_descriptors.AxesImageCanvasDescriptor("axes_canvas")  # type: AxesImageCanvas
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
-        self.init_w_vertical_layout()
-        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
-        self.toolbar.left_margin.config(width=5)
-        self.toolbar.right_margin.config(width=5)
-        self.toolbar.top_margin.config(width=5)
-        self.toolbar.bottom_margin.config(width=5)
-
+        self.toolbar = Toolbar(self)
+        self.axes_canvas = AxesImageCanvas(self)
+        # self.toolbar.left_margin.config(width=5)
+        # self.toolbar.right_margin.config(width=5)
+        # self.toolbar.top_margin.config(width=5)
+        # self.toolbar.bottom_margin.config(width=5)
+        #
         self.toolbar.left_margin_label.master.forget()
         self.toolbar.title_label.master.forget()
         self.toolbar.canvas_width_label.master.forget()
@@ -124,10 +115,9 @@ class ImagePanel(WidgetPanel):
         self.toolbar.axes_labels_checkbox.config(command=self.callback_hide_show_axes_controls)
         self.toolbar.canvas_size_checkbox.config(command=self.callback_hide_show_canvas_size_controls)
 
-        self.toolbar.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
-
-        self.axes_canvas = self.image_frame.outer_canvas
+        self.pack()
+        self.toolbar.pack(side='top', expand=tkinter.NO, fill=tkinter.BOTH)
+        self.axes_canvas.pack(side='bottom')
 
         self.set_max_canvas_size(1920, 1080)
         self.resizeable = False
