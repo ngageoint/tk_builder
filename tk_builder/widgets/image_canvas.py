@@ -548,9 +548,6 @@ class AppVariables(object):
     zoom_on_wheel = BooleanDescriptor(
         'zoom_on_wheel', default_value=True,
         docstring='Zoom on the mouse wheel operation?')  # type: bool
-    rescale_image_to_fit_canvas = BooleanDescriptor(
-        'rescale_image_to_fit_canvas', default_value=True,
-        docstring='Rescale the image to fit the canvas?')  # type: bool
     scale_dynamic_range = BooleanDescriptor(
         'scale_dynamic_range', default_value=False,
         docstring='Scale the dynamic range of the image?')  # type: bool
@@ -679,12 +676,10 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.variables.canvas_image_object = CanvasImage(
-            image_reader, self.variables.canvas_width, self.variables.canvas_height)
-        if self.variables.rescale_image_to_fit_canvas:
-            self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
-        else:
-            self.set_image_from_numpy_array(self.variables.canvas_image_object.canvas_decimated_image)
+        self.variables.canvas_image_object = CanvasImage(image_reader,
+                                                         self.variables.canvas_width,
+                                                         self.variables.canvas_height)
+        self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
 
     def get_vector_object(self, vector_id):
         """
@@ -1276,7 +1271,6 @@ class ImageCanvas(basic_widgets.Canvas):
         if self.variables.canvas_image_object is not None:
             self.variables.canvas_image_object.canvas_nx = width_npix
             self.variables.canvas_image_object.canvas_ny = height_npix
-            self.update_current_image()
         self.config(width=width_npix, height=height_npix)
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
@@ -1883,87 +1877,55 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
+        # adjust the zoom rect to not be outside the image
+        if image_rect[1] < 0:
+            image_rect[3] = image_rect[3] - image_rect[1]
+            image_rect[1] = 0
+        if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
+            image_rect[1] = image_rect[1] - (image_rect[3] - self.variables.canvas_image_object.image_reader.full_image_nx)
+            image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
+        if image_rect[0] < 0:
+            image_rect[2] = image_rect[2] - image_rect[0]
+            image_rect[0] = 0
+        if image_rect[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
+            image_rect[0] = image_rect[0] - (image_rect[2] - self.variables.canvas_image_object.image_reader.full_image_ny)
+            image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
+
+        # if the zoom rect is still bigger than either the extents of the image do nothing
+        if (image_rect[1] <= 0 and image_rect[3] >= self.variables.canvas_image_object.image_reader.full_image_nx) or \
+                (image_rect[0] <=0 and image_rect[2] >= self.variables.canvas_image_object.image_reader.full_image_ny):
+            image_rect = [0,
+                          0,
+                          self.variables.canvas_image_object.image_reader.full_image_ny,
+                          self.variables.canvas_image_object.image_reader.full_image_nx]
+
         zoomed_image_height = image_rect[2] - image_rect[0]
         zoomed_image_width = image_rect[3] - image_rect[1]
+
+        zoom_center_x = (image_rect[3] + image_rect[1])/2
+        zoom_center_y = (image_rect[2] + image_rect[1])/2
 
         canvas_height_width_ratio = self.variables.canvas_height / self.variables.canvas_width
         zoomed_image_height_width_ratio = zoomed_image_height / zoomed_image_width
 
-        new_image_width = zoomed_image_height / canvas_height_width_ratio
-        new_image_height = zoomed_image_width * canvas_height_width_ratio
-
-        if zoomed_image_height_width_ratio > canvas_height_width_ratio:
-            image_zoom_point_center = (image_rect[3] + image_rect[1]) / 2
-            image_rect[1] = image_zoom_point_center - new_image_width / 2
-            image_rect[3] = image_zoom_point_center + new_image_width / 2
-        else:
-            image_zoom_point_center = (image_rect[2] + image_rect[0]) / 2
-            image_rect[0] = image_zoom_point_center - new_image_height / 2
-            image_rect[2] = image_zoom_point_center + new_image_height / 2
-
-        # keep the rect within the image bounds
-        image_y_ul = max(image_rect[0], 0)
-        image_x_ul = max(image_rect[1], 0)
-        image_y_br = min(image_rect[2], self.variables.canvas_image_object.image_reader.full_image_ny)
-        image_x_br = min(image_rect[3], self.variables.canvas_image_object.image_reader.full_image_nx)
-
-        # re-adjust if we ran off one of the edges
-        if image_x_ul == 0:
-            image_rect[3] = new_image_width
-        if image_x_br == self.variables.canvas_image_object.image_reader.full_image_nx:
-            image_rect[1] = self.variables.canvas_image_object.image_reader.full_image_nx - new_image_width
-        if image_y_ul == 0:
-            image_rect[2] = new_image_height
-        if image_y_br == self.variables.canvas_image_object.image_reader.full_image_ny:
-            image_rect[0] = self.variables.canvas_image_object.image_reader.full_image_ny - new_image_height
-
-        # keep the rect within the image bounds
-        image_y_ul = max(image_rect[0], 0)
-        image_x_ul = max(image_rect[1], 0)
-        image_y_br = min(image_rect[2], self.variables.canvas_image_object.image_reader.full_image_ny)
-        image_x_br = min(image_rect[3], self.variables.canvas_image_object.image_reader.full_image_nx)
-
-        new_canvas_rect = self.variables.canvas_image_object.full_image_yx_to_canvas_coords(
-            (image_y_ul, image_x_ul, image_y_br, image_x_br))
-        new_canvas_rect = (
-        int(new_canvas_rect[0]), int(new_canvas_rect[1]), int(new_canvas_rect[2]), int(new_canvas_rect[3]))
-
         background_image = self.variables.canvas_image_object.display_image
-        self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(new_canvas_rect)
-        if self.variables.rescale_image_to_fit_canvas:
-            new_image = PIL.Image.fromarray(self.variables.canvas_image_object.display_image)
-        else:
-            new_image = PIL.Image.fromarray(self.variables.canvas_image_object.canvas_decimated_image)
+        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)
+        new_image = PIL.Image.fromarray(self.variables.canvas_image_object.display_image)
         if animate is True:
             # create frame sequence
             n_animations = self.variables.n_zoom_animations
             background_image = background_image / 2
             background_image = numpy.asarray(background_image, dtype=numpy.uint8)
-            canvas_x1, canvas_y1, canvas_x2, canvas_y2 = new_canvas_rect
-            display_x_ul = min(canvas_x1, canvas_x2)
-            display_x_br = max(canvas_x1, canvas_x2)
-            display_y_ul = min(canvas_y1, canvas_y2)
-            display_y_br = max(canvas_y1, canvas_y2)
-            x_diff = new_image.width - (display_x_br - display_x_ul)
-            y_diff = new_image.height - (display_y_br - display_y_ul)
+
             pil_background_image = PIL.Image.fromarray(background_image)
             frame_sequence = []
             for i in range(n_animations):
-                new_x_ul = int(display_x_ul * (1 - i / (n_animations - 1)))
-                new_y_ul = int(display_y_ul * (1 - i / (n_animations - 1)))
-                new_size_x = int((display_x_br - display_x_ul) + x_diff * (i / (n_animations - 1)))
-                new_size_y = int((display_y_br - display_y_ul) + y_diff * (i / (n_animations - 1)))
-                resized_zoom_image = new_image.resize((new_size_x, new_size_y))
-                animation_image = pil_background_image.copy()
-                animation_image.paste(resized_zoom_image, (new_x_ul, new_y_ul))
-                frame_sequence.append(animation_image)
+                # TODO replace this with actual animation
+                print("animating")
             fps = n_animations / self.variables.animation_time_in_seconds
             self.animate_with_pil_frame_sequence(frame_sequence, frames_per_second=fps)
-        if self.variables.rescale_image_to_fit_canvas:
-            self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
-        else:
-            self.set_image_from_numpy_array(self.variables.canvas_image_object.canvas_decimated_image)
-        self.update()
+        self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.variables.the_canvas_is_currently_zooming = False
 
@@ -2379,25 +2341,6 @@ class ImageCanvas(basic_widgets.Canvas):
         canvas_rect = (new_canvas_x_ul, new_canvas_y_ul, new_canvas_x_br, new_canvas_y_br)
         self.zoom_to_selection(canvas_rect, self.variables.animate_pan)
         self.hide_shape(self.variables.zoom_rect_id)
-
-    def config_do_not_scale_image_to_fit(self):
-        """
-        Set configuration to not scale image to fit.
-
-        Returns
-        -------
-        None
-        """
-        # establish scrollbars
-        self.sbarv = tkinter.Scrollbar(self, orient=tkinter.VERTICAL)
-        self.sbarh = tkinter.Scrollbar(self, orient=tkinter.HORIZONTAL)
-        self.sbarv.config(command=self.yview)
-        self.sbarh.config(command=self.xview)
-
-        self.config(yscrollcommand=self.sbarv.set)
-        self.config(xscrollcommand=self.sbarh.set)
-        self.sbarv.grid(row=0, column=1, stick=tkinter.N+tkinter.S)
-        self.sbarh.grid(row=1, column=0, sticky=tkinter.E+tkinter.W)
 
     # TODO: this should have png -> image or image_file.
     #   It's not the full canvas? This is confusing.

@@ -82,11 +82,8 @@ class ImagePanel(WidgetPanel):
         WidgetPanel.__init__(self, parent)
         self.toolbar = Toolbar(self)
         self.axes_canvas = AxesImageCanvas(self)
-        # self.toolbar.left_margin.config(width=5)
-        # self.toolbar.right_margin.config(width=5)
-        # self.toolbar.top_margin.config(width=5)
-        # self.toolbar.bottom_margin.config(width=5)
-        #
+        self.canvas = self.axes_canvas.inner_canvas
+
         self.toolbar.left_margin_label.master.forget()
         self.toolbar.title_label.master.forget()
         self.toolbar.canvas_width_label.master.forget()
@@ -302,7 +299,7 @@ class ImagePanel(WidgetPanel):
         -------
         None
         """
-        self.image_frame.outer_canvas.set_image_reader(image_reader)
+        self.axes_canvas.set_image_reader(image_reader)
 
     def do_nothing(self, event):
         """

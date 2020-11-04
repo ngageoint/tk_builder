@@ -90,7 +90,6 @@ class GeotiffViewer(WidgetPanel):
         self.geotiff_image_panel.resizeable = True
         self.geotiff_image_panel.pack(expand=True, fill=tkinter.BOTH)
         self.band_selection_panel.pack(expand=False, fill=tkinter.X)
-        # self.geotiff_image_panel.axes_canvas.pack(expand=True, fill=tkinter.BOTH, anchor=tkinter.NW)
 
         menubar = Menu()
 

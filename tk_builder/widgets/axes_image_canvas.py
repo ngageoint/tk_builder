@@ -80,6 +80,8 @@ class AxesImageCanvas(ImageCanvas):
         inner_rect_width = int(event.width) - self.left_margin_pixels - self.right_margin_pixels
         inner_rect_height = int(event.height) - self.top_margin_pixels - self.bottom_margin_pixels
 
+        print(str(inner_rect_width) + "    " + str(inner_rect_height))
+
         self.inner_canvas.set_canvas_size(inner_rect_width, inner_rect_height)
 
         self.inner_canvas.config(width=inner_rect_width, height=inner_rect_height)
