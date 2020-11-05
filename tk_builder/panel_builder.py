@@ -225,6 +225,17 @@ class WidgetPanel(basic_widgets.LabelFrame):
         button.config(state="disabled")
         button.config(relief="sunken")
 
+    def do_not_expand(self):
+        self.parent.pack(expand=tkinter.NO)
+
+    def fill_x(self,
+               value,  # type: bool
+               ):
+        if value is True:
+            self.parent.pack(fill=tkinter.X)
+        else:
+            self.parent.pack(fill=tkinter.NONE)
+
 
 class RadioButtonPanel(WidgetPanel):
     """
