@@ -299,7 +299,7 @@ class ImagePanel(WidgetPanel):
         -------
         None
         """
-        self.axes_canvas.set_image_reader(image_reader)
+        self.axes_canvas.inner_canvas.set_image_reader(image_reader)
 
     def do_nothing(self, event):
         """

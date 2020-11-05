@@ -55,9 +55,6 @@ class CanvasImage(object):
     canvas_nx = IntegerDescriptor(
         'canvas_nx',
         docstring='')  # type: int
-    scale_to_fit_canvas = BooleanDescriptor(
-        'scale_to_fit_canvas', default_value=True,
-        docstring='Scale the image to fit the canvas?')  # type: bool
 
     def __init__(self, image_reader, canvas_nx, canvas_ny):
         """
@@ -238,11 +235,11 @@ class CanvasImage(object):
         -------
         None
         """
-
-        self.set_decimation_from_full_image_rect(full_image_rect)
-        decimated_image_data = self.get_decimated_image_data_in_full_image_rect(full_image_rect, self.decimation_factor)
+        int_rect = (int(full_image_rect[0]), int(full_image_rect[1]), int(full_image_rect[2]), int(full_image_rect[3]))
+        self.set_decimation_from_full_image_rect(int_rect)
+        decimated_image_data = self.get_decimated_image_data_in_full_image_rect(int_rect, self.decimation_factor)
         self.update_canvas_display_from_numpy_array(decimated_image_data)
-        self.canvas_full_image_upper_left_yx = (full_image_rect[0], full_image_rect[1])
+        self.canvas_full_image_upper_left_yx = (int_rect[0], int_rect[1])
 
     def update_canvas_display_image_from_canvas_rect(self, canvas_rect):
         """
@@ -282,12 +279,10 @@ class CanvasImage(object):
             for drop_band in self.drop_bands:
                 image_data[:, :, drop_band] = zeros_image
         self.canvas_decimated_image = image_data
-        if self.scale_to_fit_canvas:
-            scale_factor = self.compute_display_scale_factor(image_data)
-            self.display_rescaling_factor = scale_factor
-            self.display_image = self.get_scaled_display_data(image_data)
-        else:
-            self.display_image = image_data
+        scale_factor = self.compute_display_scale_factor(image_data)
+        self.display_rescaling_factor = scale_factor
+        self.display_image = self.get_scaled_display_data(image_data)
+
 
     def get_decimation_factor_from_full_image_rect(self, full_image_rect):
         """
@@ -358,8 +353,7 @@ class CanvasImage(object):
         """
 
         decimation_factor = self.decimation_factor
-        if self.scale_to_fit_canvas:
-            decimation_factor = decimation_factor/self.display_rescaling_factor
+        decimation_factor = decimation_factor/self.display_rescaling_factor
         siz = int(len(canvas_coords)/2)
         out = []
         for i in range(siz):
@@ -409,8 +403,7 @@ class CanvasImage(object):
         """
 
         decimation_factor = self.decimation_factor
-        if self.scale_to_fit_canvas:
-            decimation_factor = decimation_factor / self.display_rescaling_factor
+        decimation_factor = decimation_factor / self.display_rescaling_factor
 
         siz = int(len(full_image_yx)/2)
         out = []
@@ -492,7 +485,7 @@ class AppVariables(object):
     canvas_image_object = TypedDescriptor(
         'canvas_image_object', CanvasImage,
         docstring='The canvas image object.')  # type: CanvasImage
-    _tk_im = TypedDescriptor(
+    tk_im = TypedDescriptor(
         '_tk_im', ImageTk.PhotoImage,
         docstring='The Tkinter Image.')  # type: ImageTk.PhotoImage
     # zoom rectangle properties
@@ -632,6 +625,7 @@ class ImageCanvas(basic_widgets.Canvas):
             user32 = ctypes.windll.user32
             user32.SetProcessDPIAware()
 
+
         basic_widgets.Canvas.__init__(self, primary, highlightthickness=0)
         self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
 
@@ -679,6 +673,9 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.canvas_image_object = CanvasImage(image_reader,
                                                          self.variables.canvas_width,
                                                          self.variables.canvas_height)
+        print("display image dims:  ")
+        print(self.variables.canvas_image_object.display_image.shape)
+        print("")
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
 
     def get_vector_object(self, vector_id):
@@ -789,37 +786,33 @@ class ImageCanvas(basic_widgets.Canvas):
                 if event.num == 5:
                     delta = delta*-1
 
-            zoom_in_box_half_width = int(self.variables.canvas_width / self.variables.mouse_wheel_zoom_percent_per_event / 2)
-            zoom_out_box_half_width = int(self.variables.canvas_width * self.variables.mouse_wheel_zoom_percent_per_event / 2)
-            zoom_in_box_half_height = int(self.variables.canvas_height / self.variables.mouse_wheel_zoom_percent_per_event / 2)
-            zoom_out_box_half_height = int(self.variables.canvas_height * self.variables.mouse_wheel_zoom_percent_per_event / 2)
+            display_image_dims = self.variables.canvas_image_object.display_image.shape
+            display_image_ny = display_image_dims[0]
+            display_image_nx = display_image_dims[1]
+
+            zoom_in_box_half_width = int(display_image_nx / self.variables.mouse_wheel_zoom_percent_per_event / 2)
+            zoom_out_box_half_width = int(display_image_nx * self.variables.mouse_wheel_zoom_percent_per_event / 2)
+            zoom_in_box_half_height = int(display_image_ny / self.variables.mouse_wheel_zoom_percent_per_event / 2)
+            zoom_out_box_half_height = int(display_image_ny * self.variables.mouse_wheel_zoom_percent_per_event / 2)
 
             x = event.x
             y = event.y
-
-            after_zoom_x_offset = (self.variables.canvas_width/2 - x)/self.variables.mouse_wheel_zoom_percent_per_event
-            after_zoom_y_offset = (self.variables.canvas_height/2 - y)/self.variables.mouse_wheel_zoom_percent_per_event
-
-            x_offset_point = x + after_zoom_x_offset
-            y_offset_point = y + after_zoom_y_offset
-
-            zoom_in_box = (x_offset_point - zoom_in_box_half_width,
-                           y_offset_point - zoom_in_box_half_height,
-                           x_offset_point + zoom_in_box_half_width,
-                           y_offset_point + zoom_in_box_half_height)
-
-            zoom_out_box = (x_offset_point - zoom_out_box_half_width,
-                            y_offset_point - zoom_out_box_half_height,
-                            x_offset_point + zoom_out_box_half_width,
-                            y_offset_point + zoom_out_box_half_height)
 
             if self.variables.the_canvas_is_currently_zooming:
                 pass
             else:
                 if delta > 0:
-                    self.zoom_to_selection(zoom_in_box, self.variables.animate_zoom)
+                    zoom_in_box = (x - zoom_in_box_half_width,
+                                   y - zoom_in_box_half_height,
+                                   x + zoom_in_box_half_width,
+                                   y + zoom_in_box_half_height)
+                    self.zoom_to_canvas_selection(zoom_in_box, self.variables.animate_zoom)
                 else:
-                    self.zoom_to_selection(zoom_out_box, self.variables.animate_zoom)
+                    zoom_out_box = (x - zoom_out_box_half_width,
+                                    y - zoom_out_box_half_height,
+                                    x + zoom_out_box_half_width,
+                                    y + zoom_out_box_half_height)
+                    self.zoom_to_canvas_selection(zoom_out_box, self.variables.animate_zoom)
         else:
             pass
 
@@ -972,7 +965,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._pan_finish(event)
         if self.variables.active_tool == TOOLS.ZOOM_IN_TOOL:
             rect_coords = self.coords(self.variables.zoom_rect_id)
-            self.zoom_to_selection(rect_coords, self.variables.animate_zoom)
+            self.zoom_to_canvas_selection(rect_coords, self.variables.animate_zoom)
             self.hide_shape(self.variables.zoom_rect_id)
         if self.variables.active_tool == TOOLS.ZOOM_OUT_TOOL:
             rect_coords = self.coords(self.variables.zoom_rect_id)
@@ -981,7 +974,7 @@ class ImageCanvas(basic_widgets.Canvas):
             y1 = -rect_coords[1]
             y2 = self.variables.canvas_height + rect_coords[3]
             zoom_rect = (x1, y1, x2, y2)
-            self.zoom_to_selection(zoom_rect, self.variables.animate_zoom)
+            self.zoom_to_canvas_selection(zoom_rect, self.variables.animate_zoom)
             self.hide_shape(self.variables.zoom_rect_id)
 
     def callback_handle_mouse_motion(self, event):
@@ -1845,7 +1838,7 @@ class ImageCanvas(basic_widgets.Canvas):
             get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
         return image_data_in_rect
 
-    def zoom_to_selection(self, canvas_rect, animate=False):
+    def zoom_to_canvas_selection(self, canvas_rect, animate=False):
         """
         Zoom to the selection using canvas coordinates.
 
@@ -1858,9 +1851,6 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        self.variables.the_canvas_is_currently_zooming = True
-        # fill up empty canvas space due to inconsistent ratios between the canvas rect and the canvas dimensions
         image_coords = self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_rect)
         self.zoom_to_full_image_selection(image_coords, animate=animate)
 
@@ -1878,6 +1868,44 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        # expand the image rect to fit the canvas
+        print(image_rect)
+        zoom_center_x = (image_rect[3] + image_rect[1])/2
+        zoom_center_y = (image_rect[2] + image_rect[0])/2
+
+        rect_height = image_rect[2] - image_rect[0]
+        rect_width = image_rect[3] - image_rect[1]
+
+        display_image_dims = self.variables.canvas_image_object.display_image.shape
+        display_height = display_image_dims[0]
+        display_width = display_image_dims[1]
+        canvas_height = self.variables.canvas_height
+        canvas_width = self.variables.canvas_width
+
+        canvas_height_width_ratio = canvas_height / canvas_width
+        rect_height_width_ratio = rect_height / rect_width
+
+        if rect_height_width_ratio > canvas_height_width_ratio:
+            rect_width = rect_height * canvas_width / canvas_height
+        elif rect_height_width_ratio < canvas_height_width_ratio:
+            rect_height = rect_width * canvas_height / canvas_width
+
+        rect_sf = 1
+        if display_height < canvas_height:
+            rect_sf = display_height / canvas_height
+        elif display_width < canvas_width:
+            rect_sf = display_width / canvas_width
+
+        rect_width = rect_width * rect_sf
+        rect_height = rect_height * rect_sf
+
+        image_rect[1] = int(round(zoom_center_x - rect_width / 2))
+        image_rect[3] = int(round(zoom_center_x + rect_width / 2))
+        image_rect[0] = int(round(zoom_center_y - rect_height / 2))
+        image_rect[2] = int(round(zoom_center_y + rect_height / 2))
+
+        print(image_rect)
+
         # adjust the zoom rect to not be outside the image
         if image_rect[1] < 0:
             image_rect[3] = image_rect[3] - image_rect[1]
@@ -1891,33 +1919,26 @@ class ImageCanvas(basic_widgets.Canvas):
         if image_rect[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
             image_rect[0] = image_rect[0] - (image_rect[2] - self.variables.canvas_image_object.image_reader.full_image_ny)
             image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
+        print(image_rect)
 
         # if the zoom rect is still bigger than either the extents of the image do nothing
         if (image_rect[1] <= 0 and image_rect[3] >= self.variables.canvas_image_object.image_reader.full_image_nx) or \
-                (image_rect[0] <=0 and image_rect[2] >= self.variables.canvas_image_object.image_reader.full_image_ny):
+                (image_rect[0] <= 0 and image_rect[2] >= self.variables.canvas_image_object.image_reader.full_image_ny):
             image_rect = [0,
                           0,
                           self.variables.canvas_image_object.image_reader.full_image_ny,
                           self.variables.canvas_image_object.image_reader.full_image_nx]
-
-        zoomed_image_height = image_rect[2] - image_rect[0]
-        zoomed_image_width = image_rect[3] - image_rect[1]
-
-        zoom_center_x = (image_rect[3] + image_rect[1])/2
-        zoom_center_y = (image_rect[2] + image_rect[1])/2
-
-        canvas_height_width_ratio = self.variables.canvas_height / self.variables.canvas_width
-        zoomed_image_height_width_ratio = zoomed_image_height / zoomed_image_width
+        print(image_rect)
+        print("done w image rect resizing")
 
         background_image = self.variables.canvas_image_object.display_image
         self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)
-        new_image = PIL.Image.fromarray(self.variables.canvas_image_object.display_image)
         if animate is True:
             # create frame sequence
+            self.variables.the_canvas_is_currently_zooming = True
             n_animations = self.variables.n_zoom_animations
             background_image = background_image / 2
             background_image = numpy.asarray(background_image, dtype=numpy.uint8)
-
             pil_background_image = PIL.Image.fromarray(background_image)
             frame_sequence = []
             for i in range(n_animations):
@@ -2289,10 +2310,8 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        nx_pix, ny_pix = pil_image.size
-        self.config(scrollregion=(0, 0, nx_pix, ny_pix))
-        self.variables._tk_im = ImageTk.PhotoImage(pil_image)
-        self.variables.image_id = self.create_image(0, 0, anchor="nw", image=self.variables._tk_im)
+        self.variables.tk_im = ImageTk.PhotoImage(pil_image)
+        self.variables.image_id = self.create_image(0, 0, anchor="nw", image=self.variables.tk_im)
         self.tag_lower(self.variables.image_id)
 
     def _pan_finish(self, event):
@@ -2339,7 +2358,7 @@ class ImageCanvas(basic_widgets.Canvas):
                 new_canvas_y_br - self.variables.canvas_height)
 
         canvas_rect = (new_canvas_x_ul, new_canvas_y_ul, new_canvas_x_br, new_canvas_y_br)
-        self.zoom_to_selection(canvas_rect, self.variables.animate_pan)
+        self.zoom_to_canvas_selection(canvas_rect, self.variables.animate_pan)
         self.hide_shape(self.variables.zoom_rect_id)
 
     # TODO: this should have png -> image or image_file.

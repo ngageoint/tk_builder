@@ -33,6 +33,7 @@ class AppVariables(CanvasAppVariables):
     outer_canvas_reader = None  # type: ImageReader
     inner_canvas_reader = None  # type: ImageReader
     resizeable = False  # type: bool
+    update_outer_canvas_on_resize = False  # type: bool
 
 
 class AxesImageCanvas(ImageCanvas):
@@ -55,13 +56,25 @@ class AxesImageCanvas(ImageCanvas):
         self.set_canvas_size(canvas_width, canvas_height)
         canvas_image = create_checkerboard(square_size, n_squares_x, n_squares_y) * 255
         canvas_image = numpy.asarray(canvas_image, dtype=numpy.uint8)
-        outer_canvas_reader = NumpyImageReader(canvas_image)
+
+        background_image = create_checkerboard(square_size, 4, 4) * 255
+        background_image = numpy.asarray(background_image, dtype=numpy.uint8)
+
+        outer_canvas_reader = NumpyImageReader(background_image)
         inner_canvas_reader = NumpyImageReader(canvas_image)
         self.set_image_reader(outer_canvas_reader)
         self.inner_canvas.set_image_reader(inner_canvas_reader)
         self.on_resize(self.callback_resize)
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
+
+    @property
+    def update_outer_canvas_on_resize(self):
+        return self.variables.update_outer_canvas_on_resize
+
+    @update_outer_canvas_on_resize.setter
+    def update_outer_canvas_on_resize(self, value):
+        self.variables.update_outer_canvas_on_resize = value
 
     @property
     def resizeable(self):
@@ -73,29 +86,20 @@ class AxesImageCanvas(ImageCanvas):
         self.on_resize(self.callback_resize)
 
     def callback_resize(self, event):
-        image_data = self.variables.canvas_image_object.image_reader[:, :]
-        pil_image = Image.fromarray(image_data)
-        scaled_image_data = pil_image.resize((event.width, event.height))
-
         inner_rect_width = int(event.width) - self.left_margin_pixels - self.right_margin_pixels
         inner_rect_height = int(event.height) - self.top_margin_pixels - self.bottom_margin_pixels
-
-        print(str(inner_rect_width) + "    " + str(inner_rect_height))
-
         self.inner_canvas.set_canvas_size(inner_rect_width, inner_rect_height)
-
         self.inner_canvas.config(width=inner_rect_width, height=inner_rect_height)
         self.create_window(self.left_margin_pixels, self.top_margin_pixels, anchor=tkinter.NW, window=self.inner_canvas)
+        image_dims = self.inner_canvas.variables.canvas_image_object.display_image.shape
+        canvas_rect = [0, 0, image_dims[1], image_dims[0]]
+        if self.update_outer_canvas_on_resize:
+            background_image = Image.fromarray(self.variables.canvas_image_object.image_reader[:])
+            background_image.resize((event.width, event.height))
+            self.set_image_from_numpy_array(numpy.asarray(background_image))
+        self.inner_canvas.zoom_to_canvas_selection(canvas_rect)
 
-        full_image_rect = [0,
-                           0,
-                           self.inner_canvas.variables.canvas_image_object.image_reader.full_image_ny,
-                           self.inner_canvas.variables.canvas_image_object.image_reader.full_image_nx]
-        self.inner_canvas.zoom_to_full_image_selection(full_image_rect)
-
-        self._set_image_from_pil_image(scaled_image_data)
-
-    def zoom_to_selection(self, canvas_rect, animate=False):
+    def zoom_to_canvas_selection(self, canvas_rect, animate=False):
         pass
 
     @property

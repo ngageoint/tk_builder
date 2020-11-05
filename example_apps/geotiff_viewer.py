@@ -81,7 +81,6 @@ class GeotiffViewer(WidgetPanel):
         """
 
         self.primary = primary
-
         primary_frame = tkinter.Frame(primary)
         WidgetPanel.__init__(self, primary_frame)
 
