@@ -92,17 +92,17 @@ class ImagePanel(WidgetPanel):
         self.toolbar.save_canvas.config(command=self.callback_save_canvas)
         self.toolbar.save_image.config(command=self.callback_save_image)
 
-        self.toolbar.left_margin.on_enter_or_return_key(self.callback_update_axes)
-        self.toolbar.right_margin.on_enter_or_return_key(self.callback_update_axes)
-        self.toolbar.top_margin.on_enter_or_return_key(self.callback_update_axes)
-        self.toolbar.bottom_margin.on_enter_or_return_key(self.callback_update_axes)
+        self.toolbar.left_margin.on_enter_or_return_key(self.callback_update_everything)
+        self.toolbar.right_margin.on_enter_or_return_key(self.callback_update_everything)
+        self.toolbar.top_margin.on_enter_or_return_key(self.callback_update_everything)
+        self.toolbar.bottom_margin.on_enter_or_return_key(self.callback_update_everything)
 
-        self.toolbar.title.on_enter_or_return_key(self.callback_update_axes)
-        self.toolbar.x.on_enter_or_return_key(self.callback_update_axes)
-        self.toolbar.y.on_enter_or_return_key(self.callback_update_axes)
+        self.toolbar.title.on_enter_or_return_key(self.callback_update_everything)
+        self.toolbar.x.on_enter_or_return_key(self.callback_update_everything)
+        self.toolbar.y.on_enter_or_return_key(self.callback_update_everything)
 
-        self.toolbar.canvas_width.on_enter_or_return_key(self.callback_update_canvas_size)
-        self.toolbar.canvas_height.on_enter_or_return_key(self.callback_update_canvas_size)
+        self.toolbar.canvas_width.on_enter_or_return_key(self.callback_update_everything)
+        self.toolbar.canvas_height.on_enter_or_return_key(self.callback_update_everything)
 
         self.toolbar.zoom_in.config(command=self.callback_set_to_zoom_in)
         self.toolbar.zoom_out.config(command=self.callback_set_to_zoom_out)
@@ -111,6 +111,8 @@ class ImagePanel(WidgetPanel):
         self.toolbar.margins_checkbox.config(command=self.callback_hide_show_margins)
         self.toolbar.axes_labels_checkbox.config(command=self.callback_hide_show_axes_controls)
         self.toolbar.canvas_size_checkbox.config(command=self.callback_hide_show_canvas_size_controls)
+
+        self.on_resize(self.callback_update_everything)
 
         self.pack()
         self.toolbar.pack(side='top', expand=tkinter.NO, fill=tkinter.BOTH)
@@ -255,7 +257,7 @@ class ImagePanel(WidgetPanel):
         else:
             self.toolbar.canvas_width_label.master.forget()
 
-    def callback_update_axes(self, event):
+    def update_axes(self):
         """
         Updates all canvas titles, x axis labels, y axis labels, and margin settings
         """
@@ -268,8 +270,6 @@ class ImagePanel(WidgetPanel):
         self.axes_canvas.top_margin_pixels = int(self.toolbar.top_margin.get())
         self.axes_canvas.bottom_margin_pixels = int(self.toolbar.bottom_margin.get())
 
-        self.update_everything()
-
     def callback_update_canvas_size(self, event):
         """
         Updates the canvas size.  This is generally done explicitly by the user using the toolbar settings when
@@ -281,11 +281,10 @@ class ImagePanel(WidgetPanel):
         self.toolbar.config(width=width)
         self.toolbar.pack(expand=True)
         self.pack(expand=True)
-        self.image_frame.config(width=width, height=height)
+        self.axes_canvas.config(width=width, height=height)
         self.axes_canvas.set_canvas_size(width, height)
         self.canvas.set_canvas_size(width - self.axes_canvas.left_margin_pixels - self.axes_canvas.right_margin_pixels,
                                     height - self.axes_canvas.top_margin_pixels - self.axes_canvas.bottom_margin_pixels)
-        self.update_everything()
 
     def set_image_reader(self, image_reader):
         """
@@ -312,7 +311,7 @@ class ImagePanel(WidgetPanel):
 
     @property
     def resizeable(self):
-        return self._resizeable
+        return self.axes_canvas.resizeable
 
     @resizeable.setter
     def resizeable(self, value):
@@ -327,17 +326,15 @@ class ImagePanel(WidgetPanel):
         -------
         None
         """
-        self._resizeable = value
+        self.axes_canvas.resizeable = value
         if value is False:
             self.show_canvas_size_controls()
-            self.on_resize(self.do_nothing)
         else:
             self.hide_canvas_size_controls()
-            self.on_resize(self.callback_resize)
 
     @property
     def current_tool(self):
-        return self.image_frame.outer_canvas.canvas.variables.current_tool
+        return self.canvas.variables.current_tool
 
     @current_tool.setter
     def current_tool(self, value):
@@ -406,5 +403,19 @@ class ImagePanel(WidgetPanel):
         self.axes_canvas.variables.max_width = x
         self.axes_canvas.variables.max_height = y
 
-    def callback_resize(self, event):
-        pass
+    def callback_update_everything(self, event):
+        self.update_everything()
+
+    def update_everything(self):
+        height = self.axes_canvas.winfo_height()
+        width = self.axes_canvas.winfo_width()
+        self.axes_canvas.delete("all")
+        self.update_axes()
+        self.axes_canvas._update_title()
+        self.axes_canvas._update_x_axis()
+        self.axes_canvas._update_x_label()
+        self.axes_canvas._update_y_axis()
+        self.axes_canvas._update_y_label()
+        self.axes_canvas._resize(width, height)
+
+

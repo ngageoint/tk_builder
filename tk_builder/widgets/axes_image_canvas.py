@@ -64,7 +64,6 @@ class AxesImageCanvas(ImageCanvas):
         inner_canvas_reader = NumpyImageReader(canvas_image)
         self.set_image_reader(outer_canvas_reader)
         self.inner_canvas.set_image_reader(inner_canvas_reader)
-        self.on_resize(self.callback_resize)
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
 
@@ -82,12 +81,20 @@ class AxesImageCanvas(ImageCanvas):
 
     @resizeable.setter
     def resizeable(self, value):
-        self.variables.resizeable = True
-        self.on_resize(self.callback_resize)
+        self.variables.resizeable = value
+        if self.resizeable:
+            self.on_resize(self.callback_resize)
+        else:
+            self.on_resize(self.do_nothing)
 
     def callback_resize(self, event):
-        inner_rect_width = int(event.width) - self.left_margin_pixels - self.right_margin_pixels
-        inner_rect_height = int(event.height) - self.top_margin_pixels - self.bottom_margin_pixels
+        width = event.width
+        height = event.height
+        self._resize(width, height)
+
+    def _resize(self, width, height):
+        inner_rect_width = int(width) - self.left_margin_pixels - self.right_margin_pixels
+        inner_rect_height = int(height) - self.top_margin_pixels - self.bottom_margin_pixels
         self.inner_canvas.set_canvas_size(inner_rect_width, inner_rect_height)
         self.inner_canvas.config(width=inner_rect_width, height=inner_rect_height)
         self.create_window(self.left_margin_pixels, self.top_margin_pixels, anchor=tkinter.NW, window=self.inner_canvas)
@@ -95,7 +102,7 @@ class AxesImageCanvas(ImageCanvas):
         canvas_rect = [0, 0, image_dims[1], image_dims[0]]
         if self.update_outer_canvas_on_resize:
             background_image = Image.fromarray(self.variables.canvas_image_object.image_reader[:])
-            background_image.resize((event.width, event.height))
+            background_image.resize((width, height))
             self.set_image_from_numpy_array(numpy.asarray(background_image))
         self.inner_canvas.zoom_to_canvas_selection(canvas_rect)
 
@@ -191,7 +198,7 @@ class AxesImageCanvas(ImageCanvas):
         self.variables.image_y_end = value
 
     def _update_title(self):
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -207,7 +214,7 @@ class AxesImageCanvas(ImageCanvas):
                          anchor="n")
 
     def _update_x_axis(self):
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -215,7 +222,7 @@ class AxesImageCanvas(ImageCanvas):
             image_height, image_width = display_image_dims[0], display_image_dims[1]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
-        bottom_pixel_index = self.top_margin_pixels + self.canvas.variables.canvas_height + 30
+        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
@@ -225,10 +232,10 @@ class AxesImageCanvas(ImageCanvas):
             tick_positions.append((x, bottom_pixel_index))
 
         if self.variables.image_x_start is not None and self.variables.image_x_end is not None:
-            m = (self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
+            m = (self.variables.image_x_end - self.variables.image_x_start) / self.inner_canvas.variables.canvas_image_object.image_reader.full_image_nx
             b = self.variables.image_x_start
 
-            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
+            display_image_coords = self.inner_canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
                 (0, 0, image_width, image_height))
             tick_vals = numpy.linspace(display_image_coords[1], display_image_coords[3], self.variables.n_x_axis_ticks)
             tick_vals = m * tick_vals + b
@@ -242,7 +249,7 @@ class AxesImageCanvas(ImageCanvas):
                              anchor="n")
 
     def _update_x_label(self):
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -250,7 +257,7 @@ class AxesImageCanvas(ImageCanvas):
             image_height, image_width = display_image_dims[0], display_image_dims[1]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
-        bottom_pixel_index = self.top_margin_pixels + self.canvas.variables.canvas_height + 30
+        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
@@ -262,7 +269,7 @@ class AxesImageCanvas(ImageCanvas):
 
     def _update_y_axis(self):
         left_pixel_index = self.left_margin_pixels - 40
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -279,10 +286,10 @@ class AxesImageCanvas(ImageCanvas):
 
         if self.variables.image_y_start and self.variables.image_y_end:
             m = (
-                            self.variables.image_y_end - self.variables.image_y_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_ny
+                            self.variables.image_y_end - self.variables.image_y_start) / self.inner_canvas.variables.canvas_image_object.image_reader.full_image_ny
             b = self.variables.image_y_start
 
-            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
+            display_image_coords = self.inner_canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
                 (0, 0, image_width, image_height))
             tick_vals = numpy.linspace(display_image_coords[0], display_image_coords[2], self.variables.n_y_axis_ticks)
             tick_vals = m * tick_vals + b
@@ -292,7 +299,7 @@ class AxesImageCanvas(ImageCanvas):
 
     def _update_y_label(self):
         left_pixel_index = self.left_margin_pixels - 40
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -311,6 +318,3 @@ class AxesImageCanvas(ImageCanvas):
                          anchor="s",
                          angle=90,
                          justify="right")
-
-    # def set_image_reader(self, image_reader):
-    #     self.canvas._set_image_reader(image_reader)

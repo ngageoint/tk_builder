@@ -673,9 +673,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.canvas_image_object = CanvasImage(image_reader,
                                                          self.variables.canvas_width,
                                                          self.variables.canvas_height)
-        print("display image dims:  ")
-        print(self.variables.canvas_image_object.display_image.shape)
-        print("")
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
 
     def get_vector_object(self, vector_id):
@@ -1869,7 +1866,6 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         # expand the image rect to fit the canvas
-        print(image_rect)
         zoom_center_x = (image_rect[3] + image_rect[1])/2
         zoom_center_y = (image_rect[2] + image_rect[0])/2
 
@@ -1904,8 +1900,6 @@ class ImageCanvas(basic_widgets.Canvas):
         image_rect[0] = int(round(zoom_center_y - rect_height / 2))
         image_rect[2] = int(round(zoom_center_y + rect_height / 2))
 
-        print(image_rect)
-
         # adjust the zoom rect to not be outside the image
         if image_rect[1] < 0:
             image_rect[3] = image_rect[3] - image_rect[1]
@@ -1919,7 +1913,6 @@ class ImageCanvas(basic_widgets.Canvas):
         if image_rect[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
             image_rect[0] = image_rect[0] - (image_rect[2] - self.variables.canvas_image_object.image_reader.full_image_ny)
             image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
-        print(image_rect)
 
         # if the zoom rect is still bigger than either the extents of the image do nothing
         if (image_rect[1] <= 0 and image_rect[3] >= self.variables.canvas_image_object.image_reader.full_image_nx) or \
@@ -1928,8 +1921,6 @@ class ImageCanvas(basic_widgets.Canvas):
                           0,
                           self.variables.canvas_image_object.image_reader.full_image_ny,
                           self.variables.canvas_image_object.image_reader.full_image_nx]
-        print(image_rect)
-        print("done w image rect resizing")
 
         background_image = self.variables.canvas_image_object.display_image
         self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)

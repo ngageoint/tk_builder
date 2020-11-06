@@ -134,5 +134,4 @@ class CanvasResize(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = CanvasResize(root)
-    # root.after(100, app.image_panel.update_everything)
     root.mainloop()

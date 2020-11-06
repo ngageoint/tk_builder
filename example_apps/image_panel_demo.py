@@ -46,7 +46,7 @@ class CanvasResize(WidgetPanel):
 
         self.init_w_horizontal_layout()
 
-        self.image_panel.resizeable = True
+        self.image_panel.resizeable = False
 
         image_npix_x = 2000
         image_npix_y = 1500
@@ -133,5 +133,4 @@ class CanvasResize(WidgetPanel):
 if __name__ == '__main__':
     root = tkinter.Tk()
     app = CanvasResize(root)
-    # root.after(100, app.image_panel.update_everything)
     root.mainloop()
