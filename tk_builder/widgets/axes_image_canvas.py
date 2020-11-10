@@ -57,12 +57,7 @@ class AxesImageCanvas(ImageCanvas):
         canvas_image = create_checkerboard(square_size, n_squares_x, n_squares_y) * 255
         canvas_image = numpy.asarray(canvas_image, dtype=numpy.uint8)
 
-        background_image = create_checkerboard(square_size, 4, 4) * 255
-        background_image = numpy.asarray(background_image, dtype=numpy.uint8)
-
-        outer_canvas_reader = NumpyImageReader(background_image)
         inner_canvas_reader = NumpyImageReader(canvas_image)
-        self.set_image_reader(outer_canvas_reader)
         self.inner_canvas.set_image_reader(inner_canvas_reader)
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
@@ -109,9 +104,10 @@ class AxesImageCanvas(ImageCanvas):
     def update_axes(self):
         self.delete("all")
         self.create_window(self.left_margin_pixels, self.top_margin_pixels, anchor=tkinter.NW, window=self.inner_canvas)
-        background_image = Image.fromarray(self.variables.canvas_image_object.image_reader[:])
-        background_image.resize((self.winfo_width(), self.winfo_height()))
-        self.set_image_from_numpy_array(numpy.asarray(background_image))
+        if self.variables.canvas_image_object is not None:
+            background_image = Image.fromarray(self.variables.canvas_image_object.image_reader[:])
+            background_image.resize((self.winfo_width(), self.winfo_height()))
+            self.set_image_from_numpy_array(numpy.asarray(background_image))
         self.inner_canvas.set_image_from_numpy_array(self.inner_canvas.variables.canvas_image_object.display_image)
         self._update_title()
         self._update_x_axis()

@@ -236,6 +236,14 @@ class WidgetPanel(basic_widgets.LabelFrame):
         else:
             self.parent.pack(fill=tkinter.NONE)
 
+    def fill_y(self,
+               value,  # type: bool
+               ):
+        if value is True:
+            self.parent.pack(fill=tkinter.Y)
+        else:
+            self.parent.pack(fill=tkinter.NONE)
+
 
 class RadioButtonPanel(WidgetPanel):
     """

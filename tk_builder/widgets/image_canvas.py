@@ -1871,8 +1871,8 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         # expand the image rect to fit the canvas
-        zoom_center_x = (image_rect[3] + image_rect[1])/2
-        zoom_center_y = (image_rect[2] + image_rect[0])/2
+        # zoom_center_x = (image_rect[3] + image_rect[1])/2
+        # zoom_center_y = (image_rect[2] + image_rect[0])/2
 
         if image_rect[0] < 0:
             image_rect[0] = 0
@@ -1912,10 +1912,10 @@ class ImageCanvas(basic_widgets.Canvas):
         rect_width = rect_width * rect_sf
         rect_height = rect_height * rect_sf
 
-        image_rect[1] = int(round(zoom_center_x - rect_width / 2))
-        image_rect[3] = int(round(zoom_center_x + rect_width / 2))
-        image_rect[0] = int(round(zoom_center_y - rect_height / 2))
-        image_rect[2] = int(round(zoom_center_y + rect_height / 2))
+        # image_rect[1] = int(round(zoom_center_x - rect_width / 2))
+        # image_rect[3] = int(round(zoom_center_x + rect_width / 2))
+        # image_rect[0] = int(round(zoom_center_y - rect_height / 2))
+        # image_rect[2] = int(round(zoom_center_y + rect_height / 2))
 
         # adjust the zoom rect to not be outside the image
         if image_rect[1] < 0:
