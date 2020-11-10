@@ -106,6 +106,19 @@ class AxesImageCanvas(ImageCanvas):
             self.set_image_from_numpy_array(numpy.asarray(background_image))
         self.inner_canvas.zoom_to_canvas_selection(canvas_rect)
 
+    def update_axes(self):
+        self.delete("all")
+        self.create_window(self.left_margin_pixels, self.top_margin_pixels, anchor=tkinter.NW, window=self.inner_canvas)
+        background_image = Image.fromarray(self.variables.canvas_image_object.image_reader[:])
+        background_image.resize((self.winfo_width(), self.winfo_height()))
+        self.set_image_from_numpy_array(numpy.asarray(background_image))
+        self.inner_canvas.set_image_from_numpy_array(self.inner_canvas.variables.canvas_image_object.display_image)
+        self._update_title()
+        self._update_x_axis()
+        self._update_x_label()
+        self._update_y_axis()
+        self._update_y_label()
+
     def zoom_to_canvas_selection(self, canvas_rect, animate=False):
         pass
 

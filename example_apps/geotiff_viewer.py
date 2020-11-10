@@ -87,7 +87,6 @@ class GeotiffViewer(WidgetPanel):
         self.init_w_horizontal_layout()
         primary_frame.pack(expand=True, fill=tkinter.BOTH)
         self.geotiff_image_panel.resizeable = True
-        self.geotiff_image_panel.pack(expand=True, fill=tkinter.BOTH)
         self.band_selection_panel.pack(expand=False, fill=tkinter.X)
 
         menubar = Menu()
@@ -111,6 +110,8 @@ class GeotiffViewer(WidgetPanel):
         self.band_selection_panel.blue_min.on_enter_or_return_key(self.callback_update_dynamic_range)
         self.band_selection_panel.blue_max.on_enter_or_return_key(self.callback_update_dynamic_range)
         self.band_selection_panel.disable_all_widgets()
+
+        self.geotiff_image_panel.set_image_reader(self.geotiff_image_panel.canvas.variables.canvas_image_object.image_reader)
 
     def select_file(self, fname=None):
         """

@@ -556,6 +556,9 @@ class AppVariables(object):
     tmp_closest_coord_index = IntegerDescriptor(
         'tmp_closest_coord_index', default_value=0,
         docstring='')  # type: int
+    update_outer_axes_on_zoom = BooleanDescriptor('update_outer_axes_on_zoom',
+                                                  default_value=True,
+                                                  docstring="tells whether or not to update the outer axes on zoom, used only if the image canvas is embedded in an axes image canvas.")  # type: bool
 
     def __init__(self):
 
@@ -673,7 +676,9 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.canvas_image_object = CanvasImage(image_reader,
                                                          self.variables.canvas_width,
                                                          self.variables.canvas_height)
-        self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
+        full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
+        full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
+        self.zoom_to_full_image_selection([0, 0, full_ny, full_nx])
 
     def get_vector_object(self, vector_id):
         """
@@ -1869,14 +1874,25 @@ class ImageCanvas(basic_widgets.Canvas):
         zoom_center_x = (image_rect[3] + image_rect[1])/2
         zoom_center_y = (image_rect[2] + image_rect[0])/2
 
+        if image_rect[0] < 0:
+            image_rect[0] = 0
+        if image_rect[1] < 0:
+            image_rect[1] = 0
+        if image_rect[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
+            image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
+        if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
+            image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_ny
+
         rect_height = image_rect[2] - image_rect[0]
         rect_width = image_rect[3] - image_rect[1]
 
-        display_image_dims = self.variables.canvas_image_object.display_image.shape
-        display_height = display_image_dims[0]
-        display_width = display_image_dims[1]
         canvas_height = self.variables.canvas_height
         canvas_width = self.variables.canvas_width
+
+        sf = canvas_height / rect_height
+
+        display_height = rect_height * sf
+        display_width = rect_width * sf
 
         canvas_height_width_ratio = canvas_height / canvas_width
         rect_height_width_ratio = rect_height / rect_width
@@ -1887,6 +1903,7 @@ class ImageCanvas(basic_widgets.Canvas):
             rect_height = rect_width * canvas_height / canvas_width
 
         rect_sf = 1
+
         if display_height < canvas_height:
             rect_sf = display_height / canvas_height
         elif display_width < canvas_width:
@@ -1922,9 +1939,9 @@ class ImageCanvas(basic_widgets.Canvas):
                           self.variables.canvas_image_object.image_reader.full_image_ny,
                           self.variables.canvas_image_object.image_reader.full_image_nx]
 
-        background_image = self.variables.canvas_image_object.display_image
         self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)
         if animate is True:
+            background_image = self.variables.canvas_image_object.display_image
             # create frame sequence
             self.variables.the_canvas_is_currently_zooming = True
             n_animations = self.variables.n_zoom_animations
@@ -1940,6 +1957,28 @@ class ImageCanvas(basic_widgets.Canvas):
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.variables.the_canvas_is_currently_zooming = False
+        if self.in_outer_canvas and self.update_outer_axes_on_zoom:
+            self.master.update_axes()
+
+    @property
+    def update_outer_axes_on_zoom(self):
+        return self.variables.update_outer_axes_on_zoom
+
+    @update_outer_axes_on_zoom.setter
+    def update_outer_axes_on_zoom(self, value):
+        """
+        tells whether or not to update the out axes titles, x/y axes, etc on zoom.  This is an expensive
+        operation so some applications that do not require it will run faster if it is disabled.
+        """
+        self.variables.update_outer_axes_on_zoom = value
+
+    @property
+    def in_outer_canvas(self):
+        try:
+            self.master.inner_canvas == self
+            return True
+        except:
+            return False
 
     def update_current_image(self):
         """
