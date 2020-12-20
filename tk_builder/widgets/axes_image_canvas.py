@@ -58,9 +58,17 @@ class AxesImageCanvas(ImageCanvas):
         canvas_image = numpy.asarray(canvas_image, dtype=numpy.uint8)
 
         inner_canvas_reader = NumpyImageReader(canvas_image)
+        self.inner_canvas.on_resize(self.callback_handle_inner_canvas_resize)
+        self.inner_canvas.on_mouse_wheel(self.callback_inner_canvas_mouse_zoom)
         self.inner_canvas.set_image_reader(inner_canvas_reader)
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
+
+    def callback_handle_inner_canvas_resize(self, event):
+        pass
+
+    def callback_inner_canvas_mouse_zoom(self, event):
+        self.inner_canvas.callback_mouse_zoom(event)
 
     @property
     def update_outer_canvas_on_resize(self):

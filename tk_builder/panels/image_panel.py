@@ -270,21 +270,22 @@ class ImagePanel(WidgetPanel):
         self.axes_canvas.top_margin_pixels = int(self.toolbar.top_margin.get())
         self.axes_canvas.bottom_margin_pixels = int(self.toolbar.bottom_margin.get())
 
-    def callback_update_canvas_size(self, event):
-        """
-        Updates the canvas size.  This is generally done explicitly by the user using the toolbar settings when
-        dynamic resizing has been disabled.
-        """
-        width = int(self.toolbar.canvas_width.get())
-        height = int(self.toolbar.canvas_height.get())
-        self.config(width=width+20)
-        self.toolbar.config(width=width)
-        self.toolbar.pack(expand=True)
-        self.pack(expand=True)
-        self.axes_canvas.config(width=width, height=height)
-        self.axes_canvas.set_canvas_size(width, height)
-        self.canvas.set_canvas_size(width - self.axes_canvas.left_margin_pixels - self.axes_canvas.right_margin_pixels,
-                                    height - self.axes_canvas.top_margin_pixels - self.axes_canvas.bottom_margin_pixels)
+    # TODO: remove this
+    # def callback_update_canvas_size(self, event):
+    #     """
+    #     Updates the canvas size.  This is generally done explicitly by the user using the toolbar settings when
+    #     dynamic resizing has been disabled.
+    #     """
+    #     width = int(self.toolbar.canvas_width.get())
+    #     height = int(self.toolbar.canvas_height.get())
+    #     self.config(width=width+20)
+    #     self.toolbar.config(width=width)
+    #     self.toolbar.pack(expand=True)
+    #     self.pack(expand=True)
+    #     self.axes_canvas.config(width=width, height=height)
+    #     self.axes_canvas.set_canvas_size(width, height)
+    #     self.canvas.set_canvas_size(width - self.axes_canvas.left_margin_pixels - self.axes_canvas.right_margin_pixels,
+    #                                 height - self.axes_canvas.top_margin_pixels - self.axes_canvas.bottom_margin_pixels)
 
     def set_image_reader(self, image_reader):
         """

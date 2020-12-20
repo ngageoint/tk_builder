@@ -1957,28 +1957,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.variables.the_canvas_is_currently_zooming = False
-        if self.in_outer_canvas and self.update_outer_axes_on_zoom:
-            self.master.update_axes()
-
-    @property
-    def update_outer_axes_on_zoom(self):
-        return self.variables.update_outer_axes_on_zoom
-
-    @update_outer_axes_on_zoom.setter
-    def update_outer_axes_on_zoom(self, value):
-        """
-        tells whether or not to update the out axes titles, x/y axes, etc on zoom.  This is an expensive
-        operation so some applications that do not require it will run faster if it is disabled.
-        """
-        self.variables.update_outer_axes_on_zoom = value
-
-    @property
-    def in_outer_canvas(self):
-        try:
-            self.master.inner_canvas == self
-            return True
-        except:
-            return False
 
     def update_current_image(self):
         """
