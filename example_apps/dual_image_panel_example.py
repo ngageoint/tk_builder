@@ -76,31 +76,31 @@ class CanvasResize(WidgetPanel):
 
         primary_frame.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-        self.button_panel.draw_rect.on_left_mouse_click(self.callback_draw_rect)
-        self.button_panel.draw_line.on_left_mouse_click(self.callback_draw_line)
-        self.button_panel.draw_arrow.on_left_mouse_click(self.callback_draw_arrow)
-        self.button_panel.draw_point.on_left_mouse_click(self.callback_draw_point)
-        self.button_panel.draw_polygon.on_left_mouse_click(self.callback_draw_polygon)
-        self.button_panel.edit_shape.on_left_mouse_click(self.callback_edit_shape)
+        self.button_panel.draw_rect.config(command=self.callback_draw_rect)
+        self.button_panel.draw_line.config(command=self.callback_draw_line)
+        self.button_panel.draw_arrow.config(command=self.callback_draw_arrow)
+        self.button_panel.draw_point.config(command=self.callback_draw_point)
+        self.button_panel.draw_polygon.config(command=self.callback_draw_polygon)
+        self.button_panel.edit_shape.config(command=self.callback_edit_shape)
         self.button_panel.resizeable.config(command=self.toggle_resizeable)
         self.image_panel_1.canvas.on_left_mouse_release(self.callback_on_left_mouse_release)
 
-    def callback_draw_rect(self, event):
+    def callback_draw_rect(self):
         self.image_panel_1.canvas.set_current_tool_to_draw_rect(self.rect_id)
 
-    def callback_draw_line(self, event):
+    def callback_draw_line(self):
         self.image_panel_1.canvas.set_current_tool_to_draw_line_by_dragging(self.line_id)
 
-    def callback_draw_arrow(self, event):
+    def callback_draw_arrow(self):
         self.image_panel_1.canvas.set_current_tool_to_draw_arrow_by_dragging(self.arrow_id)
 
-    def callback_draw_point(self, event):
+    def callback_draw_point(self):
         self.image_panel_1.canvas.set_current_tool_to_draw_point(self.point_id)
 
-    def callback_draw_polygon(self, event):
+    def callback_draw_polygon(self):
         self.image_panel_1.canvas.set_current_tool_to_draw_polygon_by_clicking(self.polygon_id)
 
-    def callback_edit_shape(self, event):
+    def callback_edit_shape(self):
         self.image_panel_1.canvas.set_current_tool_to_edit_shape(select_closest_first=True)
 
     def toggle_resizeable(self):
