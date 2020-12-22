@@ -5,6 +5,9 @@ from tk_builder.utils.color_utils.hex_color_palettes import SeabornPaletteNames
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 import tk_builder.utils.color_utils.color_converter as color_converter
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class PlotStyleUtils:
     def __init__(self):

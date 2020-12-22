@@ -1,5 +1,8 @@
 import numpy
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 def create_checkerboard(square_size,  # type: int
                         n_squares_x,  # type: int

@@ -1,6 +1,9 @@
 from tk_builder.image_readers.image_reader import ImageReader
 import numpy
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class NumpyImageReader(ImageReader):
     fname = None

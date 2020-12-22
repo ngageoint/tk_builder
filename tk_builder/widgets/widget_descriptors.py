@@ -1,3 +1,8 @@
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 from tkinter import Widget
 
 from tk_builder.base_elements import TypedDescriptor

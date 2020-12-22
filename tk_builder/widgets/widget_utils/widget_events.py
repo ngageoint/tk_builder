@@ -1,6 +1,10 @@
 import platform
 import tkinter
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 
 class WidgetEvents(tkinter.Misc):
     """

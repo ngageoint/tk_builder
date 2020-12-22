@@ -1,4 +1,8 @@
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 # TODO: prepend with an underscore if this isn't intended to be used directly.
 #   why not just use a single class to provide all this functionality?
 SEABORN_PALETTES = dict(

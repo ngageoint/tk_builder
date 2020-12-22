@@ -3,6 +3,10 @@
 This module provides functionality for main image canvas functionality.
 """
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import io
 import PIL.Image
 from PIL import ImageTk

@@ -2,6 +2,10 @@
 GUI color utilities.
 """
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import numpy
 import tk_builder.utils.color_utils.color_converter as color_converter
 

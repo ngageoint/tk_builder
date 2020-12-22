@@ -3,6 +3,9 @@ from xml.etree import ElementTree
 from xml.dom import minidom
 from tk_builder.utils.geometry_utils.kml_constants import KMLConstants
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class KmlUtil:
     def __init__(self):

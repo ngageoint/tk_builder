@@ -1,3 +1,7 @@
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import logging
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg

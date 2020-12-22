@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import numpy
 import tkinter
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class PyplotImagePanel(tkinter.LabelFrame):
     """

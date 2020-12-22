@@ -1,4 +1,7 @@
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class ImageReader:
     """

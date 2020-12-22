@@ -10,6 +10,9 @@ from tk_builder.widgets.image_canvas import ToolConstants
 
 import PIL.Image
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class Toolbar(WidgetPanel):
     top_level_controls = ("zoom_in",

@@ -4,6 +4,11 @@ import gdal
 from PIL import Image
 from typing import Union
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
+
 gdal_to_numpy_data_types = {
     "Byte": numpy.uint8,
     "UInt16": numpy.uint16,

@@ -18,6 +18,10 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.pyplot_canvas import PyplotCanvas
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 SCALE_Y_AXIS_PER_FRAME_TRUE = "scale y axis per frame"
 SCALE_Y_AXIS_PER_FRAME_FALSE = "don't scale y axis per frame"
 

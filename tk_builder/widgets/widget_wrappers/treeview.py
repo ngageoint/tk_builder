@@ -1,6 +1,9 @@
 from tkinter import ttk
 from tk_builder.widgets.widget_utils.widget_events import WidgetEvents
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class Treeview(ttk.Treeview, WidgetEvents):
     def __init__(self, master=None, **kw):

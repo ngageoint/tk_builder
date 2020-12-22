@@ -1,6 +1,9 @@
 import PIL.Image
 from typing import List
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 def save_numpy_frame_sequence_to_animated_gif(frame_sequence, fname, fps=15, loop_animation=True):
     """

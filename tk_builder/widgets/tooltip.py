@@ -1,3 +1,7 @@
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import tkinter
 import tkinter.tix
 
