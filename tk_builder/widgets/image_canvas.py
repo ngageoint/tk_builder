@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module provides functionality for
+This module provides functionality for main image canvas functionality.
 """
 
 import io

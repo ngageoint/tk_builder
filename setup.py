@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-import sys
 from setuptools import setup, find_packages
 from codecs import open
 
@@ -20,13 +18,6 @@ with open(os.path.join(here, 'tk_builder', '__about__.py'), 'r') as f:
     exec(f.read(), parameters)
 
 
-install_requires = ['numpy>=1.9.0', 'matplotlib', 'pillow', 'scipy', 'ghostscript']
-tests_require = []
-if sys.version_info[0] < 3:
-    # unittest2 only for Python2.7, we rely on subTest usage
-    tests_require.append('unittest2')
-    install_requires.extend(['typing', 'future'])
-
 setup(name=parameters['__title__'],
       version=parameters['__version__'],
       description=parameters['__summary__'],
@@ -37,11 +28,12 @@ setup(name=parameters['__title__'],
       url=parameters['__url__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
-      install_requires=install_requires,
-      extras_require={'geotiff':['gdal', ], },
+      install_requires=[
+          'numpy', 'scipy', 'tkinter', 'matplotlib', 'pillow', 'scipy', 'ghostscript',
+          'sarpy>=1.1.43', 'typing;python_version<"3.4"', 'future;python_version<"3.4"'],
       zip_safe=True,
       test_suite="tests",
-      tests_require=tests_require,
+      tests_require=['unittest2;python_version<"3.4"', ],
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',

@@ -10,7 +10,6 @@ except ImportError:
 
 import matplotlib.pyplot as plt
 import numpy
-from numpy import ndarray
 import tkinter
 
 
@@ -40,12 +39,12 @@ class PyplotImagePanel(tkinter.LabelFrame):
 
     def update_image(self, image_data):
         """
-        Updates the displayed image.  Image data should be an ndarray of dimensions: [ny, nx] for a grayscale image
-        or [ny, nx, 3] for a 3 color RGB image.
+        Updates the displayed image.  Image data should be an numpy array of dimensions:
+        [ny, nx] for a grayscale image or [ny, nx, 3] for a 3 color RGB image.
 
         Parameters
         ----------
-        image_data: ndarray
+        image_data: numpy.ndarray
 
         Returns
         -------
