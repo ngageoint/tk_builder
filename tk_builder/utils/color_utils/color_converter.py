@@ -2,6 +2,10 @@
 Color conversion utilities.
 """
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 from matplotlib import colors
 
 

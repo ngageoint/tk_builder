@@ -1,6 +1,10 @@
 import platform
 import tkinter
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 
 class WidgetEvents(tkinter.Misc):
     """
@@ -393,5 +397,37 @@ class WidgetEvents(tkinter.Misc):
 
         self.event_binding('<Return>', callback, *args, **kwargs)
 
+    def on_up_arrow_key(self, callback, *args, **kwargs):
+        """
+
+        Parameters
+        ----------
+        callback
+        args
+        kwargs
+
+        Returns
+        -------
+        None
+        """
+        self.event_binding('<Up>', callback, *args, **kwargs)
+
     def on_resize(self, callback, *args, **kwargs):
+        """
+        The resize event callback registration
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
         self.event_binding("<Configure>", callback)

@@ -13,6 +13,13 @@ GUI frameworks like QT, WX, or GTK. This provides a set tools for simple creatio
 user interfaces for Python based on the tkinter library. The main focus for the GUIs is assumed 
 to be on overhead imaging applications.
 
+The `ImagePanel` and `ImageCanvas` classes contain functionality to save figures to numpy arrays
+and to disk.  For many user facing applications this would be accomplished by using the `save canvas`
+button provided in an `ImagePanel`.  This features saved all image and vector data displayed within
+an image panel.  If a user wishes to save figures this way then `ghostscript` must be installed on their
+system.  This can be accomplished using Anaconda or other installation method listed below in the
+Dependencies section.
+
 Origins
 -------
 This was developed to enable simple prototyping of graphical user interfaces useful in conjunction 
@@ -21,8 +28,10 @@ The software use, modification, and distribution rights are stipulated within th
 
 Dependencies
 ------------
-The core library functionality depends only on `numpy >= 1.9.0`, `pillow`, and
-`matplotlib`, all of which can (now) be installed using conda or pip.
+The core library functionality depends only on `tkinter`, `numpy`, `pillow`,
+`matplotlib`, `scipy`, `ghostscript`, and minor dependence on `sarpy`, all of which 
+can be installed using conda or pip. Note that `tkinter` is part of the standard distribution 
+on some platforms, and has to be installed separately on others.
 
 Python 2.7
 ----------
@@ -31,3 +40,23 @@ been made towards remaining compatible with Python 2.7. If you are using the lib
 from Python 2.7, there is an additional dependencies for the `typing` and `future` 
 (not to be confused with the more widely known `futures`) packages, easily installed using 
 conda or pip.
+
+Installation
+------------
+From PyPI, install using pip (may require escalated privileges e.g. sudo):
+```bash
+pip install tk_builder
+```
+Note that here `pip` represents the pip utility for the desired Python environment.
+
+From the top level of a cloned version of this repository, install for all users of 
+your environment (may require escalated privileges, e.g. sudo):
+```bash
+python setup.py install
+```
+Again, `python` here represents the executible associated with the desired Python 
+environment.
+
+For more verbose instructions for installing from source, such as how to perform an 
+install applicable for your user only and requiring no escalated privileges, 
+see [here](https://docs.python.org/3/install/index.html).

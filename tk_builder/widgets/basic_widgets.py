@@ -11,3 +11,6 @@ from tk_builder.widgets.widget_wrappers.radiobutton import RadioButton
 from tk_builder.widgets.widget_wrappers.checkbutton import CheckButton
 from tk_builder.widgets.widget_wrappers.frame import Frame
 from tk_builder.widgets.widget_wrappers.treeview import Treeview
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"

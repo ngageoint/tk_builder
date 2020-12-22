@@ -1,6 +1,9 @@
 from tk_builder.utils.color_utils.hex_color_palettes import AllColorPalettes
 from tk_builder.utils.color_utils import color_utils
 
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
 
 class ColorCycler:
     def __init__(self, n_colors, hex_color_palette=AllColorPalettes.seaborn.deep):

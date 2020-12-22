@@ -1,10 +1,19 @@
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import tkinter
 
+import numpy
+
 from tk_builder.widgets.image_canvas import ImageCanvas
+from tk_builder.widgets.basic_widgets import Frame
 from tk_builder.widgets.image_canvas import AppVariables as CanvasAppVariables
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
-import numpy
+from tk_builder.utils.image_utils.create_checkerboard import create_checkerboard
 from tk_builder.base_elements import IntegerDescriptor, StringDescriptor, FloatDescriptor
+from tk_builder.image_readers.image_reader import ImageReader
+from PIL import Image
 
 
 class AppVariables(CanvasAppVariables):
@@ -25,6 +34,10 @@ class AppVariables(CanvasAppVariables):
     right_margin = IntegerDescriptor('right_margin', default_value=0)  # type: int
     n_x_axis_ticks = IntegerDescriptor('n_x_axis_ticks', default_value=5)  # type: int
     n_y_axis_ticks = IntegerDescriptor('n_y_axis_ticks', default_value=5)  # type: int
+    outer_canvas_reader = None  # type: ImageReader
+    inner_canvas_reader = None  # type: ImageReader
+    resizeable = False  # type: bool
+    update_outer_canvas_on_resize = False  # type: bool
 
 
 class AxesImageCanvas(ImageCanvas):
@@ -34,22 +47,87 @@ class AxesImageCanvas(ImageCanvas):
         ImageCanvas.__init__(self, parent)
 
         self.variables = AppVariables()
-        self.canvas = ImageCanvas(self)
-        self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
-        inner_canvas_height = int(self.variables.canvas_height / 2)
-        inner_canvas_width = int(self.variables.canvas_width / 2)
-        self.canvas.set_canvas_size(inner_canvas_width, inner_canvas_height)
-        canvas_image = numpy.zeros((self.variables.canvas_height,
-                                    self.variables.canvas_width), dtype=numpy.uint8)
-        background_image = numpy.ones((self.variables.canvas_height,
-                                       self.variables.canvas_width), dtype=numpy.uint8) * 255
-        background_reader = NumpyImageReader(background_image)
-        canvas_reader = NumpyImageReader(canvas_image)
-        self.canvas._set_image_reader(canvas_reader)
-        self._set_image_reader(background_reader)
-        self.canvas.pack(fill=tkinter.BOTH, expand=tkinter.NO)
+        self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
+        self.inner_frame = Frame(self)
+        self.inner_canvas = ImageCanvas(self)
+        self.inner_frame.pack()
+        self.inner_canvas.pack()
+        square_size = 50
+        n_squares_x = 20
+        n_squares_y = 20
+        canvas_height = square_size * n_squares_y
+        canvas_width = square_size * n_squares_x
+        self.set_canvas_size(canvas_width, canvas_height)
+        canvas_image = create_checkerboard(square_size, n_squares_x, n_squares_y) * 255
+        canvas_image = numpy.asarray(canvas_image, dtype=numpy.uint8)
 
-    def zoom_to_selection(self, canvas_rect, animate=False):
+        inner_canvas_reader = NumpyImageReader(canvas_image)
+        self.inner_canvas.on_resize(self.callback_handle_inner_canvas_resize)
+        self.inner_canvas.on_mouse_wheel(self.callback_inner_canvas_mouse_zoom)
+        self.inner_canvas.set_image_reader(inner_canvas_reader)
+        self.height = self.winfo_reqheight()
+        self.width = self.winfo_reqwidth()
+
+    def callback_handle_inner_canvas_resize(self, event):
+        pass
+
+    def callback_inner_canvas_mouse_zoom(self, event):
+        self.inner_canvas.callback_mouse_zoom(event)
+
+    @property
+    def update_outer_canvas_on_resize(self):
+        return self.variables.update_outer_canvas_on_resize
+
+    @update_outer_canvas_on_resize.setter
+    def update_outer_canvas_on_resize(self, value):
+        self.variables.update_outer_canvas_on_resize = value
+
+    @property
+    def resizeable(self):
+        return self.variables.resizeable
+
+    @resizeable.setter
+    def resizeable(self, value):
+        self.variables.resizeable = value
+        if self.resizeable:
+            self.on_resize(self.callback_resize)
+        else:
+            self.on_resize(self.do_nothing)
+
+    def callback_resize(self, event):
+        width = event.width
+        height = event.height
+        self._resize(width, height)
+
+    def _resize(self, width, height):
+        inner_rect_width = int(width) - self.left_margin_pixels - self.right_margin_pixels
+        inner_rect_height = int(height) - self.top_margin_pixels - self.bottom_margin_pixels
+        self.inner_canvas.set_canvas_size(inner_rect_width, inner_rect_height)
+        self.inner_canvas.config(width=inner_rect_width, height=inner_rect_height)
+        self.create_window(self.left_margin_pixels, self.top_margin_pixels, anchor=tkinter.NW, window=self.inner_canvas)
+        image_dims = self.inner_canvas.variables.canvas_image_object.display_image.shape
+        canvas_rect = [0, 0, image_dims[1], image_dims[0]]
+        if self.update_outer_canvas_on_resize:
+            background_image = Image.fromarray(self.variables.canvas_image_object.image_reader[:])
+            background_image.resize((width, height))
+            self.set_image_from_numpy_array(numpy.asarray(background_image))
+        self.inner_canvas.zoom_to_canvas_selection(canvas_rect)
+
+    def update_axes(self):
+        self.delete("all")
+        self.create_window(self.left_margin_pixels, self.top_margin_pixels, anchor=tkinter.NW, window=self.inner_canvas)
+        if self.variables.canvas_image_object is not None:
+            background_image = Image.fromarray(self.variables.canvas_image_object.image_reader[:])
+            background_image.resize((self.winfo_width(), self.winfo_height()))
+            self.set_image_from_numpy_array(numpy.asarray(background_image))
+        self.inner_canvas.set_image_from_numpy_array(self.inner_canvas.variables.canvas_image_object.display_image)
+        self._update_title()
+        self._update_x_axis()
+        self._update_x_label()
+        self._update_y_axis()
+        self._update_y_label()
+
+    def zoom_to_canvas_selection(self, canvas_rect, animate=False):
         pass
 
     @property
@@ -59,11 +137,6 @@ class AxesImageCanvas(ImageCanvas):
     @top_margin_pixels.setter
     def top_margin_pixels(self, value):
         self.variables.top_margin = value
-        self.create_window(self.left_margin_pixels,
-                           self.top_margin_pixels,
-                           anchor=tkinter.NW,
-                           window=self.canvas)
-        print(self.top_margin_pixels)
 
     @property
     def left_margin_pixels(self):
@@ -72,11 +145,6 @@ class AxesImageCanvas(ImageCanvas):
     @left_margin_pixels.setter
     def left_margin_pixels(self, value):
         self.variables.left_margin = value
-        self.create_window(self.left_margin_pixels,
-                           self.top_margin_pixels,
-                           anchor=tkinter.NW,
-                           window=self.canvas)
-        print(self.left_margin_pixels)
 
     @property
     def bottom_margin_pixels(self):
@@ -101,8 +169,6 @@ class AxesImageCanvas(ImageCanvas):
     @title.setter
     def title(self, value):
         self.variables.title = value
-        if value != "" or value is not None:
-            self.top_margin_pixels = 30
 
     @property
     def x_label(self):
@@ -111,8 +177,6 @@ class AxesImageCanvas(ImageCanvas):
     @x_label.setter
     def x_label(self, value):
         self.variables.x_label = value
-        if value != "0" or value is not None:
-            self.bottom_margin_pixels = 100
 
     @property
     def y_label(self):
@@ -121,8 +185,6 @@ class AxesImageCanvas(ImageCanvas):
     @y_label.setter
     def y_label(self, value):
         self.variables.y_label = " " + value
-        if value != "0" or value is not None:
-            self.left_margin_pixels = 100
 
     @property
     def image_x_min_val(self):
@@ -157,7 +219,7 @@ class AxesImageCanvas(ImageCanvas):
         self.variables.image_y_end = value
 
     def _update_title(self):
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -173,7 +235,7 @@ class AxesImageCanvas(ImageCanvas):
                          anchor="n")
 
     def _update_x_axis(self):
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -181,7 +243,7 @@ class AxesImageCanvas(ImageCanvas):
             image_height, image_width = display_image_dims[0], display_image_dims[1]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
-        bottom_pixel_index = self.top_margin_pixels + self.canvas.variables.canvas_height + 30
+        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
@@ -191,10 +253,10 @@ class AxesImageCanvas(ImageCanvas):
             tick_positions.append((x, bottom_pixel_index))
 
         if self.variables.image_x_start is not None and self.variables.image_x_end is not None:
-            m = (self.variables.image_x_end - self.variables.image_x_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_nx
+            m = (self.variables.image_x_end - self.variables.image_x_start) / self.inner_canvas.variables.canvas_image_object.image_reader.full_image_nx
             b = self.variables.image_x_start
 
-            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
+            display_image_coords = self.inner_canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
                 (0, 0, image_width, image_height))
             tick_vals = numpy.linspace(display_image_coords[1], display_image_coords[3], self.variables.n_x_axis_ticks)
             tick_vals = m * tick_vals + b
@@ -208,7 +270,7 @@ class AxesImageCanvas(ImageCanvas):
                              anchor="n")
 
     def _update_x_label(self):
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -216,7 +278,7 @@ class AxesImageCanvas(ImageCanvas):
             image_height, image_width = display_image_dims[0], display_image_dims[1]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
-        bottom_pixel_index = self.top_margin_pixels + self.canvas.variables.canvas_height + 30
+        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
@@ -228,7 +290,7 @@ class AxesImageCanvas(ImageCanvas):
 
     def _update_y_axis(self):
         left_pixel_index = self.left_margin_pixels - 40
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -245,10 +307,10 @@ class AxesImageCanvas(ImageCanvas):
 
         if self.variables.image_y_start and self.variables.image_y_end:
             m = (
-                            self.variables.image_y_end - self.variables.image_y_start) / self.canvas.variables.canvas_image_object.image_reader.full_image_ny
+                            self.variables.image_y_end - self.variables.image_y_start) / self.inner_canvas.variables.canvas_image_object.image_reader.full_image_ny
             b = self.variables.image_y_start
 
-            display_image_coords = self.canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
+            display_image_coords = self.inner_canvas.variables.canvas_image_object.canvas_coords_to_full_image_yx(
                 (0, 0, image_width, image_height))
             tick_vals = numpy.linspace(display_image_coords[0], display_image_coords[2], self.variables.n_y_axis_ticks)
             tick_vals = m * tick_vals + b
@@ -258,7 +320,7 @@ class AxesImageCanvas(ImageCanvas):
 
     def _update_y_label(self):
         left_pixel_index = self.left_margin_pixels - 40
-        display_image = self.canvas.variables.canvas_image_object.display_image
+        display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
         if len(display_image_dims) == 2:
             image_height, image_width = display_image_dims
@@ -277,6 +339,3 @@ class AxesImageCanvas(ImageCanvas):
                          anchor="s",
                          angle=90,
                          justify="right")
-
-    def set_image_reader(self, image_reader):
-        self.canvas._set_image_reader(image_reader)
