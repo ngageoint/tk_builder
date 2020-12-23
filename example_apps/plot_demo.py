@@ -3,7 +3,7 @@ from tk_builder.panels.pyplot_panel import PyplotPanel
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets import basic_widgets
-import numpy as np
+import numpy
 
 
 class ButtonPanel(WidgetPanel):
@@ -97,7 +97,7 @@ class PlotDemo(WidgetPanel):
         """
 
         plot_data = self.mockup_animation_data_2()
-        data_shape = np.shape(plot_data)
+        data_shape = numpy.shape(plot_data)
         x_axis_points = data_shape[0]
         n_overplots = data_shape[1]
         print("plot data has dimensions of: " + str(data_shape))
@@ -119,7 +119,7 @@ class PlotDemo(WidgetPanel):
         """
 
         plot_data = self.mockup_animation_data_3()
-        data_shape = np.shape(plot_data)
+        data_shape = numpy.shape(plot_data)
         x_axis_points = data_shape[0]
         n_overplots = data_shape[1]
         n_animation_frames = data_shape[2]
@@ -136,30 +136,30 @@ class PlotDemo(WidgetPanel):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
         """
 
         n_overplots = 10
         nx = 200
         n_times = 100
 
-        x_axis = np.linspace(0, np.pi, nx)
-        y_data_1 = np.sin(x_axis)
-        y_data_2 = np.zeros((len(x_axis), n_overplots))
-        y_data_3 = np.zeros((len(x_axis), n_overplots, n_times))
+        x_axis = numpy.linspace(0, numpy.pi, nx)
+        y_data_1 = numpy.sin(x_axis)
+        y_data_2 = numpy.zeros((len(x_axis), n_overplots))
+        y_data_3 = numpy.zeros((len(x_axis), n_overplots, n_times))
 
-        scaling_factors = np.linspace(0.7, 1, n_overplots)
+        scaling_factors = numpy.linspace(0.7, 1, n_overplots)
 
         for i in range(n_overplots):
             y_data_2[:, i] = y_data_1 * scaling_factors[i]
 
-        x_over_time = np.zeros((nx, n_times))
-        x_over_time_start = np.linspace(0, np.pi, n_times)
+        x_over_time = numpy.zeros((nx, n_times))
+        x_over_time_start = numpy.linspace(0, numpy.pi, n_times)
         for i in range(n_times):
             x_start = x_over_time_start[i]
-            x = np.linspace(x_start, np.pi + x_start, nx)
+            x = numpy.linspace(x_start, numpy.pi + x_start, nx)
             x_over_time[:, i] = x
-            y = np.sin(x)
+            y = numpy.sin(x)
             for j in range(n_overplots):
                 y_data_3[:, j, i] = y * scaling_factors[j]
         return y_data_3
@@ -171,17 +171,17 @@ class PlotDemo(WidgetPanel):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
         """
 
         n_overplots = 10
         nx = 200
 
-        x_axis = np.linspace(0, 2 * np.pi, nx)
+        x_axis = numpy.linspace(0, 2 * numpy.pi, nx)
         y_data_1 = x_axis
-        y_data_2 = np.zeros((len(x_axis), n_overplots))
+        y_data_2 = numpy.zeros((len(x_axis), n_overplots))
 
-        scaling_factors = np.linspace(0.7, 1, n_overplots)
+        scaling_factors = numpy.linspace(0.7, 1, n_overplots)
 
         for i in range(n_overplots):
             y_data_2[:, i] = y_data_1 * scaling_factors[i]
@@ -195,11 +195,11 @@ class PlotDemo(WidgetPanel):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
         """
 
-        x = np.linspace(-5, 5, 200)
-        y = np.sinc(x)
+        x = numpy.linspace(-5, 5, 200)
+        y = numpy.sinc(x)
         return y
 
 

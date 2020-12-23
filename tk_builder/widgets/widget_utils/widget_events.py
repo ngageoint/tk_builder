@@ -80,6 +80,7 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
+
         if platform.system() == "Darwin":
             self.event_binding('<Button-2>', callback, *args, **kwargs)
         else:
@@ -206,6 +207,7 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
+
         if platform.system() == "Darwin":
             self.event_binding('<ButtonRelease-2>', callback, *args, **kwargs)
         else:
@@ -268,6 +270,7 @@ class WidgetEvents(tkinter.Misc):
         -------
         None
         """
+
         if platform.system() == "Darwin":
             self.event_binding('<B2-Motion>', callback, *args, **kwargs)
         else:

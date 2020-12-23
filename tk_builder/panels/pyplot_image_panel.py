@@ -1,16 +1,18 @@
 import logging
+from matplotlib import pyplot
+import numpy
+import tkinter
+
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 except ImportError:
-    logging.error('Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
-                  'because the matplotlib in your environment was not built with tkinter '
-                  'backend support enabled. No functionality for the pyplot panel '
-                  'will be functional.')
+    logging.error(
+        'Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
+        'because the matplotlib in your environment was not built with tkinter '
+        'backend support enabled. No functionality for the pyplot panel '
+        'will be functional.')
     FigureCanvasTkAgg = None
 
-import matplotlib.pyplot as plt
-import numpy
-import tkinter
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
@@ -32,10 +34,9 @@ class PyplotImagePanel(tkinter.LabelFrame):
 
         # default dpi is 100, so npix will be 100 times the numbers passed to figsize
         # fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
-        fig = plt.figure()
-
-        plt.imshow(self.image_data)
-        self.canvas = FigureCanvasTkAgg(fig, master=self)
+        self.fig, self.ax = pyplot.subplots(nrows=1, ncols=1)
+        self.ax.imshow(self.image_data)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.update_image(self.image_data)
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
@@ -53,6 +54,11 @@ class PyplotImagePanel(tkinter.LabelFrame):
         -------
         str
         """
+
         self.image_data = image_data
-        plt.imshow(self.image_data)
+        self.ax.imshow(self.image_data)
         self.canvas.draw()
+
+    def destroy(self):
+        pyplot.close(self.fig)
+        super(PyplotImagePanel, self).destroy()

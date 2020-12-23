@@ -3,20 +3,9 @@ __author__ = "Jason Casey"
 
 
 import logging
-import sys
 from weakref import WeakKeyDictionary
 
-
-integer_types = (int, )
-string_types = (str, )
-int_func = int
-if sys.version_info[0] < 3:
-    # noinspection PyUnresolvedReferences
-    int_func = long  # to accommodate for 32-bit python 2
-    # noinspection PyUnresolvedReferences
-    integer_types = (int, long)
-    # noinspection PyUnresolvedReferences
-    string_types = (str, unicode)
+from sarpy.compliance import integer_types, int_func, string_types
 
 
 def _verify_bool(val, default, name, instance):

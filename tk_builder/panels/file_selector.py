@@ -11,14 +11,17 @@ __author__ = "Jason Casey"
 
 class FileSelector(WidgetPanel):
     """
-    File selector interface.  Provides a button for for the user to press to select a filename.
-    The filename is stored in the class variable "fname".
-    A label is also provided in this GUI widget that displays the name of the selected file for reference.
+    File selector interface.  Provides a button for for the user to press to
+    select a filename. The filename is stored in the variable "fname".
+    A label is also provided in this GUI widget that displays the name of the
+    selected file for reference.
     """
+
     _widget_list = ("select_file", "fname_label")
     select_file = widget_descriptors.ButtonDescriptor(
         "select_file", default_text="file selector")  # type: basic_widgets.Button
-    fname_label = widget_descriptors.LabelDescriptor("fname_label", default_text="")   # type: basic_widgets.Label
+    fname_label = widget_descriptors.LabelDescriptor(
+        "fname_label", default_text="")   # type: basic_widgets.Label
 
     def __init__(self, parent):
         """
