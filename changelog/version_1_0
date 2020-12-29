@@ -1,7 +1,7 @@
 # This details the important differences introduced in tk_builder 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
-* .5 - Clarification of a implementations for a variety of classes
+* .5 - Clarification of implementations for image reader class structure
 * .4 - Updates to ImagePanel fundamentals and some geotiff reading examples
 * .3 - Canvas bug fixes and extension of features
 * .2 - Fixed radiobutton bug

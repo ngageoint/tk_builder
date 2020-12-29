@@ -185,12 +185,10 @@ class CanvasImage(object):
         float
         """
 
-        # TODO: division may not work as expected in Python 2 (int versus float)
-        #   what is the intent here?
         decimated_image_nx = decimated_image.shape[1]
         decimated_image_ny = decimated_image.shape[0]
-        scale_factor_1 = self.canvas_nx/decimated_image_nx
-        scale_factor_2 = self.canvas_ny/decimated_image_ny
+        scale_factor_1 = float(self.canvas_nx)/decimated_image_nx
+        scale_factor_2 = float(self.canvas_ny)/decimated_image_ny
         scale_factor = min(scale_factor_1, scale_factor_2)
         return scale_factor
 
