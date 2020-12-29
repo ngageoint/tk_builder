@@ -67,3 +67,19 @@ class ImageReader(object):
         """
 
         raise NotImplementedError
+
+    def set_remap_type(self, remap_type):
+        """
+        Sets a remap function, for mapping the raw underlying data to an 8-bit image.
+        This only applies to the situation in which the data is not already 8-bit.
+
+        Parameters
+        ----------
+        remap_type : str|callable
+
+        Returns
+        -------
+        None
+        """
+
+        pass
