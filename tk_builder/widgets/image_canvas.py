@@ -302,8 +302,15 @@ class CanvasImage(object):
         decimation_x = nx / self.canvas_nx
         decimation_factor = max(decimation_y, decimation_x)
         decimation_factor = int(decimation_factor)
-        if decimation_factor < 1:
-            decimation_factor = 1
+
+        min_decimation = 1
+        max_decimation = min(nx-1, ny-1)
+
+        if decimation_factor < min_decimation:
+            decimation_factor = min_decimation
+        if decimation_factor > max_decimation:
+            decimation_factor = max_decimation
+
         return decimation_factor
 
     def get_decimation_from_canvas_rect(self, canvas_rect):
@@ -1845,8 +1852,7 @@ class ImageCanvas(basic_widgets.Canvas):
             tmp_image_coords[1] = image_coords[3]
             tmp_image_coords[3] = image_coords[1]
         if decimation is None:
-            decimation = self.variables.canvas_image_object.\
-                get_decimation_factor_from_full_image_rect(tmp_image_coords)
+            decimation = self.variables.canvas_image_object.get_decimation_factor_from_full_image_rect(tmp_image_coords)
         tmp_image_coords = (int(tmp_image_coords[0]), int(tmp_image_coords[1]), int(tmp_image_coords[2]), int(tmp_image_coords[3]))
         image_data_in_rect = self.variables.canvas_image_object.\
             get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
