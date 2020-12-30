@@ -8,16 +8,17 @@ class ImageReader(object):
     An abstract image reader class, intended to layout the basic elements for
     providing image data to Image Canvas Objects.
 
-    The subclasses of ImagReader
-    should implement __getitem__, which should return a numpy array in one of the following formats:
-    array[ny, nx]
-    array[ny, nx, 3]
-    array[ny, nx, 4]
-    Where ny is the number of rows for the image to be displayed, and nx is the number of columns.
-    The image arrays should be of datatype numpy.uint8
-    In the first case, the image to be displayed is a grayscale image
-    In the second case, the image is a 3 color RGB image with no transparency
-    In the third case, the image is a 4 channel RGBA image where the 4th channel is the transparency layer
+    Any subclasses must implement `__getitem__` to support 2 element slice parsing
+    (i.e. :code:`data = ImageReader[start_0:end_0:step_0, start1:end1:step1]`)
+
+    It is assumed that `__getitem__` will return a numpy array of some real dtype of
+    one of these shapes:
+        * (ny, nx) - monochromatic image
+        * (ny, nx, 3) - RGB image
+        * (ny, nx, 4) - RGBA image, may be strange plotting results if not dtype uint8
+
+    Note that RGB or RGBA images of dtype other than `uint8` may result in unexpected
+    plotting results.
     """
 
     __slots__ = ('_data_size', )
