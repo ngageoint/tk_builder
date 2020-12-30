@@ -25,8 +25,7 @@ class Toolbar(WidgetPanel):
         "top_margin_label", "top_margin", "bottom_margin_label", "bottom_margin")
     canvas_size_controls = (
         "canvas_width_label", "canvas_width", "canvas_height_label", "canvas_height")
-    _widget_list = top_level_controls + axes_labels_controls + margin_controls + canvas_size_controls
-
+    _widget_list = (top_level_controls, axes_labels_controls, margin_controls, canvas_size_controls)
     zoom_in = widget_descriptors.ButtonDescriptor(
         "zoom_in")  # type: basic_widgets.Button
     zoom_out = widget_descriptors.ButtonDescriptor(

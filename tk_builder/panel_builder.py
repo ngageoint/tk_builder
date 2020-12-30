@@ -169,7 +169,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         None
         """
 
-        self._rows = [basic_widgets.Frame(self) for i in range(n_rows)]
+        self._rows = [basic_widgets.Frame(self) for _ in range(n_rows)]
         for row in self._rows:
             row.config(borderwidth=2)
             row.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -177,6 +177,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         # find transition points
         transitions = numpy.cumsum(n_widgets_per_row_list)
         row_num = 0
+
         for i, widget_name in enumerate(self._widget_list):
             widget_descriptor = getattr(self.__class__, widget_name, None)
             if widget_descriptor is None:

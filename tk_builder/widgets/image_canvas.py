@@ -1835,6 +1835,8 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.get_shape_image_coords(rect_id)
+        if image_coords is None:
+            return None
         tmp_image_coords = list(image_coords)
         if image_coords[0] > image_coords[2]:
             tmp_image_coords[0] = image_coords[2]
