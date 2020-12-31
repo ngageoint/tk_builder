@@ -1,6 +1,7 @@
 import os
 import tkinter
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets
 from tk_builder.widgets import widget_descriptors
@@ -11,10 +12,11 @@ __author__ = "Jason Casey"
 
 class FileSelector(WidgetPanel):
     """
-    File selector interface.  Provides a button for for the user to press to
-    select a filename. The filename is stored in the variable "fname".
-    A label is also provided in this GUI widget that displays the name of the
-    selected file for reference.
+    File selector interface.  Provides a button for the user to press to select
+    a filename.
+
+    The selected filename is accessible in the property "file_name". A label displays
+    the selected file name for easy reference.
     """
 
     _widget_list = ("select_file", "fname_label")
@@ -31,25 +33,34 @@ class FileSelector(WidgetPanel):
         parent
             The parent widget.
         """
-
+        self._file_name = None
         WidgetPanel.__init__(self, parent)
         tkinter.LabelFrame.__init__(self, parent)
         self.config(borderwidth=0)
-        self.fname = None
 
         self.init_w_horizontal_layout()
-        self.fname_filters = [('All files', '*')]
+        self.fname_filters = [('All Files', '*')]
         # in practice this would be overridden if the user wants more things to happen after selecting a file.
         self.select_file.config(command=self.select_file_command)
-        self.initialdir = os.path.expanduser("~")
+        self.browse_directory = os.path.expanduser("~")
         self.fname_label.config(state='disabled')
+
+    @property
+    def file_name(self):
+        """
+        str: The selected file name.
+        """
+
+        return self._file_name
 
     def set_fname_filters(self, filter_list):
         """
 
         Parameters
         ----------
-        filter_list : List[str]
+        filter_list
+            This is a list of tuples of the form `[(<name for filter>, <filter expression>)]`,
+            where `<filter expression>` is a regular expression or list of regular expressions.
 
         Returns
         -------
@@ -57,21 +68,6 @@ class FileSelector(WidgetPanel):
         """
 
         self.fname_filters = filter_list
-
-    def set_initial_dir(self, directory):
-        """
-        Set the initial directory, the default opening location.
-
-        Parameters
-        ----------
-        directory : str
-
-        Returns
-        -------
-        None
-        """
-
-        self.initialdir = directory
 
     def event_select_file(self, event):
         """
@@ -90,18 +86,19 @@ class FileSelector(WidgetPanel):
 
     def select_file_command(self):
         """
-        select file command
-
-        Parameters
-        ----------
+        Select file command callback.
 
         Returns
         -------
         str
         """
-        self.fname = askopenfilename(initialdir=self.initialdir, filetypes=self.fname_filters)
-        self.fname_label.set_text(self.fname)
-        return self.fname
+
+        fname = askopenfilename(initialdir=self.browse_directory, filetypes=self.fname_filters)
+        if fname:
+            self.browse_directory = os.path.split(fname)[0]
+            self.fname_label.set_text(fname)
+            self._file_name = fname
+        return fname
 
     def event_new_file(self, event):
         """
@@ -116,5 +113,8 @@ class FileSelector(WidgetPanel):
         None
         """
 
-        self.fname = asksaveasfilename(initialdir=self.initialdir, filetypes=self.fname_filters)
-        self.fname_label.config(text=self.fname)
+        fname = asksaveasfilename(initialdir=self.browse_directory, filetypes=self.fname_filters)
+        if fname:
+            self.fname_label.config(text=fname)
+            self.browse_directory = os.path.split(fname)[0]
+            self._file_name = fname
