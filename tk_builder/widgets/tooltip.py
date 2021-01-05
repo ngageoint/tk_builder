@@ -8,9 +8,9 @@ import tkinter.tix
 
 class ToolTip(object):
     """
-        create a tooltip for a given widget
-
+    Create a tooltip for a given widget
     """
+
     def __init__(self, widget, text='widget info'):
         self.widget = widget
         self.text = text
@@ -27,9 +27,10 @@ class ToolTip(object):
         # Leaves only the label and removes the app window
         self.tw.wm_overrideredirect(True)
         self.tw.wm_geometry("+%d+%d" % (x, y))
-        label = tkinter.Label(self.tw, text=self.text, justify='left',
-                       background='yellow', relief='solid', borderwidth=1,
-                       font=("times", "8", "normal"))
+        label = tkinter.Label(
+            self.tw, text=self.text, justify='left',
+            background='yellow', relief='solid', borderwidth=1,
+            font=("times", "8", "normal"))
         label.pack(ipadx=1)
 
     def close(self, event=None):

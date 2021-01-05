@@ -1,44 +1,67 @@
 import logging
+from matplotlib import pyplot
+import numpy
+import tkinter
+
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 except ImportError:
-    logging.error('Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
-                  'because the matplotlib in your environment was not built with tkinter '
-                  'backend support enabled. No functionality for the pyplot panel '
-                  'will be functional.')
+    logging.error(
+        'Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
+        'because the matplotlib in your environment was not built with tkinter '
+        'backend support enabled. No functionality for the pyplot panel '
+        'will be functional.')
     FigureCanvasTkAgg = None
 
-import matplotlib.pyplot as plt
-import numpy
-import tkinter
 
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
+DEFAULT_CMAP = 'bone'
+
+
 class PyplotImagePanel(tkinter.LabelFrame):
     """
-    Pyplot Image Panel class.  This essentially provides a widget that allows users to embed pyplot images into
-    an application.
+    Provides a widget that allows users to embed pyplot images into an application.
     """
-    def __init__(self, parent, canvas_width=600, canvas_height=400):
+
+    def __init__(self, parent, canvas_width=600, canvas_height=400, cmap_name=DEFAULT_CMAP):
+        self._cmap_name = DEFAULT_CMAP
         tkinter.LabelFrame.__init__(self, parent)
         self.config(highlightbackground="black")
         self.config(highlightthickness=1)
         self.config(borderwidth=5)
 
         # this is a dummy placeholder for now
-        self.image_data = numpy.zeros((canvas_height, canvas_width))
-
+        self.image_data = numpy.zeros((canvas_height, canvas_width), dtype='uint8')
+        self.cmap_name = cmap_name
         # default dpi is 100, so npix will be 100 times the numbers passed to figsize
         # fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
-        fig = plt.figure()
-
-        plt.imshow(self.image_data)
-        self.canvas = FigureCanvasTkAgg(fig, master=self)
+        self.fig, self.ax = pyplot.subplots(nrows=1, ncols=1)
+        self.ax.imshow(self.image_data, cmap=self.cmap_name)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.update_image(self.image_data)
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
+
+    @property
+    def cmap_name(self):
+        """
+        str: The matplotlib colormap to apply, in the case of monochromatic image data
+        """
+
+        return self._cmap_name
+
+    @cmap_name.setter
+    def cmap_name(self, value):
+        if value in pyplot.colormaps():
+            self._cmap_name = value
+        else:
+            self._cmap_name = DEFAULT_CMAP
+            logging.error(
+                'cmap_name {} is not in the pyplot list of registered colormaps. '
+                'Using the default.'.format(value))
 
     def update_image(self, image_data):
         """
@@ -53,6 +76,14 @@ class PyplotImagePanel(tkinter.LabelFrame):
         -------
         str
         """
+
         self.image_data = image_data
-        plt.imshow(self.image_data)
+        if image_data.ndim == 3:
+            self.ax.imshow(self.image_data)
+        else:
+            self.ax.imshow(self.image_data, cmap=self.cmap_name)
         self.canvas.draw()
+
+    def destroy(self):
+        pyplot.close(self.fig)
+        super(PyplotImagePanel, self).destroy()

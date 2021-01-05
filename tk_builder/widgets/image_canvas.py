@@ -54,11 +54,9 @@ class CanvasImage(object):
         docstring='The upper left corner of the full image canvas in '
                   'yx order.')  # type: tuple
     canvas_ny = IntegerDescriptor(
-        'canvas_ny',
-        docstring='')  # type: int
+        'canvas_ny', docstring='')  # type: int
     canvas_nx = IntegerDescriptor(
-        'canvas_nx',
-        docstring='')  # type: int
+        'canvas_nx', docstring='')  # type: int
 
     def __init__(self, image_reader, canvas_nx, canvas_ny):
         """
@@ -187,12 +185,10 @@ class CanvasImage(object):
         float
         """
 
-        # TODO: division may not work as expected in Python 2 (int versus float)
-        #   what is the intent here?
         decimated_image_nx = decimated_image.shape[1]
         decimated_image_ny = decimated_image.shape[0]
-        scale_factor_1 = self.canvas_nx/decimated_image_nx
-        scale_factor_2 = self.canvas_ny/decimated_image_ny
+        scale_factor_1 = float(self.canvas_nx)/decimated_image_nx
+        scale_factor_2 = float(self.canvas_ny)/decimated_image_ny
         scale_factor = min(scale_factor_1, scale_factor_2)
         return scale_factor
 
@@ -287,7 +283,6 @@ class CanvasImage(object):
         self.display_rescaling_factor = scale_factor
         self.display_image = self.get_scaled_display_data(image_data)
 
-
     def get_decimation_factor_from_full_image_rect(self, full_image_rect):
         """
         Get the decimation factor from the rectangle size.
@@ -307,8 +302,15 @@ class CanvasImage(object):
         decimation_x = nx / self.canvas_nx
         decimation_factor = max(decimation_y, decimation_x)
         decimation_factor = int(decimation_factor)
-        if decimation_factor < 1:
-            decimation_factor = 1
+
+        min_decimation = 1
+        max_decimation = min(nx-1, ny-1)
+
+        if decimation_factor < min_decimation:
+            decimation_factor = min_decimation
+        if decimation_factor > max_decimation:
+            decimation_factor = max_decimation
+
         return decimation_factor
 
     def get_decimation_from_canvas_rect(self, canvas_rect):
@@ -444,18 +446,18 @@ class AppVariables(object):
     canvas_width = IntegerDescriptor(
         'canvas_width', default_value=600,
         docstring='The default canvas width, in pixels.')  # type: int
-    max_height = IntegerDescriptor('max_height',
-                                   default_value=800,
-                                   docstring='The maximum canvas height, in pixels.')  # type: int
-    max_width = IntegerDescriptor('max_width',
-                                   default_value=800,
-                                   docstring='The maximum canvas height, in pixels.')  # type: int
-    min_height = IntegerDescriptor('min_height',
-                                   default_value=100,
-                                   docstring='The minimum canvas width, in pixels.')  # type: int
-    min_width = IntegerDescriptor('min_width',
-                                  default_value=100,
-                                  docstring='The minimum canvas width, in pixels.')  # type: int
+    max_height = IntegerDescriptor(
+        'max_height', default_value=800,
+        docstring='The maximum canvas height, in pixels.')  # type: int
+    max_width = IntegerDescriptor(
+        'max_width', default_value=800,
+        docstring='The maximum canvas height, in pixels.')  # type: int
+    min_height = IntegerDescriptor(
+        'min_height', default_value=100,
+        docstring='The minimum canvas width, in pixels.')  # type: int
+    min_width = IntegerDescriptor(
+        'min_width', default_value=100,
+        docstring='The minimum canvas width, in pixels.')  # type: int
     rect_border_width = IntegerDescriptor(
         'rect_border_width', default_value=2,
         docstring='The (margin) rectangular border width, in pixels.')  # type: int
@@ -626,6 +628,7 @@ class ImageCanvas(basic_widgets.Canvas):
         primary
             The primary widget.
         """
+
         osplat = platform.system()
         if osplat == "Windows":
             import ctypes
@@ -695,6 +698,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         VectorObject
         """
+
         if str(vector_id) in self.variables.vector_objects:
             return self.variables.vector_objects[str(vector_id)]
         else:
@@ -886,8 +890,9 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-
+        None
         """
+
         if self.variables.active_tool == TOOLS.PAN_TOOL:
             self.variables.pan_anchor_point_xy = event.x, event.y
             self.variables.tmp_anchor_point = event.x, event.y
@@ -1104,6 +1109,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if self.variables.active_tool == TOOLS.PAN_TOOL:
             x_dist = event.x - self.variables.tmp_anchor_point[0]
             y_dist = event.y - self.variables.tmp_anchor_point[1]
@@ -1264,6 +1270,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         # pass
         self.variables.canvas_width = width_npix
         self.variables.canvas_height = height_npix
@@ -1286,6 +1293,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         vector_object = self.get_vector_object(shape_id)
         if vector_object.type == SHAPE_TYPES.POINT:
             point_size = vector_object.point_size
@@ -1422,6 +1430,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         event_x_pos = self.canvasx(event.x)
         event_y_pos = self.canvasy(event.y)
         if self.get_vector_object(self.variables.current_shape_id).image_drag_limits:
@@ -1501,7 +1510,10 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.actively_drawing_shape = True
 
     def create_new_text(self, *args, **kw):
-        """Create text with coordinates x1,y1."""
+        """
+        Create text with coordinates x1,y1.
+        """
+
         shape_id = self._create('text', args, kw)
         self.variables.shape_ids.append(shape_id)
         canvas_coords = args[0]
@@ -1689,6 +1701,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         vector_object = self.get_vector_object(shape_id)
         shape_type = vector_object.type
         if shape_type == SHAPE_TYPES.RECT or shape_type == SHAPE_TYPES.POLYGON:
@@ -1829,6 +1842,8 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.get_shape_image_coords(rect_id)
+        if image_coords is None:
+            return None
         tmp_image_coords = list(image_coords)
         if image_coords[0] > image_coords[2]:
             tmp_image_coords[0] = image_coords[2]
@@ -1837,8 +1852,7 @@ class ImageCanvas(basic_widgets.Canvas):
             tmp_image_coords[1] = image_coords[3]
             tmp_image_coords[3] = image_coords[1]
         if decimation is None:
-            decimation = self.variables.canvas_image_object.\
-                get_decimation_factor_from_full_image_rect(tmp_image_coords)
+            decimation = self.variables.canvas_image_object.get_decimation_factor_from_full_image_rect(tmp_image_coords)
         tmp_image_coords = (int(tmp_image_coords[0]), int(tmp_image_coords[1]), int(tmp_image_coords[2]), int(tmp_image_coords[3]))
         image_data_in_rect = self.variables.canvas_image_object.\
             get_decimated_image_data_in_full_image_rect(tmp_image_coords, decimation)
@@ -1857,6 +1871,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         image_coords = self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_rect)
         self.zoom_to_full_image_selection(image_coords, animate=animate)
 
@@ -2000,6 +2015,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         self.variables.active_tool = TOOLS.SELECT_CLOSEST_SHAPE_TOOL
         self.variables.current_tool = TOOLS.SELECT_CLOSEST_SHAPE_TOOL
@@ -2012,6 +2028,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = self.variables.zoom_rect_id
         self.variables.active_tool = TOOLS.ZOOM_OUT_TOOL
@@ -2025,6 +2042,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = self.variables.zoom_rect_id
         self.variables.active_tool = TOOLS.ZOOM_IN_TOOL
@@ -2042,6 +2060,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if rect_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2062,6 +2081,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if ellipse_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2082,6 +2102,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if rect_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2098,6 +2119,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = self.variables.select_rect_id
         self.variables.active_tool = TOOLS.SELECT_TOOL
@@ -2115,6 +2137,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if line_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2135,6 +2158,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if line_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2155,6 +2179,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if arrow_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2175,6 +2200,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if arrow_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2195,6 +2221,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if polygon_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2215,6 +2242,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         if point_id is None:
             self.variables.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
@@ -2231,6 +2259,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         self.activate_shape_edit_mode()
         self.variables.active_tool = TOOLS.TRANSLATE_SHAPE_TOOL
@@ -2244,6 +2273,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         self.variables.active_tool = None
         self.variables.current_tool = None
@@ -2256,6 +2286,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         if select_closest_first:
             self.variables.in_select_and_edit_mode = True
@@ -2273,6 +2304,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.variables.active_tool = TOOLS.EDIT_SHAPE_COORDS_TOOL
         self.variables.current_tool = TOOLS.EDIT_SHAPE_COORDS_TOOL
         self.activate_shape_edit_mode()
@@ -2285,6 +2317,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
         self.deactivate_shape_edit_mode()
         self.variables.active_tool = TOOLS.PAN_TOOL
         self.variables.current_tool = TOOLS.PAN_TOOL
@@ -2418,14 +2451,9 @@ class ImageCanvas(basic_widgets.Canvas):
         resized = img.resize((new_width, new_height), PIL.Image.BILINEAR)
         return numpy.array(resized)
 
-    # noinspection PyUnusedLocal
     def activate_color_selector(self):
         """
         The activate color selector callback function.
-
-        Parameters
-        ----------
-        event
 
         Returns
         -------
@@ -2450,6 +2478,7 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         int
         """
+
         vector_object = self.get_vector_object(self.variables.current_shape_id)
         coords = self.get_shape_canvas_coords(shape_id)
         if vector_object.type == SHAPE_TYPES.RECT:

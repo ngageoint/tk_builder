@@ -41,9 +41,7 @@ class AppVariables(CanvasAppVariables):
 
 
 class AxesImageCanvas(ImageCanvas):
-    def __init__(self,
-                 parent,
-                 ):
+    def __init__(self, parent):
         ImageCanvas.__init__(self, parent)
 
         self.variables = AppVariables()
@@ -221,10 +219,7 @@ class AxesImageCanvas(ImageCanvas):
     def _update_title(self):
         display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
-        if len(display_image_dims) == 2:
-            image_height, image_width = display_image_dims
-        else:
-            image_height, image_width = display_image_dims[0], display_image_dims[1]
+        image_height, image_width = display_image_dims[:2]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
         label_y_index = self.top_margin_pixels - 30
@@ -237,10 +232,7 @@ class AxesImageCanvas(ImageCanvas):
     def _update_x_axis(self):
         display_image = self.inner_canvas.variables.canvas_image_object.display_image
         display_image_dims = numpy.shape(display_image)
-        if len(display_image_dims) == 2:
-            image_height, image_width = display_image_dims
-        else:
-            image_height, image_width = display_image_dims[0], display_image_dims[1]
+        image_height, image_width = display_image_dims[:2]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
         bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.canvas_height + 30

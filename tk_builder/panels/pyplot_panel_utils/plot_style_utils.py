@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import math
-import numpy as np
+import numpy
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornPaletteNames
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 import tk_builder.utils.color_utils.color_converter as color_converter
@@ -36,13 +36,13 @@ class PlotStyleUtils:
             n_colors = len(rgb_palette)
         color_array = []
         n_color_bins = len(rgb_palette)
-        indices = np.linspace(0, n_colors, n_colors)
+        indices = numpy.linspace(0, n_colors, n_colors)
         for i in indices:
             index = i / n_colors * (n_color_bins-1)
             low = int(index)
             high = int(math.ceil(index))
             interp_float = index - low
-            color_array.append(list(np.array(rgb_palette[low]) * (1 - interp_float) + np.array(rgb_palette[high]) * interp_float))
+            color_array.append(list(numpy.array(rgb_palette[low]) * (1 - interp_float) + numpy.array(rgb_palette[high]) * interp_float))
         return color_array
 
     @staticmethod

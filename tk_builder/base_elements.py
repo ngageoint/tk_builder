@@ -3,20 +3,9 @@ __author__ = "Jason Casey"
 
 
 import logging
-import sys
 from weakref import WeakKeyDictionary
 
-
-integer_types = (int, )
-string_types = (str, )
-int_func = int
-if sys.version_info[0] < 3:
-    # noinspection PyUnresolvedReferences
-    int_func = long  # to accommodate for 32-bit python 2
-    # noinspection PyUnresolvedReferences
-    integer_types = (int, long)
-    # noinspection PyUnresolvedReferences
-    string_types = (str, unicode)
+from sarpy.compliance import integer_types, int_func, string_types
 
 
 def _verify_bool(val, default, name, instance):
@@ -343,7 +332,7 @@ def _verify_string_tuple(val, default, name, instance, length=None):
     return tuple(temp)
 
 
-def _verify_typed_tuple(val, default, name, instance, length=None):
+def _verify_typed_tuple(val, default, name, instance, the_type, length=None):
     """
     Convert and/or validate the input as a tuple of strings.
     This will make a copy of the input.
@@ -357,6 +346,8 @@ def _verify_typed_tuple(val, default, name, instance, length=None):
         The bound variable name.
     instance
         The instance to which the variable belongs.
+    the_type
+        The type to validate for.
     length : None|int|tuple|list
         See _validate_tuple_length for description.
 
@@ -367,13 +358,15 @@ def _verify_typed_tuple(val, default, name, instance, length=None):
 
     if val is None:
         return default
-    # TODO: replace try except with something to check the type
-    try:
-        temp = []
-        for entry in val:
+
+    temp = []
+    for i, entry in enumerate(val):
+        if isinstance(entry, the_type):
             temp.append(entry)
-    except Exception:
-        raise
+        else:
+            raise TypeError(
+                'Attribute {} of class {} requires a tuple with all elements of type {}, '
+                'but entry {} is of type {}'.format(name, instance.__class__, the_type, i, type(entry)))
 
     if not _validate_tuple_length(len(temp), length, name, instance):
         raise ValueError('The length of value cannot be validated appropriately')
@@ -753,5 +746,5 @@ class TypedTupleDescriptor(BasicDescriptor):
         if super(TypedTupleDescriptor, self).__set__(instance, value):
             return
 
-        iv = _verify_typed_tuple(value, self._default_value, self.name, instance, length=self._length)
+        iv = _verify_typed_tuple(value, self._default_value, self.name, instance, the_type, length=self._length)
         self.data[instance] = iv

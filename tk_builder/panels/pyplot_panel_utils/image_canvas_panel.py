@@ -12,13 +12,11 @@ __author__ = "Jason Casey"
 
 
 class ImageCanvasPanel(WidgetPanel):
-    _widget_list = ("image_canvas",)
+    _widget_list = ("image_canvas", )
 
     image_canvas = widget_descriptors.PanelDescriptor("image_canvas", AxesImageCanvas)
 
-    def __init__(self,
-                 parent,
-                 ):
+    def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
         self.init_w_vertical_layout()
         self.pack(fill=tkinter.BOTH, expand=1)

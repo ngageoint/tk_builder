@@ -61,13 +61,13 @@ class PyplotControlPanel(WidgetPanel):
         self.fps_entry.set_text("30")
 
 
-class AppVariables():
+class AppVariables(object):
     def __init__(self):
         self.title = None       # type: str
         self.x_label = None     # type: str
         self.y_label = None     # type: str
-        self.x_axis = None  # type: np.ndarray
-        self.plot_data = None  # type: np.ndarray
+        self.x_axis = None  # type: numpy.ndarray
+        self.plot_data = None  # type: numpy.ndarray
 
         self.xmin = None  # type: float
         self.xmax = None  # type: float
@@ -78,7 +78,7 @@ class AppVariables():
         self.set_y_margins_per_frame = False
         self.n_frames = 1
 
-        self.segments = None  # type: np.ndarray
+        self.segments = None  # type: numpy.ndarray
 
         self.animation_related_controls = []
         self.animation_index = 0
