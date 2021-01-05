@@ -200,7 +200,10 @@ class WidgetPanel(basic_widgets.LabelFrame):
             if i in transitions:
                 row_num += 1
 
-            widget_text = widget_descriptor.default_text
+            try:
+                widget_text = widget_descriptor.default_text
+            except AttributeError:
+                widget_text = None
             widget = widget_type(self._rows[row_num])
             widget.pack(side="left", padx=self.padx, pady=self.pady, fill=tkinter.BOTH, expand=tkinter.YES)
             if hasattr(widget_type, 'set_text') and widget_text is not None:
