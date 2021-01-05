@@ -25,8 +25,7 @@ class Toolbar(WidgetPanel):
         "top_margin_label", "top_margin", "bottom_margin_label", "bottom_margin")
     canvas_size_controls = (
         "canvas_width_label", "canvas_width", "canvas_height_label", "canvas_height")
-    _widget_list = top_level_controls + axes_labels_controls + margin_controls + canvas_size_controls
-
+    _widget_list = (top_level_controls, axes_labels_controls, margin_controls, canvas_size_controls)
     zoom_in = widget_descriptors.ButtonDescriptor(
         "zoom_in")  # type: basic_widgets.Button
     zoom_out = widget_descriptors.ButtonDescriptor(
@@ -311,23 +310,6 @@ class ImagePanel(WidgetPanel):
         self.axes_canvas.top_margin_pixels = int(self.toolbar.top_margin.get())
         self.axes_canvas.bottom_margin_pixels = int(self.toolbar.bottom_margin.get())
 
-    # TODO: remove this
-    # def callback_update_canvas_size(self, event):
-    #     """
-    #     Updates the canvas size.  This is generally done explicitly by the user using the toolbar settings when
-    #     dynamic resizing has been disabled.
-    #     """
-    #     width = int(self.toolbar.canvas_width.get())
-    #     height = int(self.toolbar.canvas_height.get())
-    #     self.config(width=width+20)
-    #     self.toolbar.config(width=width)
-    #     self.toolbar.pack(expand=True)
-    #     self.pack(expand=True)
-    #     self.axes_canvas.config(width=width, height=height)
-    #     self.axes_canvas.set_canvas_size(width, height)
-    #     self.canvas.set_canvas_size(width - self.axes_canvas.left_margin_pixels - self.axes_canvas.right_margin_pixels,
-    #                                 height - self.axes_canvas.top_margin_pixels - self.axes_canvas.bottom_margin_pixels)
-
     def set_image_reader(self, image_reader):
         """
         Sets the image reader.  The image reader should be a subclass of the "ImageReader" class.
@@ -400,7 +382,6 @@ class ImagePanel(WidgetPanel):
         -------
         None
         """
-
         if value is None:
             self.canvas.set_current_tool_to_none()
         elif value == ToolConstants.EDIT_SHAPE_TOOL:
