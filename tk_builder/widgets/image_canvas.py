@@ -661,6 +661,23 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self._color_cycler = ColorCycler(n_colors=10)
 
+    def reinitialize_shapes(self):
+        """
+        Delete all shapes, and refresh.
+
+        Returns
+        -------
+        None
+        """
+        if len(self.variables.shape_ids) <= 2:
+            return
+
+        shape_ids = self.variables.shape_ids.copy()
+        for shape_id in shape_ids:
+            if shape_id not in [self.variables.zoom_rect_id, self.variables.select_rect_id]:
+                self.delete_shape(shape_id)
+        self.redraw_all_shapes()
+
     def disable_mouse_zoom(self):
         self.on_mouse_wheel(self.do_nothing)
 
