@@ -48,6 +48,14 @@ class ImageReader(object):
 
         return self.data_size[1]
 
+    @property
+    def file_name(self):
+        """
+        None|str|Tuple[str]: The filename(s) for the given images.
+        """
+
+        raise NotImplementedError
+
     def __getitem__(self, item):
         """
         This is expected to accompany a basic two element slice, with bounds

@@ -43,6 +43,7 @@ class GeotiffImageReader(ImageReader):
         if gdal is None:
             raise ImportError('Importing gdal failed, this functionality is not viable.')
 
+        self._file_name = fname
         self.all_image_data = None  # type: Union[None, numpy.ndarray]
         self.display_bands = [0, 1, 2, 3]  # type: List[int]
         self._dset = gdal.Open(fname, gdal.GA_ReadOnly)
@@ -57,6 +58,10 @@ class GeotiffImageReader(ImageReader):
             self.display_bands = [0, ]
 
         self.n_overviews = self._dset.GetRasterBand(1).GetOverviewCount()
+
+    @property
+    def file_name(self):
+        return self._file_name
 
     @property
     def n_bands(self):

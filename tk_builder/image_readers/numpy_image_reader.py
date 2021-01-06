@@ -30,5 +30,9 @@ class NumpyImageReader(ImageReader):
         self.numpy_image_data = numpy_image_data
         self._data_size = numpy_image_data.shape[:2]
 
+    @property
+    def file_name(self):
+        return None
+
     def __getitem__(self, key):
         return self.numpy_image_data[key]
