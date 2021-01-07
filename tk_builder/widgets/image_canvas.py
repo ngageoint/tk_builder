@@ -669,12 +669,11 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-        if len(self.variables.shape_ids) <= 2:
-            return
 
         shape_ids = self.variables.shape_ids.copy()
+        tool_shapes = self.get_tool_shape_ids()
         for shape_id in shape_ids:
-            if shape_id not in [self.variables.zoom_rect_id, self.variables.select_rect_id]:
+            if shape_id not in tool_shapes:
                 self.delete_shape(shape_id)
         self.redraw_all_shapes()
 
