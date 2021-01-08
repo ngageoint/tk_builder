@@ -264,7 +264,7 @@ class ImagePanel(WidgetPanel):
         save_fname = asksaveasfilename(
             initialdir=self._image_save_directory,
             title="Select output image file",
-            filetypes=file_filters.basic_image_types)
+            filetypes=file_filters.basic_image_collection)
 
         if save_fname in ['', ()]:
             return
@@ -283,7 +283,7 @@ class ImagePanel(WidgetPanel):
         save_fname = asksaveasfilename(
             initialdir=self._image_save_directory,
             title="Select output image file",
-            filetypes=file_filters.basic_image_types)
+            filetypes=file_filters.basic_image_collection)
 
         if save_fname in ['', ()]:
             return
