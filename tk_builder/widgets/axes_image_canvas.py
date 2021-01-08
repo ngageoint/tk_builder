@@ -235,7 +235,7 @@ class AxesImageCanvas(ImageCanvas):
         image_height, image_width = display_image_dims[:2]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
-        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.canvas_height + 30
+        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.state.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)
@@ -270,7 +270,7 @@ class AxesImageCanvas(ImageCanvas):
             image_height, image_width = display_image_dims[0], display_image_dims[1]
         left_pixel_index = self.left_margin_pixels + 2
         right_pixel_index = self.left_margin_pixels + image_width
-        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.canvas_height + 30
+        bottom_pixel_index = self.top_margin_pixels + self.inner_canvas.variables.state.canvas_height + 30
         label_y_index = bottom_pixel_index + 30
 
         x_axis_positions = numpy.linspace(left_pixel_index, right_pixel_index, self.variables.n_x_axis_ticks)

@@ -414,8 +414,8 @@ class ImagePanel(WidgetPanel):
         None
         """
 
-        self.axes_canvas.variables.min_width = x
-        self.axes_canvas.variables.min_height = y
+        self.axes_canvas.variables.state.min_width = x
+        self.axes_canvas.variables.state.min_height = y
 
     def set_max_canvas_size(self, x, y):
         """
@@ -432,8 +432,8 @@ class ImagePanel(WidgetPanel):
         None
         """
 
-        self.axes_canvas.variables.max_width = x
-        self.axes_canvas.variables.max_height = y
+        self.axes_canvas.variables.state.max_width = x
+        self.axes_canvas.variables.state.max_height = y
 
     def callback_update_everything(self, event):
         self.update_everything()
