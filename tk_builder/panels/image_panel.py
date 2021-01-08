@@ -7,6 +7,8 @@ from tk_builder.widgets import basic_widgets
 from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants
+from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder import file_filters
 
 import PIL.Image
 
@@ -101,6 +103,7 @@ class ImagePanel(WidgetPanel):
 
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
+        self._image_save_directory = os.path.expanduser('~')
         self.toolbar = Toolbar(self)
         self.axes_canvas = AxesImageCanvas(self)
         self.canvas = self.axes_canvas.inner_canvas
@@ -141,6 +144,25 @@ class ImagePanel(WidgetPanel):
 
         self.set_max_canvas_size(1920, 1080)
         self.resizeable = False
+
+    def update_image_save_directory(self, pathname):
+        """
+        Updates the initial browsing directory for saving image files, to the parent directory
+        of the provided path.
+
+        Parameters
+        ----------
+        pathname : None|str
+
+        Returns
+        -------
+        None
+        """
+
+        if pathname is None or pathname == '':
+            self._image_save_directory = os.path.expanduser('~')
+        else:
+            self._image_save_directory = os.path.split(pathname)
 
     def hide_zoom_in(self):
         """
@@ -239,10 +261,18 @@ class ImagePanel(WidgetPanel):
         Saves the image canvas as a png image.  This will save the entire canvas, including axes labels and titles.
         """
 
-        save_fname = asksaveasfilename()
-        if "." not in os.path.basename(save_fname):
-            save_fname = save_fname + ".png"
-        self.axes_canvas.save_full_canvas_as_png(save_fname)
+        save_fname = asksaveasfilename(
+            initialdir=self._image_save_directory,
+            title="Select output image file",
+            filetypes=file_filters.basic_image_types)
+
+        if save_fname in ['', ()]:
+            return
+        if os.path.splitext(save_fname)[1] == '':
+            save_fname += '.png'
+        self.update_image_save_directory(save_fname)
+
+        self.axes_canvas.save_full_canvas_as_image_file(save_fname)
 
     def callback_save_image(self):
         """
@@ -250,9 +280,17 @@ class ImagePanel(WidgetPanel):
         any axes, axes labels, or titles.
         """
 
-        save_fname = asksaveasfilename()
-        if "." not in os.path.basename(save_fname):
-            save_fname = save_fname + ".png"
+        save_fname = asksaveasfilename(
+            initialdir=self._image_save_directory,
+            title="Select output image file",
+            filetypes=file_filters.basic_image_types)
+
+        if save_fname in ['', ()]:
+            return
+        if os.path.splitext(save_fname)[1] == '':
+            save_fname += '.png'
+        self.update_image_save_directory(save_fname)
+
         image_data = self.canvas.variables.canvas_image_object.display_image
         pil_image = PIL.Image.fromarray(image_data)
         pil_image.save(save_fname)
@@ -324,6 +362,7 @@ class ImagePanel(WidgetPanel):
         """
 
         self.axes_canvas.inner_canvas.set_image_reader(image_reader)
+        self.update_image_save_directory(image_reader.file_name)
 
     def do_nothing(self, event):
         """
