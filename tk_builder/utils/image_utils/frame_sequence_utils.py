@@ -1,6 +1,8 @@
 import PIL.Image
 from typing import List
 
+import numpy
+
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
