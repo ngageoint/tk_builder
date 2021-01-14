@@ -6,14 +6,6 @@ This module provides functionality for main image canvas functionality.
 __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
-# TODO: what to do now?
-#   1.) Done! Define new state for drawing. Use a temporary name for now?
-#   2.) Done! Define new functionality for this shape drawing.
-#       For polygon, line, arrow, when sufficiently close to vertex, switch cursor to something good.
-#       Remember to set proper mouse cursor - https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/cursors.html
-#   3.) Done! Remove deprecated usage of defunct shape drawing tools.
-#   4.) Create a function to show a shape drawing/editing explanation
-
 import logging
 import io
 from PIL import ImageTk, Image
@@ -909,7 +901,7 @@ class AppVariables(object):
     active_tool = IntegerDescriptor(
         'active_tool',
         docstring='The active tool.')  # type: Union[None, int]
-    current_tool = IntegerDescriptor(  # TODO: this should be redundant
+    current_tool = IntegerDescriptor(
         'current_tool',
         docstring='The current tool.')  # type: Union[None, int]
 
@@ -1299,7 +1291,9 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.shape_drawing.tmp_anchor_point_xy = anchor
             return
         elif self.variables.active_tool == ToolConstants.SHIFT_SHAPE_TOOL:
-            # TODO: is this the entire correct action? Shouldn't it be anchor_point_xy?
+            if self.variables.current_shape_id is None:
+                self._select_closest_shape(event)
+                return
             self.variables.shape_drawing.tmp_anchor_point_xy = event.x, event.y
             return
         elif self.variables.active_tool == ToolConstants.SELECT_CLOSEST_SHAPE_TOOL:
@@ -1568,7 +1562,6 @@ class ImageCanvas(basic_widgets.Canvas):
         if self.variables.active_tool == ToolConstants.EDIT_SHAPE_TOOL:
             self.variables.shape_drawing.set_inactive()
             self.deactivate_shape_edit_mode()
-        # TODO: anything else here?
 
     def callback_handle_right_mouse_click(self, event):
         """
@@ -1592,8 +1585,6 @@ class ImageCanvas(basic_widgets.Canvas):
                 # delete the coordinate at the current insertion index
                 self._remove_current_coord()
 
-        # TODO: anything else here?
-
     def callback_handle_right_mouse_motion(self, event):
         """
         Callback for motion while holding the right mouse button.
@@ -1606,8 +1597,6 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        # TODO: anything here?
 
         pass
 
@@ -1623,8 +1612,6 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
-
-        # TODO: anything here?
 
         pass
 
@@ -2518,10 +2505,11 @@ class ImageCanvas(basic_widgets.Canvas):
         linear_ring = LinearRing(coordinates=new_coords)
         if linear_ring.self_intersection():
             self.variables.shape_drawing.set_inactive()
-            showinfo('Self intersection not permitted', message='This yields a self intersection, which is not permitted.')
+            showinfo('Self intersection not permitted',
+                     message='This yields a self intersection, which is not permitted. '
+                             'Resetting polygon definition.')
             return
         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
-        # TODO: should we verify that there is not a self-intersection here?
 
     def _drag_rectangle_ellipse_arrow(self, event):
         """
@@ -3090,7 +3078,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
-        # TODO: what about selecting a shape, if None is selected?
+        self.variables.current_shape_id = None
         self.variables.set_current_and_active_tool(ToolConstants.SHIFT_SHAPE_TOOL)
 
     def _deactivate_shape_edit_stub(self, shape_id):
