@@ -690,7 +690,7 @@ class CanvasConfig(object):
         'vertex_selector_pixel_threshold', default_value=10.0,
         docstring='The pixel threshold for vertex selection.')  # type: float
     shape_selector_pixel_threshold = FloatDescriptor(
-        'shape_selector_pixel_threshold', default_value=20.0,
+        'shape_selector_pixel_threshold', default_value=10.0,
         docstring='The pixel distance threshold for shape selection.')  # type: float
     mouse_wheel_zoom_percent_per_event = FloatDescriptor(
         'mouse_wheel_zoom_percent_per_event', default_value=1.5,
@@ -1001,9 +1001,11 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables = AppVariables()
 
         self.variables.zoom_rect.uid = self.create_new_rect(
-            (0, 0, 1, 1), outline=self.variables.zoom_rect.color, width=self.variables.zoom_rect.border_width)
+            (0, 0, 1, 1), make_current=False, increment_color=False,
+            outline=self.variables.zoom_rect.color, width=self.variables.zoom_rect.border_width)
         self.variables.select_rect.uid = self.create_new_rect(
-            (0, 0, 1, 1), outline=self.variables.select_rect.color, width=self.variables.select_rect.border_width)
+            (0, 0, 1, 1), make_current=False, increment_color=False,
+            outline=self.variables.select_rect.color, width=self.variables.select_rect.border_width)
 
         # hide the shapes we initialize
         self.hide_shape(self.variables.select_rect.uid)
@@ -1039,6 +1041,17 @@ class ImageCanvas(basic_widgets.Canvas):
         color = colorchooser.askcolor()[1]
         self.variables.state.foreground_color = color
         self.change_shape_color(self.variables.current_shape_id, color)
+
+    def _increment_color(self):
+        """
+        Increment the color to the next color.
+
+        Returns
+        -------
+        None
+        """
+
+        self.variables.state.foreground_color = self.color_cycler.next_color
 
     def do_nothing(self, event):
         pass
@@ -1313,22 +1326,28 @@ class ImageCanvas(basic_widgets.Canvas):
             coords = (start_x, start_y)
             if new_shape_type == ShapeTypeConstants.POINT:
                 self.create_new_point(coords)
+                self.variables.shape_drawing.set_active(insert_at_index=0, anchor_point_xy=coords)
             elif new_shape_type == ShapeTypeConstants.TEXT:
                 self.create_new_text(coords, text='Text')
+                self.variables.shape_drawing.set_active(insert_at_index=0, anchor_point_xy=coords)
             elif new_shape_type == ShapeTypeConstants.LINE:
-                self.create_new_line(coords)
+                self.create_new_line((start_x, start_y, start_x+1, start_y+1))
+                self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=coords)
             elif new_shape_type == ShapeTypeConstants.ARROW:
                 self.create_new_arrow((start_x, start_y, start_x+1, start_y+1))
+                self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=coords)
             elif new_shape_type == ShapeTypeConstants.RECT:
                 self.create_new_rect((start_x, start_y, start_x+1, start_y+1))
+                self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=coords)
             elif new_shape_type == ShapeTypeConstants.ELLIPSE:
                 self.create_new_ellipse((start_x, start_y, start_x+1, start_y+1))
+                self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=coords)
             elif new_shape_type == ShapeTypeConstants.POLYGON:
-                self.create_new_polygon(coords)
+                self.create_new_polygon((start_x, start_y, start_x, start_y))
+                self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=coords)
             else:
                 raise ValueError('Got unhandled shape type ShapeTypeConstants.{}'.format(ShapeTypeConstants.get_name(new_shape_type)))
 
-            self.variables.shape_drawing.set_active(insert_at_index=0, anchor_point_xy=coords)
             self.variables.set_current_and_active_tool(ToolConstants.EDIT_SHAPE_TOOL)
         elif self.variables.active_tool == ToolConstants.EDIT_SHAPE_TOOL:
             if self.variables.current_shape_id is None:
@@ -1504,7 +1523,7 @@ class ImageCanvas(basic_widgets.Canvas):
                     self.config(cursor="arrow")
             elif vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
                 the_dist = self.find_distance_from_shape(vector_object.uid, event.x, event.y)
-                vertex_distance = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
+                the_vertex, vertex_distance, _, _ = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
                 self.variables.active_tool = ToolConstants.EDIT_SHAPE_TOOL
                 if vertex_distance < self.variables.config.vertex_selector_pixel_threshold:
                     self.config(cursor='cross')
@@ -1515,14 +1534,18 @@ class ImageCanvas(basic_widgets.Canvas):
                 else:
                     self.config(cursor='arrow')
             elif vector_object.type == ShapeTypeConstants.POLYGON:
-                vertex_distance = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
+                the_vertex, vertex_distance, _, _ = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
                 geometry_object = self.get_geometry_for_shape(vector_object.uid, coordinate_type='canvas')
                 if geometry_object is None:
                     contained = False
                     the_dist = float('inf')
                 else:
                     assert isinstance(geometry_object, LinearRing)
-                    contained = geometry_object.contain_coordinates(event.x, event.y)
+                    try:
+                        contained = geometry_object.contain_coordinates(event.x, event.y)
+                    except Exception as e:
+                        # should only be from a feeble linear ring
+                        contained = False
                     the_dist = geometry_object.get_minimum_distance((event.x, event.y))
 
                 self.variables.active_tool = ToolConstants.EDIT_SHAPE_TOOL
@@ -1576,11 +1599,16 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        print('active tool {}, current tool {}'.format(ToolConstants.get_name(self.variables.active_tool),
+                                                       ToolConstants.get_name(self.variables.current_tool)))
+
         if self.variables.active_tool == ToolConstants.EDIT_SHAPE_TOOL:
             if not self.variables.shape_drawing.actively_drawing:
                 return
 
             vector_object = self.get_current_vector_object()
+            if vector_object is None:
+                return
             if vector_object.type in [ShapeTypeConstants.LINE or ShapeTypeConstants.POLYGON]:
                 # delete the coordinate at the current insertion index
                 self._remove_current_coord()
@@ -2119,16 +2147,16 @@ class ImageCanvas(basic_widgets.Canvas):
             the_coords = self._normalized_rectangle_coordinates(coords)
 
             coords_diff = the_coords - the_point
-            dists = numpy.sum(coords_diff*coords_diff, axis=1)
+            dists = numpy.sqrt(numpy.sum(coords_diff*coords_diff, axis=1))
             the_index = numpy.argmin(dists)
             closest = the_coords[the_index, :]
 
             if not (numpy.all(closest == rect_coords[0, :]) or numpy.all(closest == rect_coords[1, :])):
                 # the rectangle definition involves one of the corners which is not selected, so switch
-                ul = the_coords[0, :].to_list()
-                ur = the_coords[1, :].to_list()
-                lr = the_coords[2, :].to_list()
-                ll = the_coords[3, :].to_list()
+                ul = the_coords[0, :].tolist()
+                ur = the_coords[1, :].tolist()
+                lr = the_coords[2, :].tolist()
+                ll = the_coords[3, :].tolist()
 
                 if the_index == 0:  # upper left
                     self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, ul+lr)
@@ -2142,7 +2170,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         the_coords = numpy.array(coords).reshape((-1, 2))
         coords_diff = the_coords - the_point
-        dists = numpy.sum(coords_diff*coords_diff, axis=1)
+        dists = numpy.sqrt(numpy.sum(coords_diff*coords_diff, axis=1))
         min_ind = numpy.argmin(dists)
         return int(min_ind), float(dists[min_ind]), int(the_coords[min_ind, 0]), int(the_coords[min_ind, 1])
 
@@ -2376,24 +2404,23 @@ class ImageCanvas(basic_widgets.Canvas):
         event_x_pos, event_y_pos = self._trim_to_drag_limits(event_x_pos, event_y_pos, drag_lims)
 
         if insert:
-            if self.variables.shape_drawing.insert_at_index == 0:
-                out = [event_x_pos, event_y_pos, event_x_pos, event_y_pos] + list(coords[2:])
-            elif 2 * (self.variables.shape_drawing.insert_at_index + 1) == len(coords) - 2:
-                out = list(coords) + [event_x_pos, event_y_pos, event_x_pos, event_y_pos]
+            if 2*self.variables.shape_drawing.insert_at_index == len(coords) - 2:
+                # it's the final coordinate
+                out = list(coords) + [event_x_pos, event_y_pos]
             else:
-                index_insert = 2 * self.variables.shape_drawing.insert_at_index
-                out = list(coords[:index_insert]) + [event_x_pos, event_y_pos, event_x_pos, event_y_pos] + list(coords[index_insert+2:])
+                index_insert = 2*self.variables.shape_drawing.insert_at_index
+                out = list(coords[:index_insert+2]) + [event_x_pos, event_y_pos] + list(coords[index_insert+2:])
             # increment insert_at_index
             self.variables.shape_drawing.insert_at_index += 1
             return out
         else:
             if self.variables.shape_drawing.insert_at_index == 0:
                 return [event_x_pos, event_y_pos] + list(coords[2:])
-            elif 2 * (self.variables.shape_drawing.insert_at_index + 1) == len(coords) - 2:
+            elif 2*self.variables.shape_drawing.insert_at_index == len(coords) - 2:
                 return list(coords[:-2]) + [event_x_pos, event_y_pos]
             else:
                 index_insert = 2 * self.variables.shape_drawing.insert_at_index
-                return list(coords[:index_insert]) + [event_x_pos, event_y_pos] + list(coords[index_insert + 2:])
+                return list(coords[:index_insert]) + [event_x_pos, event_y_pos] + list(coords[index_insert+2:])
 
     def _remove_current_coord(self):
         """
@@ -2502,13 +2529,15 @@ class ImageCanvas(basic_widgets.Canvas):
         event_y_pos = self.canvasy(event.y)
         old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
         new_coords = self._modify_coords(old_coords, event_x_pos, event_y_pos, insert=insert)
-        linear_ring = LinearRing(coordinates=new_coords)
-        if linear_ring.self_intersection():
-            self.variables.shape_drawing.set_inactive()
-            showinfo('Self intersection not permitted',
-                     message='This yields a self intersection, which is not permitted. '
-                             'Resetting polygon definition.')
-            return
+        coords_array = numpy.array(new_coords, dtype='float64').reshape((-1, 2))
+        if coords_array.shape[0] > 3:
+            linear_ring = LinearRing(coordinates=coords_array)
+            if linear_ring.self_intersection():
+                self.variables.shape_drawing.set_inactive()
+                showinfo('Self intersection not permitted',
+                         message='This yields a self intersection, which is not permitted. '
+                                 'Resetting polygon definition.')
+                return
         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
 
     def _drag_rectangle_ellipse_arrow(self, event):
@@ -2611,7 +2640,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if shape_id == self.variables.current_shape_id:
             self.variables.current_shape_id = None
 
-    def create_new_point(self, coords, make_current=True, **options):
+    def create_new_point(self, coords, make_current=True, increment_color=True, **options):
         """
         Create a new point.
 
@@ -2620,6 +2649,8 @@ class ImageCanvas(basic_widgets.Canvas):
         coords : Tuple|List
         make_current : bool
             Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the color after creating this object?
         options
             Optional keyword arguments.
 
@@ -2627,6 +2658,9 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         int
         """
+
+        if options.get('increment_color', True):
+            self._increment_color()
 
         if 'fill' not in options:
             options['fill'] = self.variables.state.foreground_color
@@ -2639,9 +2673,11 @@ class ImageCanvas(basic_widgets.Canvas):
             shape_id, ShapeTypeConstants.POINT,
             image_coords=image_coords, point_size=self.variables.state.point_size, **options)
         self.variables.track_shape(vector_obj, make_current=make_current)
+        if increment_color:
+            self._increment_color()
         return shape_id
 
-    def create_new_text(self, *args, make_current=True, **kw):
+    def create_new_text(self, *args, make_current=True, increment_color=True, **kw):
         """
         Create text with coordinates x1,y1.
 
@@ -2650,7 +2686,10 @@ class ImageCanvas(basic_widgets.Canvas):
         args
         make_current : bool
             Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
         kw
+            The keyword arguments
 
         Returns
         -------
@@ -2663,9 +2702,13 @@ class ImageCanvas(basic_widgets.Canvas):
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords)
         self.variables.track_shape(vector_obj, make_current=make_current)
+        if make_current:
+            self.activate_shape_edit_mode(shape_id)
+        if increment_color:
+            self._increment_color()
         return shape_id
 
-    def create_new_rect(self, canvas_coords, make_current=True, **options):
+    def create_new_rect(self, canvas_coords, make_current=True, increment_color=True, **options):
         """
         Create a new rectangle.
 
@@ -2674,6 +2717,8 @@ class ImageCanvas(basic_widgets.Canvas):
         canvas_coords : Tuple|List
         make_current : bool
             Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
         options
             Optional Keyword arguments.
 
@@ -2690,9 +2735,13 @@ class ImageCanvas(basic_widgets.Canvas):
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, **options)
         self.variables.track_shape(vector_obj, make_current=make_current)
+        if make_current:
+            self.activate_shape_edit_mode(shape_id)
+        if increment_color:
+            self._increment_color()
         return shape_id
 
-    def create_new_ellipse(self, canvas_coords, make_current=True, **options):
+    def create_new_ellipse(self, canvas_coords, make_current=True, increment_color=True, **options):
         """
         Create a new rectangle.
 
@@ -2701,6 +2750,8 @@ class ImageCanvas(basic_widgets.Canvas):
         canvas_coords : Tuple|List
         make_current : bool
             Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
         options
             Optional Keyword arguments.
 
@@ -2715,11 +2766,15 @@ class ImageCanvas(basic_widgets.Canvas):
             options['width'] = self.variables.state.rect_border_width
         shape_id = self.create_oval(*canvas_coords, **options)
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, **options)
+        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, **options)
         self.variables.track_shape(vector_obj, make_current=make_current)
+        if make_current:
+            self.activate_shape_edit_mode(shape_id)
+        if increment_color:
+            self._increment_color()
         return shape_id
 
-    def create_new_line(self, coords, make_current=True, **options):
+    def create_new_line(self, coords, make_current=True, increment_color=True, **options):
         """
         Create a new line.
 
@@ -2728,6 +2783,8 @@ class ImageCanvas(basic_widgets.Canvas):
         coords : Tuple|List
         make_current : bool
             Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
         options
             Optional keyword arguments.
 
@@ -2745,9 +2802,13 @@ class ImageCanvas(basic_widgets.Canvas):
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, **options)
         self.variables.track_shape(vector_obj, make_current=make_current)
+        if make_current:
+            self.activate_shape_edit_mode(shape_id)
+        if increment_color:
+            self._increment_color()
         return shape_id
 
-    def create_new_arrow(self, coords, make_current=True, **options):
+    def create_new_arrow(self, coords, make_current=True, increment_color=True, **options):
         """
         Create a new arrow.
 
@@ -2756,6 +2817,8 @@ class ImageCanvas(basic_widgets.Canvas):
         coords : Tuple|List
         make_current : bool
             Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
         options
             Optional keyword arguments.
 
@@ -2775,9 +2838,13 @@ class ImageCanvas(basic_widgets.Canvas):
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, **options)
         self.variables.track_shape(vector_obj, make_current=make_current)
+        if make_current:
+            self.activate_shape_edit_mode(shape_id)
+        if increment_color:
+            self._increment_color()
         return shape_id
 
-    def create_new_polygon(self, coords, make_current=True, **options):
+    def create_new_polygon(self, coords, make_current=True, increment_color=True, **options):
         """
         Create a new polygon.
 
@@ -2786,6 +2853,8 @@ class ImageCanvas(basic_widgets.Canvas):
         coords : Tuple|List
         make_current : bool
             Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
         options
             Optional keyword arguments.
 
@@ -2805,6 +2874,10 @@ class ImageCanvas(basic_widgets.Canvas):
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, **options)
         self.variables.track_shape(vector_obj, make_current=make_current)
+        if make_current:
+            self.activate_shape_edit_mode(shape_id)
+        if increment_color:
+            self._increment_color()
         return shape_id
 
     # shape as geometry methods
@@ -2834,8 +2907,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if vector_object.type == ShapeTypeConstants.TEXT:
             return Point(coordinates=coords_array[0, :])
         elif vector_object.type == ShapeTypeConstants.POINT:
-            mid_point = 0.5*(coords_array[0, :] + coords_array[1, :])
-            return Point(coordinates=mid_point)
+            return Point(coordinates=coords_array[0, :])
         elif vector_object.type == ShapeTypeConstants.RECT:
             rect_coords = numpy.zeros((4, 2), dtype='float64')
             rect_coords[0, :] = coords_array[0, :]
@@ -2873,6 +2945,9 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         Tuple
         """
+
+        if self.variables.canvas_image_object is None:
+            return canvas_coords
 
         return self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_coords)
 
@@ -3081,7 +3156,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.current_shape_id = None
         self.variables.set_current_and_active_tool(ToolConstants.SHIFT_SHAPE_TOOL)
 
-    def _deactivate_shape_edit_stub(self, shape_id):
+    def _deactivate_shape_edit_stub(self, shape_id=None):
         """
         Common use stub for setting tool status.
 
@@ -3094,26 +3169,28 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if shape_id is None:
-            self.variables.state.foreground_color = self.color_cycler.next_color
         self.deactivate_shape_edit_mode()
         self.variables.current_shape_id = shape_id
         self.show_shape(shape_id)
 
-    def set_current_tool_to_new_shape(self, shape_id=None):
+    def set_current_tool_to_new_shape(self, shape_type=None):
         """
-        Sets the current tool to new shape.
+        Sets the current tool to new shape of the type given. If shape_type is not given
+        the value of variables.state.new_shape_type is set to this value. Otherwise,
+        the type of shape to create is determined by variables.state.new_shape_type.
 
         Parameters
         ----------
-        shape_id : None|int
+        shape_type : None|int|str
 
         Returns
         -------
         None
         """
 
-        self._deactivate_shape_edit_stub(shape_id)
+        self._deactivate_shape_edit_stub()
+        if shape_type is not None:
+            self.variables.state.new_shape_type = shape_type
         self.variables.set_current_and_active_tool(ToolConstants.NEW_SHAPE_TOOL)
 
     def set_current_tool_to_draw_point(self, point_id=None):
@@ -3130,7 +3207,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.state.new_shape_type = ShapeTypeConstants.POINT
-        self.set_current_tool_to_new_shape(point_id)
+        self.set_tool_to_new_or_edit_shape(point_id)
 
     def set_current_tool_to_draw_rect(self, rect_id=None):
         """
@@ -3146,7 +3223,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.state.new_shape_type = ShapeTypeConstants.RECT
-        self.set_current_tool_to_new_shape(rect_id)
+        self.set_tool_to_new_or_edit_shape(rect_id)
 
     def set_current_tool_to_draw_ellipse(self, ellipse_id=None):
         """
@@ -3162,7 +3239,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.state.new_shape_type = ShapeTypeConstants.ELLIPSE
-        self.set_current_tool_to_new_shape(ellipse_id)
+        self.set_tool_to_new_or_edit_shape(ellipse_id)
 
     def set_current_tool_to_draw_line(self, line_id=None):
         """
@@ -3178,7 +3255,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.state.new_shape_type = ShapeTypeConstants.LINE
-        self.set_current_tool_to_new_shape(line_id)
+        self.set_tool_to_new_or_edit_shape(line_id)
 
     def set_current_tool_to_draw_arrow(self, arrow_id=None):
         """
@@ -3194,7 +3271,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.state.new_shape_type = ShapeTypeConstants.ARROW
-        self.set_current_tool_to_new_shape(arrow_id)
+        self.set_tool_to_new_or_edit_shape(arrow_id)
 
     def set_current_tool_to_draw_polygon(self, polygon_id=None):
         """
@@ -3210,7 +3287,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.state.new_shape_type = ShapeTypeConstants.POLYGON
-        self.set_current_tool_to_new_shape(polygon_id)
+        self.set_tool_to_new_or_edit_shape(polygon_id)
 
     def set_current_tool_to_edit_shape(self):
         """
@@ -3225,3 +3302,23 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.set_current_and_active_tool(ToolConstants.EDIT_SHAPE_TOOL)
         self.activate_shape_edit_mode()
 
+    def set_tool_to_new_or_edit_shape(self, shape_id=None):
+        """
+        If shape_id is None, this sets the current tool to new shape. If shape_id
+        is not None, this sets the current tool to edit shape.
+
+        Parameters
+        ----------
+        shape_id : None|int
+
+        Returns
+        -------
+        None
+        """
+
+        self._deactivate_shape_edit_stub(shape_id)
+        if shape_id is None:
+            self.variables.set_current_and_active_tool(ToolConstants.NEW_SHAPE_TOOL)
+        else:
+            self.activate_shape_edit_mode(shape_id)
+            self.variables.set_current_and_active_tool(ToolConstants.EDIT_SHAPE_TOOL)

@@ -5,18 +5,20 @@ from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
 from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
-from tk_builder.widgets.image_canvas import ToolConstants
+from tk_builder.widgets.image_canvas import ToolConstants, ShapeTypeConstants
 from tk_builder.widgets.basic_widgets import Button, CheckButton
 
 
 class Buttons(WidgetPanel):
-    _widget_list = ("draw_rect", "draw_line", "draw_arrow", "draw_point", "draw_polygon", "edit_shape", "resizeable")
-    draw_rect = widget_descriptors.ButtonDescriptor("draw_rect", default_text="rect")  # type: Button
+    _widget_list = (
+        "draw_point", "draw_line", "draw_arrow", "draw_rect", "draw_ellipse", "draw_polygon",
+        "resizeable")
+    draw_point = widget_descriptors.ButtonDescriptor("draw_point", default_text="point")  # type: Button
     draw_line = widget_descriptors.ButtonDescriptor("draw_line", default_text="line")  # type: Button
     draw_arrow = widget_descriptors.ButtonDescriptor("draw_arrow", default_text="arrow")  # type: Button
-    draw_point = widget_descriptors.ButtonDescriptor("draw_point", default_text="point")  # type: Button
+    draw_rect = widget_descriptors.ButtonDescriptor("draw_rect", default_text="rect")  # type: Button
+    draw_ellipse = widget_descriptors.ButtonDescriptor("draw_ellipse", default_text="ellipse")  # type: Button
     draw_polygon = widget_descriptors.ButtonDescriptor("draw_polygon", default_text="polygon")  # type: Button
-    edit_shape = widget_descriptors.ButtonDescriptor("edit_shape", default_text="edit")  # type: Button
     resizeable = widget_descriptors.CheckButtonDescriptor("resizeable", default_text="resizeable")  # type: CheckButton
 
     def __init__(self, primary):
@@ -32,12 +34,7 @@ class CanvasResize(WidgetPanel):
     button_panel = widget_descriptors.PanelDescriptor("button_panel", Buttons)  # type: Buttons
 
     def __init__(self, primary):
-        self.rect_id = None
-        self.line_id = None
-        self.arrow_id = None
-        self.point_id = None
-        self.polygon_id = None
-        self.n_shapes = 0
+        self._shape_ids = {}
 
         self.primary = primary
 
@@ -79,52 +76,129 @@ class CanvasResize(WidgetPanel):
         self.button_panel.draw_line.config(command=self.callback_draw_line)
         self.button_panel.draw_arrow.config(command=self.callback_draw_arrow)
         self.button_panel.draw_point.config(command=self.callback_draw_point)
+        self.button_panel.draw_ellipse.config(command=self.callback_draw_ellipse)
         self.button_panel.draw_polygon.config(command=self.callback_draw_polygon)
-        self.button_panel.edit_shape.config(command=self.callback_edit_shape)
         self.button_panel.resizeable.config(command=self.toggle_resizeable)
+        self.image_panel.canvas.on_left_mouse_click(self.callback_on_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_release(self.callback_on_left_mouse_release)
 
-    def callback_draw_rect(self):
-        self.image_panel.canvas.set_current_tool_to_draw_rect(self.rect_id)
+    @property
+    def point_id(self):
+        """
+        None|int: The point id.
+        """
 
-    def callback_draw_line(self):
-        self.image_panel.canvas.set_current_tool_to_draw_line_by_dragging(self.line_id)
+        return self._shape_ids.get(ShapeTypeConstants.POINT, None)
 
-    def callback_draw_arrow(self):
-        self.image_panel.canvas.set_current_tool_to_draw_arrow_by_dragging(self.arrow_id)
+    @property
+    def line_id(self):
+        """
+        None|int: The line id.
+        """
+
+        return self._shape_ids.get(ShapeTypeConstants.LINE, None)
+
+    @property
+    def arrow_id(self):
+        """
+        None|int: The arrow id.
+        """
+
+        return self._shape_ids.get(ShapeTypeConstants.ARROW, None)
+
+    @property
+    def rect_id(self):
+        """
+        None|int: The rectangle id.
+        """
+
+        return self._shape_ids.get(ShapeTypeConstants.RECT, None)
+
+    @property
+    def ellipse_id(self):
+        """
+        None|int: The ellipse id.
+        """
+
+        return self._shape_ids.get(ShapeTypeConstants.ELLIPSE, None)
+
+    @property
+    def polygon_id(self):
+        """
+        None|int: polygon id.
+        """
+
+        return self._shape_ids.get(ShapeTypeConstants.POLYGON, None)
 
     def callback_draw_point(self):
         self.image_panel.canvas.set_current_tool_to_draw_point(self.point_id)
 
-    def callback_draw_polygon(self):
-        self.image_panel.canvas.set_current_tool_to_draw_polygon_by_clicking(self.polygon_id)
+    def callback_draw_line(self):
+        self.image_panel.canvas.set_current_tool_to_draw_line(self.line_id)
 
-    def callback_edit_shape(self):
-        self.image_panel.canvas.set_current_tool_to_edit_shape(select_closest_first=True)
+    def callback_draw_arrow(self):
+        self.image_panel.canvas.set_current_tool_to_draw_arrow(self.arrow_id)
+
+    def callback_draw_rect(self):
+        self.image_panel.canvas.set_current_tool_to_draw_rect(self.rect_id)
+
+    def callback_draw_ellipse(self):
+        self.image_panel.canvas.set_current_tool_to_draw_ellipse(self.ellipse_id)
+
+    def callback_draw_polygon(self):
+        self.image_panel.canvas.set_current_tool_to_draw_polygon(self.polygon_id)
 
     def toggle_resizeable(self):
         value = self.button_panel.resizeable.is_selected()
         self.image_panel.resizeable = value
 
+    def callback_on_left_mouse_click(self, event):
+        self.image_panel.canvas.callback_handle_left_mouse_click(event)
+        self._set_the_ids()
+
     def callback_on_left_mouse_release(self, event):
         self.image_panel.canvas.callback_handle_left_mouse_release(event)
-        n_shapes = len(self.image_panel.canvas.get_non_tool_shape_ids())
-        if n_shapes > self.n_shapes:
-            if self.image_panel.current_tool == ToolConstants.DRAW_RECT_BY_DRAGGING:
-                self.rect_id = self.image_panel.canvas.variables.current_shape_id
-            elif self.image_panel.current_tool == ToolConstants.DRAW_LINE_BY_DRAGGING:
-                self.line_id = self.image_panel.canvas.variables.current_shape_id
-            elif self.image_panel.current_tool == ToolConstants.DRAW_ARROW_BY_DRAGGING:
-                self.arrow_id = self.image_panel.canvas.variables.current_shape_id
-            elif self.image_panel.current_tool == ToolConstants.DRAW_POINT_BY_CLICKING:
-                self.point_id = self.image_panel.canvas.variables.current_shape_id
-            elif self.image_panel.current_tool == ToolConstants.DRAW_POLYGON_BY_CLICKING:
-                self.polygon_id = self.image_panel.canvas.variables.current_shape_id
-            self.image_panel.canvas.get_vector_object(
-                self.image_panel.canvas.variables.current_shape_id).image_drag_limits = (self.drag_ylim_1,
-                                                                                         self.drag_xlim_1,
-                                                                                         self.drag_ylim_2,
-                                                                                         self.drag_xlim_2)
+        self._set_the_ids()
+
+    def _set_the_ids(self):
+        """
+        Keep our tracking for the shapes.
+
+        Returns
+        -------
+        None
+        """
+
+        def set_drag_limits():
+            vector_obj.image_drag_limits = (
+                self.drag_ylim_1, self.drag_xlim_1, self.drag_ylim_2, self.drag_xlim_2)
+
+        vector_obj = self.image_panel.canvas.get_current_vector_object()
+        if vector_obj is None:
+            # no current shape id, so nothing to be done
+            return
+        if vector_obj.uid in self.image_panel.canvas.get_tool_shape_ids():
+            # this is a tool, so ignore
+            return
+
+        print(self._shape_ids)
+
+        set_drag_limits()  # what if this polygon is already outside the drag limits? This will be dumb...
+
+        # see what we are tracking for this shape
+        old_shape_id = self._shape_ids.get(vector_obj.type, None)
+        if vector_obj.uid == old_shape_id:
+            # we are already tracking this shape as our given type, nothing more to do
+            return
+
+        # delete the old shape of that type, if applicable
+        # this shouldn't happen...
+        if old_shape_id is not None:
+            self.image_panel.canvas.delete_shape(old_shape_id)
+        self._shape_ids[vector_obj.type] = vector_obj.uid
+
+        print(self._shape_ids)
+
 
     def exit(self):
         self.quit()

@@ -70,10 +70,6 @@ class PlotDemo(WidgetPanel):
         """
         A single plot callback.
 
-        Parameters
-        ----------
-        event
-
         Returns
         -------
         None
@@ -86,10 +82,6 @@ class PlotDemo(WidgetPanel):
     def multi_plot(self):
         """
         A multiplot callback.
-
-        Parameters
-        ----------
-        event
 
         Returns
         -------
@@ -108,10 +100,6 @@ class PlotDemo(WidgetPanel):
     def animated_plot(self):
         """
         Animated callback plot.
-
-        Parameters
-        ----------
-        event
 
         Returns
         -------
