@@ -28,6 +28,7 @@ class Toolbar(WidgetPanel):
     canvas_size_controls = (
         "canvas_width_label", "canvas_width", "canvas_height_label", "canvas_height")
     _widget_list = (top_level_controls, axes_labels_controls, margin_controls, canvas_size_controls)
+
     zoom_in = widget_descriptors.ButtonDescriptor(
         "zoom_in")  # type: basic_widgets.Button
     zoom_out = widget_descriptors.ButtonDescriptor(
@@ -410,33 +411,19 @@ class ImagePanel(WidgetPanel):
     @current_tool.setter
     def current_tool(self, value):
         """
-        Sets the image canvases current tool.  The value should be one of the strings defined in the ToolConstants
-        class in "image_canvas.py"
+        Sets the image canvas current tool. This should be in keeping with the ToolConstants
+        class in "image_canvas.py".
 
         Parameters
         ----------
-        value : str
+        value : int|str
 
         Returns
         -------
         None
         """
-        if value is None:
-            self.canvas.set_current_tool_to_none()
-        elif value == ToolConstants.EDIT_SHAPE_TOOL:
-            self.canvas.set_current_tool_to_edit_shape()
-        elif value == ToolConstants.PAN_TOOL:
-            self.canvas.set_current_tool_to_pan()
-        elif value == ToolConstants.SELECT_TOOL:
-            self.canvas.set_current_tool_to_selection_tool()
-        elif value == ToolConstants.ZOOM_IN_TOOL:
-            self.canvas.set_current_tool_to_zoom_in()
-        elif value == ToolConstants.ZOOM_OUT_TOOL:
-            self.canvas.set_current_tool_to_zoom_out()
-        elif value == ToolConstants.DRAW_ARROW_BY_DRAGGING:
-            self.canvas.set_current_tool_to_draw_arrow_by_dragging()
-        elif value == ToolConstants.DRAW_RECT_BY_DRAGGING:
-            self.canvas.set_current_tool_to_draw_rect()
+
+        self.canvas.set_tool(value)
 
     def set_min_canvas_size(self, x, y):
         """
