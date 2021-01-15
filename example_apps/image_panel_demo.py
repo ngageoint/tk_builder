@@ -181,8 +181,6 @@ class CanvasResize(WidgetPanel):
             # this is a tool, so ignore
             return
 
-        print(self._shape_ids)
-
         set_drag_limits()  # what if this polygon is already outside the drag limits? This will be dumb...
 
         # see what we are tracking for this shape
@@ -196,8 +194,6 @@ class CanvasResize(WidgetPanel):
         if old_shape_id is not None:
             self.image_panel.canvas.delete_shape(old_shape_id)
         self._shape_ids[vector_obj.type] = vector_obj.uid
-
-        print(self._shape_ids)
 
 
     def exit(self):
