@@ -1,3 +1,11 @@
+"""
+Basically defining an interface for convenience of binding GUI events using a clear
+common naming scheme.
+
+Note that most widgets only emit a limited number of events, so this permits nonsensical
+binding for events that never happen, but is completely harmless.
+"""
+
 import platform
 import tkinter
 
@@ -5,15 +13,11 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
-
 class WidgetEvents(tkinter.Misc):
     """
     A base class intended for simplifying the association of callback functions with
     the possible GUI events.
     """
-
-    def __init__(self):
-        pass
 
     def event_binding(self, event_string, callback, *args, **kwargs):
         """
