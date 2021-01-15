@@ -1,4 +1,6 @@
 import tkinter
+from tkinter import ttk
+
 from tk_builder.panel_builder import WidgetPanel
 import tk_builder.widgets.basic_widgets as basic_widgets
 from tk_builder.widgets import widget_descriptors
@@ -71,6 +73,10 @@ class PrimaryPanel(WidgetPanel):
 
 def main():
     root = tkinter.Tk()
+
+    the_style = ttk.Style()
+    the_style.theme_use('clam')
+
     app = PrimaryPanel(root)
     root.mainloop()
 

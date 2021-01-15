@@ -1,4 +1,6 @@
 import tkinter
+from tkinter import ttk
+
 import numpy
 
 from tk_builder.panel_builder import WidgetPanel
@@ -204,7 +206,15 @@ class CanvasResize(WidgetPanel):
         self.quit()
 
 
-if __name__ == '__main__':
+def main():
     root = tkinter.Tk()
+
+    the_style = ttk.Style()
+    the_style.theme_use('clam')
+
     app = CanvasResize(root)
     root.mainloop()
+
+
+if __name__ == '__main__':
+    main()
