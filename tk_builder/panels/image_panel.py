@@ -102,6 +102,8 @@ class ImagePanel(WidgetPanel):
     X/Y axes, titles, etc for 2 dimensional data displays or plots.
     """
 
+    # TODO: axes_canvas functionality
+
     def __init__(self, parent):
         WidgetPanel.__init__(self, parent)
         self._image_save_directory = os.path.expanduser('~')
@@ -163,7 +165,7 @@ class ImagePanel(WidgetPanel):
         if pathname is None or pathname == '':
             self._image_save_directory = os.path.expanduser('~')
         else:
-            self._image_save_directory = os.path.split(pathname)
+            self._image_save_directory = os.path.split(pathname)[0]
 
     def hide_zoom_in(self):
         """

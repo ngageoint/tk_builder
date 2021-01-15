@@ -79,8 +79,10 @@ class CanvasResize(WidgetPanel):
         self.button_panel.draw_ellipse.config(command=self.callback_draw_ellipse)
         self.button_panel.draw_polygon.config(command=self.callback_draw_polygon)
         self.button_panel.resizeable.config(command=self.toggle_resizeable)
+        # monkey patch mouse event for image canvas
         self.image_panel.canvas.on_left_mouse_click(self.callback_on_left_mouse_click)
         self.image_panel.canvas.on_left_mouse_release(self.callback_on_left_mouse_release)
+        self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
 
     @property
     def point_id(self):
@@ -160,6 +162,9 @@ class CanvasResize(WidgetPanel):
         self.image_panel.canvas.callback_handle_left_mouse_release(event)
         self._set_the_ids()
 
+    def callback_on_left_mouse_motion(self, event):
+        self.image_panel.canvas.callback_handle_left_mouse_motion(event)
+
     def _set_the_ids(self):
         """
         Keep our tracking for the shapes.
@@ -194,7 +199,6 @@ class CanvasResize(WidgetPanel):
         if old_shape_id is not None:
             self.image_panel.canvas.delete_shape(old_shape_id)
         self._shape_ids[vector_obj.type] = vector_obj.uid
-
 
     def exit(self):
         self.quit()

@@ -673,9 +673,6 @@ class AnimationProperties(object):
     animations = IntegerDescriptor(
         'animations', default_value=5,
         docstring='The number of zoom frames.')  # type: int
-    pan = BooleanDescriptor(
-        'pan', default_value=False,
-        docstring='Specifies whether to animate panning.')  # type: bool
     time = FloatDescriptor(
         'time', default_value=0.3,
         docstring='The animation time in seconds.')  # type: float
@@ -709,9 +706,16 @@ class CanvasConfig(object):
         default_value=True,
         docstring="Indicates whether or not to update the outer axes on zoom, used only if the "
                   "image canvas is embedded in an axes image canvas.")  # type: bool
-    zoom_box_size_threshold = IntegerDescriptor(
-        'zoom_box_size_threshold', default_value=20,
-        docstring='minimum size for the zoom box for any action to take place.')  # type: int
+    zoom_box_size_threshold = FloatDescriptor(
+        'zoom_box_size_threshold', default_value=20.0,
+        docstring='minimum size for the zoom box for any action to take place.')  # type: float
+    pan_pixel_threshold = FloatDescriptor(
+        'pan_pixel_threshold', default_value=10,
+        docstring='The threshold for actually performing a pan operation.')  # type: float
+    zoom_pixel_threshold = FloatDescriptor(
+        'zoom_pixel_threshold', default_value=50,
+        docstring='The threshold in image pixels (either dimension) beyond which '
+                  'zooming will not actually occur.')  # type: float
 
 
 class CanvasState(object):
@@ -1315,9 +1319,8 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.active_tool = ToolConstants.EDIT_SHAPE_TOOL
             return
         elif self.variables.active_tool == ToolConstants.PAN_TOOL:
-            anchor = (event.x, event.y)
-            self.variables.shape_drawing.set_active(anchor_point_xy=anchor)
-            self.variables.shape_drawing.tmp_anchor_point_xy = anchor
+            self.variables.current_shape_id = self.variables.zoom_rect.uid
+            self.variables.shape_drawing.set_active(anchor_point_xy=(event.x, event.y))
             return
         elif self.variables.active_tool == ToolConstants.SHIFT_SHAPE_TOOL:
             if self.variables.current_shape_id is None:
@@ -1428,18 +1431,15 @@ class ImageCanvas(basic_widgets.Canvas):
         if active_tool in [ToolConstants.ZOOM_IN_TOOL, ToolConstants.ZOOM_OUT_TOOL, ToolConstants.SELECT_TOOL]:
             self._drag_rectangle_ellipse_arrow(event)
         elif active_tool == ToolConstants.PAN_TOOL:
-            tmp_anchor = self.variables.shape_drawing.tmp_anchor_point_xy
-            x_dist = event.x - tmp_anchor[0]
-            y_dist = event.y - tmp_anchor[1]
-            self.move(self.variables.image_id, x_dist, y_dist)
-            self.variables.shape_drawing.tmp_anchor_point_xy = event.x, event.y
+            self._pan(event)
         elif active_tool == ToolConstants.SHIFT_SHAPE_TOOL:
+            shape_id = self.variables.current_shape_id
             anchor = self.variables.shape_drawing.tmp_anchor_point_xy
             x_dist = event.x - anchor[0]
             y_dist = event.y - anchor[1]
 
-            vector_object = self.get_vector_object(self.variables.current_shape_id)
-            t_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+            vector_object = self.get_vector_object(shape_id)
+            t_coords = self.get_shape_canvas_coords(shape_id)
             new_coords = numpy.asarray(t_coords) + x_dist
             new_coords_y = numpy.asarray(t_coords) + y_dist
             new_coords[1::2] = new_coords_y[1::2]
@@ -1459,8 +1459,7 @@ class ImageCanvas(basic_widgets.Canvas):
                     new_coords[0::2] = t_coords[0::2]
                 if not within_y_limits:
                     new_coords[1::2] = t_coords[1::2]
-            self.modify_existing_shape_using_canvas_coords(
-                self.variables.current_shape_id, new_coords)
+            self.modify_existing_shape_using_canvas_coords(shape_id, new_coords)
             self.variables.shape_drawing.tmp_anchor_point_xy = event.x, event.y
         elif active_tool == ToolConstants.EDIT_SHAPE_TOOL:
             previous_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
@@ -1677,6 +1676,58 @@ class ImageCanvas(basic_widgets.Canvas):
 
         pass
 
+    def _pan(self, event):
+        """
+        Perform the pan operation.
+
+        Parameters
+        ----------
+        event
+
+        Returns
+        -------
+        None
+        """
+
+        anchor = self.variables.shape_drawing.anchor_point_xy
+        x_diff = anchor[0] - event.x
+        y_diff = anchor[1] - event.y
+        if (x_diff*x_diff + y_diff*y_diff)**0.5 < self.variables.config.pan_pixel_threshold:
+            # we haven't moved far enough
+            return
+
+        canvas_coords = (x_diff, y_diff, x_diff + self.variables.state.canvas_width, y_diff + self.variables.state.canvas_height)
+        # convert to image coordinates and accoutn for panning beyond feasible limits
+        image_coords = list(self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_coords))
+        if image_coords[2] - image_coords[0] >= self.variables.canvas_image_object.image_reader.full_image_ny:
+            image_coords[0] = 0
+            image_coords[2] = self.variables.canvas_image_object.image_reader.full_image_ny
+        if image_coords[3] - image_coords[1] >= self.variables.canvas_image_object.image_reader.full_image_nx:
+            image_coords[1] = 0
+            image_coords[3] = self.variables.canvas_image_object.image_reader.full_image_nx
+
+        # account for panning beyond feasible limits
+        if image_coords[0] < 0:
+            diff = image_coords[2] - image_coords[0]
+            image_coords[0] = 0
+            image_coords[2] = diff
+        if image_coords[1] < 0:
+            diff = image_coords[3] - image_coords[1]
+            image_coords[1] = 0
+            image_coords[3] = diff
+        if image_coords[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
+            diff = image_coords[2] - image_coords[0]
+            image_coords[0] = self.variables.canvas_image_object.image_reader.full_image_ny - diff
+            image_coords[2] = self.variables.canvas_image_object.image_reader.full_image_ny
+        if image_coords[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
+            diff = image_coords[3] - image_coords[1]
+            image_coords[1] = self.variables.canvas_image_object.image_reader.full_image_nx - diff
+            image_coords[3] = self.variables.canvas_image_object.image_reader.full_image_nx
+
+        # apply the view to this rectangle
+        self.zoom_to_full_image_selection(image_coords, animate=False)
+        self.variables.shape_drawing.anchor_point_xy = event.x, event.y
+
     def _pan_finish(self, event):
         """
         A pan event.
@@ -1690,37 +1741,10 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        anchor_point = self.variables.shape_drawing.anchor_point_xy
-        # nominal new coordinates for view box (xul, yul, xbr, ybr)
-        x_ul = anchor_point[0] - event.x
-        y_ul = anchor_point[1] - event.y
-        canvas_coords = (x_ul, y_ul, x_ul + self.variables.state.canvas_width, y_ul + self.variables.state.canvas_height)
-        # convert to image coordinates and accoutn for panning beyond feasible limits
-        image_coords = list(self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_coords))
-        # account for panning beyond feasible limits
-        if image_coords[0] < 0:
-            diff = image_coords[2] - image_coords[0]
-            image_coords[0] = 0
-            image_coords[2] = min(diff, self.variables.canvas_image_object.image_reader.full_image_ny)
-        if image_coords[1] < 0:
-            diff = image_coords[3] - image_coords[1]
-            image_coords[1] = 0
-            image_coords[3] = min(diff, self.variables.canvas_image_object.image_reader.full_image_nx)
-        if image_coords[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
-            diff = image_coords[2] - image_coords[0]
-            image_coords[0] = max(0, self.variables.canvas_image_object.image_reader.full_image_ny - diff)
-            image_coords[2] = self.variables.canvas_image_object.image_reader.full_image_ny
-        if image_coords[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
-            diff = image_coords[3] - image_coords[1]
-            image_coords[1] = max(0, self.variables.canvas_image_object.image_reader.full_image_nx - diff)
-            image_coords[3] = self.variables.canvas_image_object.image_reader.full_image_nx
-
-        # convert back to canvas coordinates
-        canvas_rect = self.variables.canvas_image_object.full_image_yx_to_canvas_coords(image_coords)
-        # apply the view to this rectangle
-        self.zoom_to_canvas_selection(canvas_rect, self.variables.animate.pan)
-        self.hide_shape(self.variables.zoom_rect.uid)
+        self._pan(event)
         self.variables.shape_drawing.set_inactive()
+        self.variables.current_shape_id = None
+        self.hide_shape(self.variables.zoom_rect.uid)  # this should never have been unhidden?
 
     def _select_closest_shape(self, event):
         """
@@ -1850,12 +1874,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        # TODO: this is an abomination
-
-        # expand the image rect to fit the canvas
-        # zoom_center_x = (image_rect[3] + image_rect[1])/2
-        # zoom_center_y = (image_rect[2] + image_rect[0])/2
-
+        # ensure that sensible limits apply
         if image_rect[0] < 0:
             image_rect[0] = 0
         if image_rect[1] < 0:
@@ -1868,74 +1887,18 @@ class ImageCanvas(basic_widgets.Canvas):
         rect_height = image_rect[2] - image_rect[0]
         rect_width = image_rect[3] - image_rect[1]
 
-        canvas_height = self.variables.state.canvas_height
-        canvas_width = self.variables.state.canvas_width
+        if rect_height < 0 or rect_width < 0:
+            showinfo('Poorly defined zoom rectangle', message='Zoom rectangle {}. Aborting zoom.'.format(image_rect))
 
-        sf = canvas_height / rect_height
+        if rect_height < self.variables.config.zoom_pixel_threshold or \
+                rect_width < self.variables.config.zoom_pixel_threshold:
+            # do not perform this zoom
+            return
 
-        display_height = rect_height * sf
-        display_width = rect_width * sf
-
-        canvas_height_width_ratio = canvas_height / canvas_width
-        rect_height_width_ratio = rect_height / rect_width
-
-        if rect_height_width_ratio > canvas_height_width_ratio:
-            rect_width = rect_height * canvas_width / canvas_height
-        elif rect_height_width_ratio < canvas_height_width_ratio:
-            rect_height = rect_width * canvas_height / canvas_width
-
-        rect_sf = 1
-
-        if display_height < canvas_height:
-            rect_sf = display_height / canvas_height
-        elif display_width < canvas_width:
-            rect_sf = display_width / canvas_width
-
-        rect_width = rect_width * rect_sf
-        rect_height = rect_height * rect_sf
-
-        # image_rect[1] = int(round(zoom_center_x - rect_width / 2))
-        # image_rect[3] = int(round(zoom_center_x + rect_width / 2))
-        # image_rect[0] = int(round(zoom_center_y - rect_height / 2))
-        # image_rect[2] = int(round(zoom_center_y + rect_height / 2))
-
-        # adjust the zoom rect to not be outside the image
-        if image_rect[1] < 0:
-            image_rect[3] = image_rect[3] - image_rect[1]
-            image_rect[1] = 0
-        if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
-            image_rect[1] = image_rect[1] - (image_rect[3] - self.variables.canvas_image_object.image_reader.full_image_nx)
-            image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
-        if image_rect[0] < 0:
-            image_rect[2] = image_rect[2] - image_rect[0]
-            image_rect[0] = 0
-        if image_rect[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
-            image_rect[0] = image_rect[0] - (image_rect[2] - self.variables.canvas_image_object.image_reader.full_image_ny)
-            image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
-
-        # if the zoom rect is still bigger than either the extents of the image do nothing
-        if (image_rect[1] <= 0 and image_rect[3] >= self.variables.canvas_image_object.image_reader.full_image_nx) or \
-                (image_rect[0] <= 0 and image_rect[2] >= self.variables.canvas_image_object.image_reader.full_image_ny):
-            image_rect = [0,
-                          0,
-                          self.variables.canvas_image_object.image_reader.full_image_ny,
-                          self.variables.canvas_image_object.image_reader.full_image_nx]
-
-        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)
         if animate is True:
-            background_image = self.variables.canvas_image_object.display_image
-            # create frame sequence
-            self.variables.state.currently_zooming = True
-            n_animations = self.variables.animate.animations
-            background_image = background_image / 2
-            background_image = numpy.asarray(background_image, dtype=numpy.uint8)
-            pil_background_image = Image.fromarray(background_image)
-            frame_sequence = []
-            for i in range(n_animations):
-                # TODO replace this with actual animation
-                continue
-            fps = n_animations / self.variables.animate.time
-            self.animate_with_pil_frame_sequence(frame_sequence, frames_per_second=fps)
+            # TODO: animation is not currently functional
+            pass
+        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.variables.state.currently_zooming = False
@@ -1994,12 +1957,13 @@ class ImageCanvas(basic_widgets.Canvas):
         """
         Export the currently displayed canvas as a numpy array.
 
-        This method exports a tkinter canvas to postscript, generates an oversampled image based on the postscript
-        output, and then rescales the oversampled image to match the dimensions of the canvas displayed on the screen.
-        This means that both image data and vector data that are displayed on an image canvas are rasterized to
-        a numpy array.
-        Tkinter accomplishes this by using ghostscript under the hood, so ghostscript must be installed as a
-        dependency to use this method.
+        This method exports a tkinter canvas to postscript, generates an oversampled
+        image based on the postscript output, and then rescales the oversampled image to
+        match the dimensions of the canvas displayed on the screen.
+        This means that both image data and vector data that are displayed on an image
+        canvas are rasterized to a numpy array. Tkinter accomplishes this by using
+        ghostscript under the hood, so ghostscript must be installed as a dependency
+        to use this method.
 
         Returns
         -------
@@ -2358,7 +2322,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.set_shape_pixel_coords(shape_id, image_coords)
         canvas_coords = self.image_coords_to_canvas_coords(image_coords)
-        self.modify_existing_shape_using_canvas_coords(shape_id, canvas_coords, update_pixel_coords=True)
+        self.modify_existing_shape_using_canvas_coords(shape_id, canvas_coords, update_pixel_coords=False)
 
     def _trim_to_drag_limits(self, event_x, event_y, drag_lims):
         """
@@ -2531,7 +2495,7 @@ class ImageCanvas(basic_widgets.Canvas):
         event_y_pos = self.canvasy(event.y)
         old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
         new_coords = self._modify_coords(old_coords, event_x_pos, event_y_pos, insert=insert)
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
+        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
 
     def _update_polygon_event(self, event, insert=True):
         """
@@ -2556,8 +2520,7 @@ class ImageCanvas(basic_widgets.Canvas):
         event_y_pos = self.canvasy(event.y)
         old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
         new_coords = self._modify_coords(old_coords, event_x_pos, event_y_pos, insert=insert)
-        coords_array = numpy.array(new_coords, dtype='float64').reshape((-1, 2))
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
+        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
 
     def _drag_rectangle_ellipse_arrow(self, event):
         """
@@ -2581,7 +2544,7 @@ class ImageCanvas(basic_widgets.Canvas):
         event_y_pos = self.canvasy(event.y)
         coords = self.variables.shape_drawing.anchor_point_xy + (event_x_pos, event_y_pos)
         new_coords = self._modify_coords(coords, event_x_pos, event_y_pos, insert=False)
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
+        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
 
     def change_shape_color(self, shape_id, color):
         """
@@ -3148,6 +3111,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
+        self.variables.current_shape_id = self.variables.zoom_rect.uid
         self.variables.set_current_and_active_tool(ToolConstants.PAN_TOOL)
 
     def set_current_tool_to_select_closest_shape(self):
