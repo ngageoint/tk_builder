@@ -1571,7 +1571,11 @@ class ImageCanvas(basic_widgets.Canvas):
                     self.config(cursor='arrow')
             elif vector_object.type == ShapeTypeConstants.POLYGON:
                 the_vertex, vertex_distance, _, _ = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
-                geometry_object = self.get_geometry_for_shape(vector_object.uid, coordinate_type='canvas')
+                try:
+                    geometry_object = self.get_geometry_for_shape(vector_object.uid, coordinate_type='canvas')
+                except:
+                    geometry_object = None
+
                 if geometry_object is None:
                     contained = False
                     the_dist = float('inf')

@@ -103,6 +103,8 @@ class WidgetPanel(basic_widgets.LabelFrame):
         of columns. It is assumed that elements of `_widget_list` are defined
         sequentially, and the layout is defined across columns first.
 
+        NOTE! This will fail if `_widget_list` is not a flat list.
+
         For example, suppose `_widget_list = ("one", "two", "three", "four", "five" "six")`.
         Initializing with `init_w_box_layout`, the layout will be 3 rows of 2 columns each.
         The first row containing `one`, `two`, the second row containing `three`, `four`,

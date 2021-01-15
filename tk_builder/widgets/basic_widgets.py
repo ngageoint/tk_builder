@@ -52,19 +52,14 @@ class CheckButton(ttk.Checkbutton, WidgetEvents):
         return self.value.get()
 
 
-class Entry(ttk.Entry, WidgetEvents):
+class Entry(tkinter.Entry, WidgetEvents):
     def __init__(self, master=None, **kwargs):
-        ttk.Entry.__init__(self, master=master, **kwargs)
+        self._text_variable = kwargs.get('textvariable', tkinter.StringVar())
+        kwargs['textvariable'] = self._text_variable
+        tkinter.Entry.__init__(self, master=master, **kwargs)
 
     def set_text(self, text):
-        # handle case if the widget is disabled
-        entry_state = self['state']
-        if entry_state == 'disabled':
-            self.config(state='normal')
-        self.delete(0, tkinter.END)
-        self.insert(0, text)
-        if entry_state == 'disabled':
-            self.config(state='disabled')
+        self._text_variable.set(text)
 
 
 class Frame(ttk.Frame, WidgetEvents):
@@ -121,17 +116,12 @@ class Scrollbar(ttk.Scrollbar, WidgetEvents):
 
 class Spinbox(ttk.Spinbox, WidgetEvents):
     def __init__(self, master=None, **kwargs):
+        self._text_variable = kwargs.get('textvariable', tkinter.StringVar())
+        kwargs['textvariable'] = self._text_variable
         ttk.Spinbox.__init__(self, master=master, **kwargs)
 
     def set_text(self, text):
-        # handle case if the widget is disabled
-        entry_state = self['state']
-        if entry_state == 'disabled':
-            self.config(state='normal')
-        self.delete(0, tkinter.END)
-        self.insert(0, text)
-        if entry_state == 'disabled':
-            self.config(state='disabled')
+        self._text_variable.set(text)
 
 
 ###########
@@ -139,10 +129,12 @@ class Spinbox(ttk.Spinbox, WidgetEvents):
 
 class Combobox(ttk.Combobox, WidgetEvents):
     def __init__(self, master=None, **kwargs):
+        self._text_variable = kwargs.get('textvariable', tkinter.StringVar())
+        kwargs['textvariable'] = self._text_variable
         ttk.Combobox.__init__(self, master=master, **kwargs)
 
     def set_text(self, text):
-        self.config(text=text)
+        self._text_variable.set(text)
 
     def on_selection(self, callback, *args, **kwargs):
         """
