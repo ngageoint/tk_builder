@@ -2585,7 +2585,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if self.variables.canvas_image_object:
+        if self.variables.canvas_image_object is not None:
             image_coords = self.canvas_coords_to_image_coords(coords)
             self.set_shape_pixel_coords(shape_id, image_coords)
 
@@ -2646,9 +2646,8 @@ class ImageCanvas(basic_widgets.Canvas):
             return  # nothing to be done
 
         self.variables.current_shape_id = shape_id
-        if old_id is not None and old_vector_obj.uid not in self.get_tool_shape_ids():
-            self.emit_shape_deselect(old_id, old_type)
-        if shape_id is not None and shape_id not in self.get_tool_shape_ids():
+        self.emit_shape_deselect(old_id, old_type)
+        if shape_id is not None:
             self.emit_shape_select(shape_id, new_vector_obj.type)
 
     def delete_shape(self, shape_id):
@@ -3386,11 +3385,14 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_type : int
         """
 
+        if shape_id is None:
+            return
         self.event_generate('<<ShapeCreate>>', x=shape_id, y=shape_type)
 
     def emit_shape_delete(self, shape_id, shape_type):
         """
-        Emit the <<ShapeDelete>> event. This will be emitted after the shape has been deleted.
+        Emit the <<ShapeDelete>> event. This will be emitted after the shape has been
+        deleted.
 
         Parameters
         ----------
@@ -3398,17 +3400,23 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_type : int
         """
 
+        if shape_id is None:
+            return
         self.event_generate('<<ShapeDelete>>', shape_id=shape_id, shape_type=shape_type)
 
     def emit_shape_select(self, shape_id, shape_type):
         """
-        Emit the <<ShapeSelect>> event. This will be emitted after the shape has been selected.
+        Emit the <<ShapeSelect>> event. This will be emitted after the shape has been
+        selected.
 
         Parameters
         ----------
         shape_id : int
         shape_type : int
         """
+
+        if shape_id is None or shape_id in self.get_tool_shape_ids():
+            return
         self.event_generate('<<ShapeSelect>>', x=shape_id, y=shape_type)
 
     def emit_shape_deselect(self, shape_id, shape_type):
@@ -3422,12 +3430,14 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_type : int
         """
 
+        if shape_id is None or shape_id in self.get_tool_shape_ids():
+            return
         self.event_generate('<<ShapeDeselect>>', x=shape_id, y=shape_type)
 
     def emit_shape_coords_edit(self, shape_id, shape_type):
         """
-        Emit the <<ShapeCoordsEdit>> event. This will be emitted after the shape has been
-        edited.
+        Emit the <<ShapeCoordsEdit>> or <<SelectionChanged>> event. This will be emitted
+        after the shape has been edited.
 
         Parameters
         ----------
@@ -3435,4 +3445,9 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_type : int
         """
 
-        self.event_generate('<<ShapeCoordsEdit>>', x=shape_id, y=shape_type)
+        if shape_id is None:
+            return
+        elif shape_id == self.variables.select_rect.uid:
+            self.event_generate('<<SelectionChanged>>', x=shape_id, y=shape_type)
+        elif shape_id not in self.get_tool_shape_ids():
+            self.event_generate('<<ShapeCoordsEdit>>', x=shape_id, y=shape_type)
