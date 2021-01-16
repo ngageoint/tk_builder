@@ -1008,10 +1008,10 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables = AppVariables()
 
         self.variables.zoom_rect.uid = self.create_new_rect(
-            (0, 0, 1, 1), make_current=False, increment_color=False,
+            (0, 0, 1, 1), make_current=False, is_tool=True, increment_color=False,
             outline=self.variables.zoom_rect.color, width=self.variables.zoom_rect.border_width)
         self.variables.select_rect.uid = self.create_new_rect(
-            (0, 0, 1, 1), make_current=False, increment_color=False,
+            (0, 0, 1, 1), make_current=False, is_tool=True, increment_color=False,
             outline=self.variables.select_rect.color, width=self.variables.select_rect.border_width)
 
         # hide the shapes we initialize
@@ -1319,7 +1319,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.active_tool = ToolConstants.EDIT_SHAPE_TOOL
             return
         elif self.variables.active_tool == ToolConstants.PAN_TOOL:
-            self.variables.current_shape_id = self.variables.zoom_rect.uid
+            self._set_current_shape_id(self.variables.zoom_rect.uid)
             self.variables.shape_drawing.set_active(anchor_point_xy=(event.x, event.y))
             return
         elif self.variables.active_tool == ToolConstants.SHIFT_SHAPE_TOOL:
@@ -1747,7 +1747,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self._pan(event)
         self.variables.shape_drawing.set_inactive()
-        self.variables.current_shape_id = None
+        self._set_current_shape_id(None)
         self.hide_shape(self.variables.zoom_rect.uid)  # this should never have been unhidden?
 
     def _select_closest_shape(self, event):
@@ -1767,7 +1767,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         closest_shape_id = self.find_closest_shape(event.x, event.y)
         if closest_shape_id is not None:
-            self.variables.current_shape_id = closest_shape_id
+            self._set_current_shape_id(closest_shape_id)
             self.highlight_existing_shape(self.variables.current_shape_id)
         return closest_shape_id
 
@@ -2234,7 +2234,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         if shape_id is not None:
-            self.variables.current_shape_id = shape_id
+            self._set_current_shape_id(shape_id)
         else:
             shape_id = self.variables.current_shape_id
 
@@ -2605,8 +2605,52 @@ class ImageCanvas(basic_widgets.Canvas):
 
         vector_object = self.get_vector_object(shape_id)
         vector_object.image_coords = image_coords
+        self.emit_shape_coords_edit(vector_object.uid, vector_object.type)
 
     # shape creation/deletion methods
+    def _track_shape(self, vector_object, make_current=True, is_tool=False):
+        """
+        Track the new shape.
+
+        Parameters
+        ----------
+        vector_object : VectorObject
+        make_current : bool
+            Make this new object the current object?
+        """
+
+        if not is_tool:
+            self.emit_shape_create(vector_object.uid, vector_object.type)
+        self.variables.track_shape(vector_object, make_current=make_current)
+
+    def _set_current_shape_id(self, shape_id):
+        """
+        Set the current shape id as appropriate. Emits signals, as required.
+
+        Parameters
+        ----------
+        shape_id : None|int
+        """
+
+        old_vector_obj = self.get_vector_object(self.variables.current_shape_id)
+        new_vector_obj = self.get_vector_object(shape_id)
+        if old_vector_obj is None:
+            old_id = None
+            old_type = None
+        else:
+            old_id = old_vector_obj.uid
+            old_type = old_vector_obj.type
+
+
+        if (old_id is None and shape_id is None) or (old_id == shape_id):
+            return  # nothing to be done
+
+        self.variables.current_shape_id = shape_id
+        if old_id is not None and old_vector_obj.uid not in self.get_tool_shape_ids():
+            self.emit_shape_deselect(old_id, old_type)
+        if shape_id is not None and shape_id not in self.get_tool_shape_ids():
+            self.emit_shape_select(shape_id, new_vector_obj.type)
+
     def delete_shape(self, shape_id):
         """
         Deletes a shape by its id.
@@ -2620,13 +2664,19 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        the_vector = self.get_vector_object(shape_id)
+        if the_vector is None:
+            return # nothing to be done
+
+        the_type = the_vector.type
         self.variables.shape_ids.remove(shape_id)
         del self.variables.vector_objects[shape_id]
         self.delete(shape_id)
         if shape_id == self.variables.current_shape_id:
-            self.variables.current_shape_id = None
+            self._set_current_shape_id(None)
+        self.emit_shape_delete(shape_id, the_type)
 
-    def create_new_point(self, coords, make_current=True, increment_color=True, **options):
+    def create_new_point(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
         """
         Create a new point.
 
@@ -2637,6 +2687,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Should the new shape be set as the current shape?
         increment_color : bool
             Increment the color after creating this object?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
         options
             Optional keyword arguments.
 
@@ -2658,12 +2710,13 @@ class ImageCanvas(basic_widgets.Canvas):
         vector_obj = VectorObject(
             shape_id, ShapeTypeConstants.POINT,
             image_coords=image_coords, point_size=self.variables.state.point_size, **options)
-        self.variables.track_shape(vector_obj, make_current=make_current)
+        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
+
         if increment_color:
             self._increment_color()
         return shape_id
 
-    def create_new_text(self, *args, make_current=True, increment_color=True, **kw):
+    def create_new_text(self, *args, make_current=True, increment_color=True, is_tool=False, **kwargs):
         """
         Create text with coordinates x1,y1.
 
@@ -2674,7 +2727,9 @@ class ImageCanvas(basic_widgets.Canvas):
             Should the new shape be set as the current shape?
         increment_color : bool
             Increment the foreground color?
-        kw
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
+        kwargs
             The keyword arguments
 
         Returns
@@ -2682,19 +2737,19 @@ class ImageCanvas(basic_widgets.Canvas):
         int
         """
 
-        shape_id = self._create('text', args, kw)
+        shape_id = self._create('text', args, kwargs)
         self.variables.shape_ids.append(shape_id)
         canvas_coords = args[0]
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords)
-        self.variables.track_shape(vector_obj, make_current=make_current)
+        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
         if increment_color:
             self._increment_color()
         return shape_id
 
-    def create_new_rect(self, canvas_coords, make_current=True, increment_color=True, **options):
+    def create_new_rect(self, canvas_coords, make_current=True, increment_color=True, is_tool=False, **options):
         """
         Create a new rectangle.
 
@@ -2705,6 +2760,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Should the new shape be set as the current shape?
         increment_color : bool
             Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
         options
             Optional Keyword arguments.
 
@@ -2720,14 +2777,14 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_id = self.create_rectangle(*canvas_coords, **options)
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, **options)
-        self.variables.track_shape(vector_obj, make_current=make_current)
+        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
         if increment_color:
             self._increment_color()
         return shape_id
 
-    def create_new_ellipse(self, canvas_coords, make_current=True, increment_color=True, **options):
+    def create_new_ellipse(self, canvas_coords, make_current=True, increment_color=True, is_tool=False, **options):
         """
         Create a new rectangle.
 
@@ -2738,6 +2795,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Should the new shape be set as the current shape?
         increment_color : bool
             Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
         options
             Optional Keyword arguments.
 
@@ -2753,14 +2812,14 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_id = self.create_oval(*canvas_coords, **options)
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, **options)
-        self.variables.track_shape(vector_obj, make_current=make_current)
+        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
         if increment_color:
             self._increment_color()
         return shape_id
 
-    def create_new_line(self, coords, make_current=True, increment_color=True, **options):
+    def create_new_line(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
         """
         Create a new line.
 
@@ -2771,6 +2830,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Should the new shape be set as the current shape?
         increment_color : bool
             Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
         options
             Optional keyword arguments.
 
@@ -2787,14 +2848,14 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_id = self.create_line(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, **options)
-        self.variables.track_shape(vector_obj, make_current=make_current)
+        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
         if increment_color:
             self._increment_color()
         return shape_id
 
-    def create_new_arrow(self, coords, make_current=True, increment_color=True, **options):
+    def create_new_arrow(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
         """
         Create a new arrow.
 
@@ -2805,6 +2866,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Should the new shape be set as the current shape?
         increment_color : bool
             Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
         options
             Optional keyword arguments.
 
@@ -2823,14 +2886,14 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_id = self.create_line(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, **options)
-        self.variables.track_shape(vector_obj, make_current=make_current)
+        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
         if increment_color:
             self._increment_color()
         return shape_id
 
-    def create_new_polygon(self, coords, make_current=True, increment_color=True, **options):
+    def create_new_polygon(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
         """
         Create a new polygon.
 
@@ -2841,6 +2904,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Should the new shape be set as the current shape?
         increment_color : bool
             Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
         options
             Optional keyword arguments.
 
@@ -2859,7 +2924,7 @@ class ImageCanvas(basic_widgets.Canvas):
         shape_id = self.create_polygon(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, **options)
-        self.variables.track_shape(vector_obj, make_current=make_current)
+        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
         if increment_color:
@@ -3076,7 +3141,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
-        self.variables.current_shape_id = self.variables.zoom_rect.uid
+        self._set_current_shape_id(self.variables.zoom_rect.uid)
         self.variables.set_current_and_active_tool(ToolConstants.ZOOM_IN_TOOL)
 
     def set_current_tool_to_zoom_out(self):
@@ -3089,7 +3154,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
-        self.variables.current_shape_id = self.variables.zoom_rect.uid
+        self._set_current_shape_id(self.variables.zoom_rect.uid)
         self.variables.set_current_and_active_tool(ToolConstants.ZOOM_OUT_TOOL)
 
     def set_current_tool_to_selection_tool(self):
@@ -3102,7 +3167,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
-        self.variables.current_shape_id = self.variables.select_rect.uid
+        self._set_current_shape_id(self.variables.select_rect.uid)
         self.variables.set_current_and_active_tool(ToolConstants.SELECT_TOOL)
 
     def set_current_tool_to_pan(self):
@@ -3115,7 +3180,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
-        self.variables.current_shape_id = self.variables.zoom_rect.uid
+        self._set_current_shape_id(self.variables.zoom_rect.uid)
         self.variables.set_current_and_active_tool(ToolConstants.PAN_TOOL)
 
     def set_current_tool_to_select_closest_shape(self):
@@ -3140,7 +3205,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
-        self.variables.current_shape_id = None
+        self._set_current_shape_id(None)
         self.variables.set_current_and_active_tool(ToolConstants.SHIFT_SHAPE_TOOL)
 
     def _deactivate_shape_edit_stub(self, shape_id=None):
@@ -3157,7 +3222,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.deactivate_shape_edit_mode()
-        self.variables.current_shape_id = shape_id
+        self._set_current_shape_id(shape_id)
         self.show_shape(shape_id)
 
     def set_current_tool_to_new_shape(self, shape_type=None):
@@ -3309,3 +3374,65 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             self.activate_shape_edit_mode(shape_id)
             self.variables.set_current_and_active_tool(ToolConstants.EDIT_SHAPE_TOOL)
+
+    # custom event creation methods
+    def emit_shape_create(self, shape_id, shape_type):
+        """
+        Emit the <<ShapeCreate>> event. This will be emitted after the shape has been created.
+
+        Parameters
+        ----------
+        shape_id : int
+        shape_type : int
+        """
+
+        self.event_generate('<<ShapeCreate>>', x=shape_id, y=shape_type)
+
+    def emit_shape_delete(self, shape_id, shape_type):
+        """
+        Emit the <<ShapeDelete>> event. This will be emitted after the shape has been deleted.
+
+        Parameters
+        ----------
+        shape_id : int
+        shape_type : int
+        """
+
+        self.event_generate('<<ShapeDelete>>', shape_id=shape_id, shape_type=shape_type)
+
+    def emit_shape_select(self, shape_id, shape_type):
+        """
+        Emit the <<ShapeSelect>> event. This will be emitted after the shape has been selected.
+
+        Parameters
+        ----------
+        shape_id : int
+        shape_type : int
+        """
+        self.event_generate('<<ShapeSelect>>', x=shape_id, y=shape_type)
+
+    def emit_shape_deselect(self, shape_id, shape_type):
+        """
+        Emit the <<ShapeDeselect>> event. This will be emitted after the shape has been
+        deselected.
+
+        Parameters
+        ----------
+        shape_id : int
+        shape_type : int
+        """
+
+        self.event_generate('<<ShapeDeselect>>', x=shape_id, y=shape_type)
+
+    def emit_shape_coords_edit(self, shape_id, shape_type):
+        """
+        Emit the <<ShapeCoordsEdit>> event. This will be emitted after the shape has been
+        edited.
+
+        Parameters
+        ----------
+        shape_id : int
+        shape_type : int
+        """
+
+        self.event_generate('<<ShapeCoordsEdit>>', x=shape_id, y=shape_type)

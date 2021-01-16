@@ -81,10 +81,9 @@ class CanvasResize(WidgetPanel):
         self.button_panel.draw_ellipse.config(command=self.callback_draw_ellipse)
         self.button_panel.draw_polygon.config(command=self.callback_draw_polygon)
         self.button_panel.resizeable.config(command=self.toggle_resizeable)
-        # monkey patch mouse event for image canvas
-        self.image_panel.canvas.on_left_mouse_click(self.callback_on_left_mouse_click)
-        self.image_panel.canvas.on_left_mouse_release(self.callback_on_left_mouse_release)
-        self.image_panel.canvas.on_left_mouse_motion(self.callback_on_left_mouse_motion)
+
+        # handle the image creation event
+        self.image_panel.canvas.bind('<<ShapeCreate>>', self.handle_new_shape)
 
     @property
     def point_id(self):
@@ -156,51 +155,17 @@ class CanvasResize(WidgetPanel):
         value = self.button_panel.resizeable.is_selected()
         self.image_panel.resizeable = value
 
-    def callback_on_left_mouse_click(self, event):
-        self.image_panel.canvas.callback_handle_left_mouse_click(event)
-        self._set_the_ids()
-
-    def callback_on_left_mouse_release(self, event):
-        self.image_panel.canvas.callback_handle_left_mouse_release(event)
-        self._set_the_ids()
-
-    def callback_on_left_mouse_motion(self, event):
-        self.image_panel.canvas.callback_handle_left_mouse_motion(event)
-
-    def _set_the_ids(self):
+    def handle_new_shape(self, event):
         """
-        Keep our tracking for the shapes.
+        Handle the creation of a new shape.
 
-        Returns
-        -------
-        None
+        Parameters
+        ----------
+        event
         """
 
-        def set_drag_limits():
-            vector_obj.image_drag_limits = (
-                self.drag_ylim_1, self.drag_xlim_1, self.drag_ylim_2, self.drag_xlim_2)
-
-        vector_obj = self.image_panel.canvas.get_current_vector_object()
-        if vector_obj is None:
-            # no current shape id, so nothing to be done
-            return
-        if vector_obj.uid in self.image_panel.canvas.get_tool_shape_ids():
-            # this is a tool, so ignore
-            return
-
-        set_drag_limits()  # what if this polygon is already outside the drag limits? This will be dumb...
-
-        # see what we are tracking for this shape
-        old_shape_id = self._shape_ids.get(vector_obj.type, None)
-        if vector_obj.uid == old_shape_id:
-            # we are already tracking this shape as our given type, nothing more to do
-            return
-
-        # delete the old shape of that type, if applicable
-        # this shouldn't happen...
-        if old_shape_id is not None:
-            self.image_panel.canvas.delete_shape(old_shape_id)
-        self._shape_ids[vector_obj.type] = vector_obj.uid
+        # we'll be tracking the most recently created
+        self._shape_ids[event.y] = event.x
 
     def exit(self):
         self.quit()
@@ -208,7 +173,7 @@ class CanvasResize(WidgetPanel):
 
 def main():
     root = tkinter.Tk()
-
+    # use the theme, must be after the root element is created
     the_style = ttk.Style()
     the_style.theme_use('clam')
 
