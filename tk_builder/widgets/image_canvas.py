@@ -1512,6 +1512,10 @@ class ImageCanvas(basic_widgets.Canvas):
         elif self.variables.current_tool == ToolConstants.SELECT_TOOL:
             self.variables.shape_drawing.set_inactive()
             self.variables.active_tool = ToolConstants.SELECT_TOOL
+            self.emit_select_finalized()
+            return
+        elif self.variables.current_tool in [ToolConstants.EDIT_SHAPE_TOOL, ToolConstants.SHIFT_SHAPE_TOOL]:
+            self.emit_shape_coords_finalized()
             return
 
     def callback_handle_mouse_motion(self, event):
@@ -1886,7 +1890,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if image_rect[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
             image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
         if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
-            image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_ny
+            image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
 
         rect_height = image_rect[2] - image_rect[0]
         rect_width = image_rect[3] - image_rect[1]
@@ -3451,3 +3455,22 @@ class ImageCanvas(basic_widgets.Canvas):
             self.event_generate('<<SelectionChanged>>', x=shape_id, y=shape_type)
         elif shape_id not in self.get_tool_shape_ids():
             self.event_generate('<<ShapeCoordsEdit>>', x=shape_id, y=shape_type)
+
+    def emit_select_finalized(self):
+        """
+        Emit the <<SelectionFinalized>> event. This will be emitted
+        after the shape has been edited.
+        """
+
+        self.event_generate('<<SelectionFinalized>>')
+
+    def emit_shape_coords_finalized(self):
+        """
+        Emits the <<ShapeCoordsFinalized>> event, indicating that the current
+        editing step for the current shape is finished.
+        """
+
+        vector_object = self.get_current_vector_object()
+        if vector_object is None or vector_object.uid in self.get_tool_shape_ids():
+            return
+        self.event_generate('<<hapeCoordsFinalized>>', x=vector_object.uid, y=vector_object.type)

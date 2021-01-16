@@ -22,11 +22,10 @@ class PyplotCanvas(Frame):
         Frame.__init__(self, parent, **kwargs)
 
         # default dpi is 100, so npix will be 100 times the numbers passed to figsize
-        self.fig = pyplot.figure(figsize=(canvas_width/float(100), canvas_height/float(100)))
+        self.fig = pyplot.figure(dpi=100, figsize=(canvas_width/float(100), canvas_height/float(100)))
         pyplot.plot(0)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(fill='both')
-        toolbar = self.canvas.toolbar
 
     @property
     def axes(self):

@@ -3,6 +3,8 @@ from matplotlib import pyplot
 import numpy
 import tkinter
 
+from tk_builder.widgets import basic_widgets
+
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 except ImportError:
@@ -21,16 +23,14 @@ __author__ = "Jason Casey"
 DEFAULT_CMAP = 'bone'
 
 
-class PyplotImagePanel(tkinter.LabelFrame):
+class PyplotImagePanel(basic_widgets.LabelFrame):
     """
     Provides a widget that allows users to embed pyplot images into an application.
     """
 
     def __init__(self, parent, canvas_width=600, canvas_height=400, cmap_name=DEFAULT_CMAP):
         self._cmap_name = DEFAULT_CMAP
-        tkinter.LabelFrame.__init__(self, parent)
-        self.config(highlightbackground="black")
-        self.config(highlightthickness=1)
+        basic_widgets.LabelFrame.__init__(self, parent)
         self.config(borderwidth=5)
 
         # this is a dummy placeholder for now
@@ -40,6 +40,9 @@ class PyplotImagePanel(tkinter.LabelFrame):
         # fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
         self.fig, self.ax = pyplot.subplots(nrows=1, ncols=1)
         self.ax.imshow(self.image_data, cmap=self.cmap_name)
+        self.ax.set_ylabel('row')
+        self.ax.set_xlabel('column')
+        self.ax.grid(False)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.update_image(self.image_data)
@@ -63,7 +66,7 @@ class PyplotImagePanel(tkinter.LabelFrame):
                 'cmap_name {} is not in the pyplot list of registered colormaps. '
                 'Using the default.'.format(value))
 
-    def update_image(self, image_data):
+    def update_image(self, image_data, **kwargs):
         """
         Updates the displayed image.  Image data should be an numpy array of dimensions:
         [ny, nx] for a grayscale image or [ny, nx, 3] for a 3 color RGB image.
@@ -71,6 +74,8 @@ class PyplotImagePanel(tkinter.LabelFrame):
         Parameters
         ----------
         image_data: numpy.ndarray
+        kwargs
+            Optional key word arguments for `imshow`
 
         Returns
         -------
@@ -78,10 +83,10 @@ class PyplotImagePanel(tkinter.LabelFrame):
         """
 
         self.image_data = image_data
-        if image_data.ndim == 3:
-            self.ax.imshow(self.image_data)
-        else:
-            self.ax.imshow(self.image_data, cmap=self.cmap_name)
+        if image_data.ndim != 3 and 'cmap' not in kwargs:
+            kwargs['cmap'] = self.cmap_name
+
+        self.ax.imshow(self.image_data, **kwargs)
         self.canvas.draw()
 
     def destroy(self):

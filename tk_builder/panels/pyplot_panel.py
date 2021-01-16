@@ -22,6 +22,9 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
+# TODO: revamp this module...
+
+
 SCALE_Y_AXIS_PER_FRAME_TRUE = "scale y axis per frame"
 SCALE_Y_AXIS_PER_FRAME_FALSE = "don't scale y axis per frame"
 
@@ -94,7 +97,6 @@ class PyplotPanel(WidgetPanel):
 
     def __init__(self, primary):
         WidgetPanel.__init__(self, primary)
-
         self.variables = AppVariables()
         self.pyplot_utils = PlotStyleUtils()
         self.init_w_vertical_layout()
