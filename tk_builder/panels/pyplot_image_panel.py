@@ -17,8 +17,7 @@ except ImportError:
 
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
-
+__author__ = ("Jason Casey", "Thomas McCullough")
 
 DEFAULT_CMAP = 'bone'
 
@@ -28,25 +27,23 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
     Provides a widget that allows users to embed pyplot images into an application.
     """
 
-    def __init__(self, parent, canvas_width=600, canvas_height=400, cmap_name=DEFAULT_CMAP):
+    def __init__(self, parent, cmap_name=DEFAULT_CMAP):
         self._cmap_name = DEFAULT_CMAP
         basic_widgets.LabelFrame.__init__(self, parent)
         self.config(borderwidth=5)
-
-        # this is a dummy placeholder for now
-        self.image_data = numpy.zeros((canvas_height, canvas_width), dtype='uint8')
         self.cmap_name = cmap_name
-        # default dpi is 100, so npix will be 100 times the numbers passed to figsize
-        # fig = plt.figure(figsize=(canvas_width/100, canvas_height/100))
-        self.fig, self.ax = pyplot.subplots(nrows=1, ncols=1)
-        self.ax.imshow(self.image_data, cmap=self.cmap_name)
-        self.ax.set_ylabel('row')
-        self.ax.set_xlabel('column')
-        self.ax.grid(False)
+        self.fig, self.ax = pyplot.subplots(dpi=100, nrows=1, ncols=1)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(expand=tkinter.YES, fill=tkinter.BOTH)
-        self.update_image(self.image_data)
+        self.make_blank()
+        self.set_ylabel('row')
+        self.set_xlabel('column')
+        self.ax.grid(False)
         self.pack(expand=tkinter.YES, fill=tkinter.BOTH)
+
+    def make_blank(self):
+        image_data = numpy.zeros((600, 400), dtype='uint8')
+        self.update_image(image_data)
 
     @property
     def cmap_name(self):
@@ -88,6 +85,39 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
 
         self.ax.imshow(self.image_data, **kwargs)
         self.canvas.draw()
+
+    def set_xlabel(self, the_label):
+        """
+        Sets the displayed x label.
+
+        Parameters
+        ----------
+        the_label : str
+        """
+
+        self.ax.set_xlabel(the_label)
+
+    def set_ylabel(self, the_label):
+        """
+        Sets the displayed y label.
+
+        Parameters
+        ----------
+        the_label : str
+        """
+
+        self.ax.set_ylabel(the_label)
+
+    def set_title(self, the_title):
+        """
+        Sets the displayed figure title.
+
+        Parameters
+        ----------
+        the_title : str
+        """
+
+        self.ax.set_title(the_title)
 
     def destroy(self):
         pyplot.close(self.fig)

@@ -26,7 +26,6 @@ class Canvas(tkinter.Canvas, WidgetEvents):
     def __init__(self, master=None, **kwargs):
         tkinter.Canvas.__init__(self, master=master, **kwargs)
 
-
 #########
 # The basic tkinter widget, where we can use the ttk version
 

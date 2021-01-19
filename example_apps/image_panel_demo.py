@@ -62,13 +62,7 @@ class CanvasResize(WidgetPanel):
         self.drag_ylim_1 = image_npix_y * 0.1
         self.drag_ylim_2 = image_npix_y * 0.9
 
-        self.image_panel.current_tool = ToolConstants.PAN_TOOL
-
-        self.image_panel.axes_canvas.image_x_min_val = 500
-        self.image_panel.axes_canvas.image_x_max_val = 1200
-
-        self.image_panel.axes_canvas.image_y_min_val = 5000
-        self.image_panel.axes_canvas.image_y_max_val = 2000
+        self.image_panel.current_tool = ToolConstants.PAN
 
         self.image_panel.set_min_canvas_size(100, 100)
 
