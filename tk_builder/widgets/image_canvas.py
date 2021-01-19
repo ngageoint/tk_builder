@@ -1497,7 +1497,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         if active_tool in [ToolConstants.VIEW, ToolConstants.NEW_SHAPE, ToolConstants.SELECT_CLOSEST_SHAPE]:
             return  # nothing to be done
-        if active_tool in [ToolConstants.ZOOM_IN, ToolConstants.ZOOM_OUT, ToolConstants.SELECT]:
+        if active_tool in [ToolConstants.ZOOM_IN, ToolConstants.ZOOM_OUT]:
             self._drag_rectangle_ellipse_arrow(event)
         elif active_tool == ToolConstants.PAN:
             self._pan(event)
@@ -2279,10 +2279,12 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         for shape_id in self.variables.shape_ids:
-            pixel_coords = self.get_vector_object(shape_id).image_coords
-            if pixel_coords:
-                new_canvas_coords = self.shape_image_coords_to_canvas_coords(shape_id)
-                self.modify_existing_shape_using_canvas_coords(shape_id, new_canvas_coords, update_pixel_coords=False)
+            vector_object = self.get_vector_object(shape_id)
+            if vector_object is not None:
+                pixel_coords = vector_object.image_coords
+                if pixel_coords:
+                    new_canvas_coords = self.shape_image_coords_to_canvas_coords(shape_id)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, new_canvas_coords, update_pixel_coords=False)
 
     def hide_shape(self, shape_id):
         """
@@ -2347,6 +2349,8 @@ class ImageCanvas(basic_widgets.Canvas):
     def deactivate_shape_edit_mode(self):
         for shape_id in self.get_non_tool_shape_ids():
             vector_object = self.get_vector_object(shape_id)
+            if vector_object is None:
+                return
             shape_type = vector_object.type
             if shape_type in ShapeTypeConstants.geometric_shapes():
                 self.itemconfigure(shape_id, dash=())
@@ -3505,7 +3509,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         if shape_id is None:
             return
-        self.event_generate('<<ShapeDelete>>', shape_id=shape_id, shape_type=shape_type)
+        self.event_generate('<<ShapeDelete>>', x=shape_id, y=shape_type)
 
     def emit_shape_select(self, shape_id, shape_type):
         """
