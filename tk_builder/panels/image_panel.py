@@ -8,48 +8,14 @@ from typing import List
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ImageCanvas, ToolConstants, ShapeTypeConstants
-from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder.image_reader import ImageReader
 from tk_builder import file_filters
 
 from sarpy.compliance import string_types
-
+from sarpy.visualization import remap
 
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
-
-
-class CanvasSize(WidgetPanel):
-    _widget_list = (
-        "canvas_size_checkbox", "canvas_width_label", "canvas_width", "canvas_height_label", "canvas_height", "set_size")
-    canvas_size_checkbox = widget_descriptors.CheckButtonDescriptor(
-        'canvas_size_checkbox', default_text='canvas\nsize:',
-        docstring='Should the canvas size elements be shown?')  # type: basic_widgets.CheckButton
-    canvas_width_label = widget_descriptors.LabelDescriptor(
-        'canvas_width_label', default_text='width:',
-        docstring='The canvas width label.')  # type: basic_widgets.Label
-    canvas_width = widget_descriptors.EntryDescriptor(
-        'canvas_width', default_text='600',
-        docstring='The canvas width value.')  # type: basic_widgets.Entry
-    canvas_height_label = widget_descriptors.LabelDescriptor(
-        'canvas_height_label', default_text='height:',
-        docstring='The canvas height label.')  # type: basic_widgets.Label
-    canvas_height = widget_descriptors.EntryDescriptor(
-        'canvas_height', default_text='400',
-        docstring='The canvas height value.')  # type: basic_widgets.Entry
-    set_size = widget_descriptors.ButtonDescriptor(
-        'set_size', default_text='set size',
-        docstring='Button to perform the actual size set.')  # type: basic_widgets.Button
-
-    def __init__(self, parent):
-        """
-
-        Parameters
-        ----------
-        parent : ImagePanel
-        """
-
-        WidgetPanel.__init__(self, parent)
-        self.init_w_horizontal_layout()
 
 
 class Toolbar(WidgetPanel):
@@ -57,7 +23,7 @@ class Toolbar(WidgetPanel):
         'tool_label', 'zoom_in', 'zoom_out', 'pan', 'select', 'view',
         'select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape')
     shape_controls = ('shape_label', 'point', 'line', 'rect', 'ellipse', 'arrow', 'polygon', 'text')
-    other_controls = ("save_canvas", "save_image", "size_controls")
+    other_controls = ("save_canvas", "save_image", "remap_combo", "select_index_label", "select_index_combo")
     _widget_list = (tool_controls, shape_controls, other_controls)
 
     # create the tool descriptors
@@ -103,8 +69,14 @@ class Toolbar(WidgetPanel):
         'save_canvas', default_text='save canvas', docstring='Save the present canvas and contents to image file.')  # type: basic_widgets.Button
     save_image = widget_descriptors.ButtonDescriptor(
         'save_image', default_text='save image', docstring='Save the present canvas to image file.')  # type: basic_widgets.Button
-    size_controls = widget_descriptors.TypedDescriptor(
-        'size_controls', CanvasSize, docstring='The canvas size controls.')  # type: CanvasSize
+    remap_label = widget_descriptors.LabelDescriptor(
+        'remap_label', default_text='remap:', docstring='The remap label.')  # type: basic_widgets.Label
+    remap_combo = widget_descriptors.ComboboxDescriptor(
+        'remap_combo', default_text='density', docstring='The remap value')  # type: basic_widgets.Combobox
+    select_index_label = widget_descriptors.LabelDescriptor(
+        'select_index_label', default_text='image\nindex:', docstring='The image index selection label.')  # type: basic_widgets.Label
+    select_index_combo = widget_descriptors.ComboboxDescriptor(
+        'select_index_combo', default_text='', docstring='The image index selection')  # type: basic_widgets.Combobox
 
     def __init__(self, parent):
         """
@@ -146,7 +118,6 @@ class ImagePanel(WidgetPanel):
         self.canvas.pack(side='bottom', fill=tkinter.BOTH, expand=1)
 
         self.set_max_canvas_size(1920, 1080)
-        self.resizeable = False
 
     def _set_toolbar_callbacks(self):
         # set the toolbar tool callbacks
@@ -170,13 +141,9 @@ class ImagePanel(WidgetPanel):
         # set the save callbacks
         self.toolbar.save_canvas.config(command=self.callback_save_canvas)
         self.toolbar.save_image.config(command=self.callback_save_image)
-        # set the canvas size callbacks
-        self.toolbar.size_controls.canvas_size_checkbox.config(command=self.callback_hide_show_canvas_size_controls)
-        width_validator = (self.register(self.validate_width), '%P')
-        self.toolbar.size_controls.canvas_width.config(validate='focusout', validatecommand=width_validator)
-        height_validator = (self.register(self.validate_height), '%P')
-        self.toolbar.size_controls.canvas_height.config(validate='focusout', validatecommand=height_validator)
-        self.toolbar.size_controls.set_size.config(command=self.perform_resize)
+        # set the other callbacks
+        self.toolbar.remap_combo.on_selection(self.callback_remap)
+        self.toolbar.select_index_combo.on_selection(self.callback_select_index)
 
     @property
     def the_tool(self):
@@ -199,30 +166,6 @@ class ImagePanel(WidgetPanel):
         if the_value is None:
             raise ValueError('Unhandled shape value {}'.format(value))
         self._the_shape.set(the_value)
-
-    @property
-    def resizeable(self):
-        return self.canvas.resizeable
-
-    @resizeable.setter
-    def resizeable(self, value):
-        """
-        Enables or disables dynamic resizing of the image canvas.
-
-        Parameters
-        ----------
-        value : bool
-
-        Returns
-        -------
-        None
-        """
-
-        self.canvas.resizeable = value
-        if value is False:
-            self.show_canvas_size_controls()
-        else:
-            self.hide_canvas_size_controls()
 
     @property
     def current_tool(self):
@@ -281,7 +224,7 @@ class ImagePanel(WidgetPanel):
         self.canvas.variables.state.max_width = x
         self.canvas.variables.state.max_height = y
 
-    def update_image_save_directory(self, pathname):
+    def _update_image_save_directory(self, pathname):
         """
         Updates the initial browsing directory for saving image files, to the parent directory
         of the provided path.
@@ -300,45 +243,50 @@ class ImagePanel(WidgetPanel):
         else:
             self._image_save_directory = os.path.split(pathname)[0]
 
-    def validate_width(self, the_value):
+    def _populate_select_index_combo(self):
         """
-        Helper method validating the canvas width value.
-
-        Parameters
-        ----------
-        the_value : str
+        Populate the index selection combobox. This should be called when a new
+        reader is selected.
         """
 
-        try:
-            the_int = int(the_value)
-        except:
-            return False
-        if the_int < self.canvas.variables.state.min_width or the_int > self.canvas.variables.state.max_width:
-            showinfo('Width requirement',
-                     message='Width must be in the range {} - {}'.format(self.canvas.variables.state.min_width,
-                                                                         self.canvas.variables.state.max_width))
-            return False
-        return True
+        if self.canvas.variables.canvas_image_object is None or self.canvas.variables.canvas_image_object.image_reader is None:
+            index_values = []
+        else:
+            index_values = [str(entry) for entry in range(self.canvas.variables.canvas_image_object.image_reader.image_count)]
 
-    def validate_height(self, the_value):
+        self.toolbar.select_index_combo.update_combobox_values(index_values)
+        if len(index_values) == 0:
+            self.toolbar.select_index_combo.set('')
+            self.toolbar.select_index_combo.config(state='disabled')
+        else:
+            current_value = self.canvas.variables.canvas_image_object.image_reader.index
+            self.toolbar.select_index_combo.current(current_value)
+            self.toolbar.select_index_combo.config(state='readonly')
+
+    def _populate_remap_combo(self):
         """
-        Helper method validating the canvas height value.
-
-        Parameters
-        ----------
-        the_value : str
+        Populate the remap combobox state. This should be called when a new reader is
+        selected.
         """
 
-        try:
-            the_int = int(the_value)
-        except:
-            return False
-        if the_int < self.canvas.variables.state.min_height or the_int > self.canvas.variables.state.max_height:
-            showinfo('Height requirement',
-                     message='Height must be in the range {} - {}'.format(self.canvas.variables.state.min_height,
-                                                                         self.canvas.variables.state.max_height))
-            return False
-        return True
+        if self.canvas.variables.canvas_image_object is None or self.canvas.variables.canvas_image_object.image_reader is None:
+            remapable = False
+        else:
+            remapable = self.canvas.variables.canvas_image_object.image_reader.remapable
+
+        if remapable:
+            # get the old value
+            old_value = self.toolbar.remap_combo.get()
+            # populate the list of values
+            remap_values = [entry[0] for entry in remap.get_remap_list()]
+            self.toolbar.remap_combo.update_combobox_values(remap_values)
+            if old_value in remap_values:
+                self.toolbar.remap_combo.set(old_value)
+            else:
+                self.toolbar.remap_combo.current(0)  # TODO: verify that this triggers callback_remap()
+            self.toolbar.remap_combo.config(state='readonly')
+        else:
+            self.toolbar.remap_combo.config(state='disabled')
 
     # methods for showing or hiding elements
     def hide_controls(self):
@@ -430,35 +378,51 @@ class ImagePanel(WidgetPanel):
             for the_item in temp_shape_list:
                 getattr(self.toolbar, the_item).pack_forget()
 
-    def hide_canvas_size_controls(self):
+    def hide_remap_combo(self):
         """
-        Hides the canvas size controls checkbox in the toolbar
-        """
-
-        self.toolbar.size_controls.canvas_size_checkbox.master.pack_forget()
-
-    def show_canvas_size_controls(self):
-        """
-        Shows / unhides the canvas size controls checkbox in the toolbar
+        Hides the remap combobox.
         """
 
-        self.toolbar.size_controls.canvas_size_checkbox.master.pack()
+        self.toolbar.remap_combo.pack_forget()
 
-    def callback_hide_show_canvas_size_controls(self):
+    def hide_select_index(self):
         """
-        Allows the user to toggle the canvas size controls.  This option is available
-        by default if the image panel is set up to not allow dynamic resizing.  In
-        this case, the user can set the canvas size using the canvas size controls.
+        Hides the index selection label and combobox.
         """
 
-        # NB: this is bound by the toolbar itself.
-        show_canvas_size_controls = self.toolbar.size_controls.canvas_size_checkbox.is_selected()
-        if show_canvas_size_controls:
-            self.toolbar.size_controls.master.pack()
-        else:
-            self.toolbar.size_controls.master.forget()
+        self.toolbar.select_index_label.pack_forget()
+        self.toolbar.select_index_combo.pack_forget()
 
     # callbacks
+    def callback_select_index(self, event):
+        """
+        Handles setting the image index.
+        """
+
+        the_index = self.toolbar.select_index_combo.get()
+        if the_index == '':
+            return
+
+        the_index = int(the_index)
+        if self.canvas.variables.canvas_image_object.image_reader.index == the_index:
+            return  # nothing has changed, so nothing to be done
+
+        self.canvas.set_image_index(the_index)
+
+    def callback_remap(self, event):
+        """
+        Handles the remap setting.
+
+        Parameters
+        ----------
+        event
+        """
+
+        remap_dict = {entry[0]: entry[1] for entry in remap.get_remap_list()}
+        selection = self.toolbar.remap_combo.get()
+        remap_type = remap_dict[selection]
+        self.canvas.set_remap(remap_type)
+
     def callback_canvas_mouse_zoom(self, event):
         """
         Handles the canvas zoom event then updates axes
@@ -526,7 +490,7 @@ class ImagePanel(WidgetPanel):
             return
         if os.path.splitext(save_fname)[1] == '':
             save_fname += '.png'
-        self.update_image_save_directory(save_fname)
+        self._update_image_save_directory(save_fname)
 
         self.canvas.save_full_canvas_as_image_file(save_fname)
 
@@ -545,7 +509,7 @@ class ImagePanel(WidgetPanel):
             return
         if os.path.splitext(save_fname)[1] == '':
             save_fname += '.png'
-        self.update_image_save_directory(save_fname)
+        self._update_image_save_directory(save_fname)
 
         image_data = self.canvas.variables.canvas_image_object.display_image
         pil_image = PIL.Image.fromarray(image_data)
@@ -565,7 +529,9 @@ class ImagePanel(WidgetPanel):
         """
 
         self.canvas.set_image_reader(image_reader)
-        self.update_image_save_directory(image_reader.file_name)
+        self._update_image_save_directory(image_reader.file_name)
+        self._populate_select_index_combo()
+        self._populate_remap_combo()
 
     def do_nothing(self, event):
         """
@@ -581,15 +547,6 @@ class ImagePanel(WidgetPanel):
         """
 
         pass
-
-    def perform_resize(self):
-        """
-        Perform the resize.
-        """
-
-        the_height = int(self.toolbar.size_controls.canvas_height.get())
-        the_width = int(self.toolbar.size_controls.canvas_width.get())
-        self.canvas.set_canvas_size(the_width, the_height)
 
     def update_everything(self):
         """

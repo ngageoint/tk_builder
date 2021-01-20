@@ -5,23 +5,21 @@ import numpy
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.image_readers.numpy_image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyImageReader
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants, ShapeTypeConstants
-from tk_builder.widgets.basic_widgets import Button, CheckButton
+from tk_builder.widgets.basic_widgets import Button
 
 
 class Buttons(WidgetPanel):
     _widget_list = (
-        "draw_point", "draw_line", "draw_arrow", "draw_rect", "draw_ellipse", "draw_polygon",
-        "resizeable")
+        "draw_point", "draw_line", "draw_arrow", "draw_rect", "draw_ellipse", "draw_polygon")
     draw_point = widget_descriptors.ButtonDescriptor("draw_point", default_text="point")  # type: Button
     draw_line = widget_descriptors.ButtonDescriptor("draw_line", default_text="line")  # type: Button
     draw_arrow = widget_descriptors.ButtonDescriptor("draw_arrow", default_text="arrow")  # type: Button
     draw_rect = widget_descriptors.ButtonDescriptor("draw_rect", default_text="rect")  # type: Button
     draw_ellipse = widget_descriptors.ButtonDescriptor("draw_ellipse", default_text="ellipse")  # type: Button
     draw_polygon = widget_descriptors.ButtonDescriptor("draw_polygon", default_text="polygon")  # type: Button
-    resizeable = widget_descriptors.CheckButtonDescriptor("resizeable", default_text="resizeable")  # type: CheckButton
 
     def __init__(self, primary):
         self.primary = primary
@@ -44,8 +42,6 @@ class CanvasResize(WidgetPanel):
         WidgetPanel.__init__(self, primary_frame)
 
         self.init_w_horizontal_layout()
-
-        self.image_panel.resizeable = False
 
         image_npix_x = 2000
         image_npix_y = 1500
@@ -74,7 +70,6 @@ class CanvasResize(WidgetPanel):
         self.button_panel.draw_point.config(command=self.callback_draw_point)
         self.button_panel.draw_ellipse.config(command=self.callback_draw_ellipse)
         self.button_panel.draw_polygon.config(command=self.callback_draw_polygon)
-        self.button_panel.resizeable.config(command=self.toggle_resizeable)
 
         # handle the image creation event
         self.image_panel.canvas.bind('<<ShapeCreate>>', self.handle_new_shape)
@@ -144,10 +139,6 @@ class CanvasResize(WidgetPanel):
 
     def callback_draw_polygon(self):
         self.image_panel.canvas.set_current_tool_to_draw_polygon(self.polygon_id)
-
-    def toggle_resizeable(self):
-        value = self.button_panel.resizeable.is_selected()
-        self.image_panel.resizeable = value
 
     def handle_new_shape(self, event):
         """

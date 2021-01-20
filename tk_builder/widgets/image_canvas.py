@@ -26,9 +26,11 @@ from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
 from tk_builder.widgets import basic_widgets
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.utils.color_utils import color_utils
-from tk_builder.image_readers.image_reader import ImageReader
+from tk_builder.image_reader import ImageReader
 from tk_builder.utils.color_utils.color_cycler import ColorCycler
+
 from sarpy.geometry.geometry_elements import GeometryObject, LinearRing, LineString, Point
+import sarpy.visualization.remap as remap
 
 #######
 # shape drawing explanations
@@ -761,9 +763,6 @@ class CanvasState(object):
     currently_zooming = BooleanDescriptor(
         'currently_zooming', default_value=False,
         docstring='Is the canvas object currently zooming?')  # type: bool
-    resizeable = BooleanDescriptor(
-        'resizeable', default_value=True,
-        docstring='Is the canvas object resizeable?')  # type: bool
 
 
 class ShapeDrawingState(object):
@@ -888,6 +887,7 @@ class AppVariables(object):
 
         self._shape_ids = []
         self._vector_objects = OrderedDict()
+        self._remap_function = remap.density
         self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
 
     @property
@@ -928,6 +928,23 @@ class AppVariables(object):
         if make_current:
             self.current_shape_id = vector_object.uid
 
+    @property
+    def remap_function(self):
+        """
+        Callable: the remap function for usage.
+        """
+
+        return self._remap_function
+
+    def set_remap_type(self, remap_type):
+        if callable(remap_type):
+            self._remap_function = remap_type
+        elif hasattr(remap, remap_type):
+            self._remap_function = getattr(remap, remap_type)
+        else:
+            logging.error('Got unexpected value for remap {}. Using "density".'.format(remap_type))
+            self._remap_function = remap.density
+
 
 ######
 # image canvas widget
@@ -959,10 +976,10 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables = AppVariables()
 
         self.variables.zoom_rect.uid = self.create_new_rect(
-            (0, 0, 1, 1), make_current=False, is_tool=True, increment_color=False,
+            (0, 0, 0, 0), make_current=False, is_tool=True, increment_color=False,
             outline=self.variables.zoom_rect.color, width=self.variables.zoom_rect.border_width)
         self.variables.select_rect.uid = self.create_new_rect(
-            (0, 0, 1, 1), make_current=False, is_tool=True, increment_color=False,
+            (0, 0, 0, 0), make_current=False, is_tool=True, increment_color=False,
             outline=self.variables.select_rect.color, width=self.variables.select_rect.border_width)
 
         # hide the shapes we initialize
@@ -987,18 +1004,6 @@ class ImageCanvas(basic_widgets.Canvas):
 
     def set_color_cycler(self, n_colors, hex_color_palette):
         self._color_cycler = ColorCycler(n_colors, hex_color_palette)
-
-    @property
-    def resizeable(self):
-        """
-        bool: Is this resizeable?
-        """
-
-        return self.variables.state.resizeable
-
-    @resizeable.setter
-    def resizeable(self, value):
-        self.variables.state.resizeable = value
 
     @property
     def current_tool(self):
@@ -1086,6 +1091,21 @@ class ImageCanvas(basic_widgets.Canvas):
     def do_nothing(self, event):
         pass
 
+    def _reinitialize_reader(self):
+        """
+        Re-initializes image view, based on an image reader change, or change in image index.
+
+        Returns
+        -------
+        None
+        """
+
+        self.set_current_tool_to_view()
+        self.reinitialize_shapes()
+        full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
+        full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
+        self.zoom_to_full_image_selection([0, 0, full_ny, full_nx])
+
     def set_image_reader(self, image_reader):
         """
         Set the image reader.
@@ -1101,11 +1121,47 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.variables.canvas_image_object = CanvasImage(
             image_reader, self.variables.state.canvas_width, self.variables.state.canvas_height)
-        self.set_current_tool_to_view()
-        self.reinitialize_shapes()
-        full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
-        full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
-        self.zoom_to_full_image_selection([0, 0, full_ny, full_nx])
+        # set the remap
+        self.variables.canvas_image_object.image_reader.set_remap_type(self.variables.remap_function)
+        # update the canvas elements
+        self._reinitialize_reader()
+
+    def set_image_index(self, the_value):
+        """
+        Sets the image index for the reader, which re-initializes the image data.
+        This assumes that vetting for the prospective value has already been performed.
+
+        Parameters
+        ----------
+        the_value : int
+        """
+
+        if self.variables.canvas_image_object is None or self.variables.canvas_image_object.image_reader is None:
+            return
+
+        current_value = self.variables.canvas_image_object.image_reader.index
+        if the_value == current_value:
+            return # nothing to be done
+
+        try:
+            self.variables.canvas_image_object.image_reader.index = the_value
+            self._reinitialize_reader()
+            self.emit_image_index_changed()
+        except AttributeError:
+            return  # nothing to be done
+
+    def get_image_index(self):
+        """
+        Gets the current image index.
+
+        Returns
+        -------
+        None|int
+        """
+
+        if self.variables.canvas_image_object is None or self.variables.canvas_image_object.image_reader is None:
+            return None
+        return self.variables.canvas_image_object.image_reader.index
 
     def get_vector_object(self, vector_id):
         """
@@ -1305,6 +1361,22 @@ class ImageCanvas(basic_widgets.Canvas):
             x_lower = max(0, x_limit-the_width)
         self.zoom_to_full_image_selection([y_lower, x_lower, y_upper, x_upper])
 
+    def set_remap(self, remap_value):
+        """
+        Sets the remap, where applicable. Emits the <<RemapChanged>> event.
+
+        Parameters
+        ----------
+        remap_value : str|Callable
+        """
+
+        self.variables.set_remap_type(remap_value)
+        if self.variables.canvas_image_object is None or self.variables.canvas_image_object.image_reader is None:
+            return
+        self.variables.canvas_image_object.image_reader.set_remap_type(remap_value)
+        self.update_current_image()
+        self.emit_remap_changed()
+
     # mouse event callbacks
     def callback_mouse_zoom(self, event):
         """
@@ -1384,9 +1456,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.shape_drawing.tmp_anchor_point_xy = anchor
             self.show_shape(self.variables.zoom_rect.uid)
             return
-        elif self.current_tool == ToolConstants.SELECT:
-            if self.active_tool == ToolConstants.EDIT_SHAPE:
-                return
+        elif self.current_tool == ToolConstants.SELECT and self.active_tool == ToolConstants.SELECT:
             self.modify_existing_shape_using_canvas_coords(self.variables.select_rect.uid, (event.x, event.y, event.x, event.y))
             anchor = (event.x, event.y)
             self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=anchor)
@@ -1608,7 +1678,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if self.current_tool == ToolConstants.VIEW:
             # TODO: set our variable capturing pixel locations
             pass
-        elif self.current_tool == ToolConstants.EDIT_SHAPE:
+        elif self.current_tool in [ToolConstants.EDIT_SHAPE, ToolConstants.SELECT]:
             if not self.variables.shape_drawing.actively_drawing:
                 return
             vector_object = self.get_current_vector_object()
@@ -1912,8 +1982,9 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.get_shape_image_coords(rect_id)
-        if image_coords is None:
+        if image_coords is None or image_coords[0] == image_coords[2] or image_coords[1] == image_coords[3]:
             return None
+
         tmp_image_coords = list(image_coords)
         if image_coords[0] > image_coords[2]:
             tmp_image_coords[0] = image_coords[2]
@@ -1997,8 +2068,8 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        rect = (0, 0, self.variables.state.canvas_width, self.variables.state.canvas_height)
         if self.variables.canvas_image_object is not None:
+            rect = (0, 0, self.variables.state.canvas_width, self.variables.state.canvas_height)
             self.variables.canvas_image_object.update_canvas_display_image_from_canvas_rect(rect)
             self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
             self.update()
@@ -2268,6 +2339,9 @@ class ImageCanvas(basic_widgets.Canvas):
             else:
                 self.delete_shape(shape_id)
         self.redraw_all_shapes()
+        # reset the initial coordinates for zoom and select rectangles.
+        self.modify_existing_shape_using_image_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
+        self.modify_existing_shape_using_image_coords(self.variables.select_rect.uid, (0, 0, 0, 0))
 
     def redraw_all_shapes(self):
         """
@@ -2343,7 +2417,8 @@ class ImageCanvas(basic_widgets.Canvas):
 
         vector_object = self.get_vector_object(shape_id)
         shape_type = vector_object.type
-        if shape_type in ShapeTypeConstants.geometric_shapes():
+        if shape_type in ShapeTypeConstants.geometric_shapes() and \
+                shape_id not in self.get_tool_shape_ids():
             self.itemconfigure(shape_id, dash=(5, 5))
 
     def deactivate_shape_edit_mode(self):
@@ -3591,3 +3666,17 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.event_generate('<<ShapeTypeChanged>>')
+
+    def emit_remap_changed(self):
+        """
+        Emits the <<RemapChanged>> event, after the remap value has been changed.
+        """
+
+        self.event_generate('<<RemapChanged>>')
+
+    def emit_image_index_changed(self):
+        """
+        Emits the <<ImageIndexChanged>> event, after the index value has changed.
+        """
+
+        self.event_generate('<<ImageIndexChanged>>')

@@ -1,6 +1,11 @@
+"""
+Sets out the main interface for something which provides image data.
+"""
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+__author__ = ("Jason Casey", "Thomas McCullough")
+
+import numpy
 
 
 class ImageReader(object):
@@ -56,6 +61,30 @@ class ImageReader(object):
 
         raise NotImplementedError
 
+    @property
+    def remapable(self):
+        """
+        bool: Does this support any remap operations?
+        """
+
+        raise NotImplementedError
+
+    @property
+    def image_count(self):
+        """
+        int: The number of image segments.
+        """
+
+        raise NotImplementedError
+
+    @property
+    def index(self):
+        """
+        int: The index of the selected image segment.
+        """
+
+        raise NotImplementedError
+
     def __getitem__(self, item):
         """
         This is expected to accompany a basic two element slice, with bounds
@@ -92,3 +121,48 @@ class ImageReader(object):
         """
 
         pass
+
+
+class NumpyImageReader(ImageReader):
+    """
+    ImageReader for numpy array data. This requires a two or
+    three dimensional array of one of the basic real dtypes. If three dimensional,
+    the final dimension must have size 3 or 4.
+    """
+
+    def __init__(self, numpy_image_data):
+        """
+
+        Parameters
+        ----------
+        numpy_image_data : numpy.ndarray
+        """
+
+        if not isinstance(numpy_image_data, numpy.ndarray):
+            raise TypeError('Expected numpy.ndarray, got type {}'.format(type(numpy_image_data)))
+        if numpy_image_data.ndim not in [2, 3]:
+            raise ValueError('Expected input to have dimension 2 or 3.')
+        if numpy_image_data.ndim == 3 and numpy_image_data.shape[2] not in [3, 4]:
+            raise ValueError('Input is 2-d, bu the final dimension is not size 3 or 4.')
+
+        self.numpy_image_data = numpy_image_data
+        self._data_size = numpy_image_data.shape[:2]
+
+    @property
+    def file_name(self):
+        return None
+
+    def __getitem__(self, key):
+        return self.numpy_image_data[key]
+
+    @property
+    def remapable(self):
+        return False
+
+    @property
+    def image_count(self):
+        return 1
+
+    @property
+    def index(self):
+        return 0
