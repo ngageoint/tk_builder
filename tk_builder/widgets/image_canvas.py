@@ -1456,7 +1456,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.shape_drawing.tmp_anchor_point_xy = anchor
             self.show_shape(self.variables.zoom_rect.uid)
             return
-        elif self.current_tool == ToolConstants.SELECT and self.active_tool == ToolConstants.SELECT:
+        elif self.active_tool == ToolConstants.SELECT:
             self.modify_existing_shape_using_canvas_coords(self.variables.select_rect.uid, (event.x, event.y, event.x, event.y))
             anchor = (event.x, event.y)
             self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=anchor)
@@ -1541,8 +1541,11 @@ class ImageCanvas(basic_widgets.Canvas):
             elif vector_object.type == ShapeTypeConstants.ARROW:
                 self._update_arrow_event(event)
             elif vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
-                if self.variables.shape_drawing.actively_drawing:
-                    self.variables.shape_drawing.set_inactive()
+                self.modify_existing_shape_using_canvas_coords(
+                    self.variables.select_rect.uid, (event.x, event.y, event.x, event.y))
+                anchor = (event.x, event.y)
+                self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=anchor)
+                self.variables.shape_drawing.tmp_anchor_point_xy = anchor
             elif vector_object.type == ShapeTypeConstants.POLYGON:
                 self._update_polygon_event(event, insert=True)
             else:
@@ -2030,6 +2033,34 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        # what is the aspect ratio of the zoom rectangle?
+        zoom_height = image_rect[2] - image_rect[0]
+        zoom_width = image_rect[3] - image_rect[1]
+        # validate that our sizes make sense
+        if zoom_width <= 0 or zoom_height <= 0:
+            showinfo('Poorly defined zoom rectangle', message='Zoom rectangle {}. Aborting zoom.'.format(image_rect))
+            return  # do nothing
+        if zoom_height < self.variables.config.zoom_pixel_threshold or \
+                zoom_width < self.variables.config.zoom_pixel_threshold:
+            # do not perform this zoom
+            return
+        zoom_ratio = zoom_height/float(zoom_width)
+
+        # what is the aspect ratio of the canvas?
+        window_height = self.winfo_height()
+        window_width = self.winfo_width()
+        window_ratio = window_height/float(window_width)
+
+        # craft an image rectangle containing the input rectangle, of the same ratio as the window rectangle
+        if zoom_ratio >= window_ratio:
+            # the zoom rectangle is taller than the window rectangle.
+            # Keep the height, and extend the width
+            image_rect = [image_rect[0], image_rect[1], image_rect[2], image_rect[1] + zoom_width*zoom_ratio/window_ratio]
+        else:
+            # the zoom rectangle is longer than the window rectangle
+            # Keep the width, and expand the height
+            image_rect = [image_rect[0], image_rect[1], image_rect[0] + zoom_height*window_ratio/zoom_ratio, image_rect[3]]
+
         # ensure that sensible limits apply
         if image_rect[0] < 0:
             image_rect[0] = 0
@@ -2039,17 +2070,6 @@ class ImageCanvas(basic_widgets.Canvas):
             image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
         if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
             image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
-
-        rect_height = image_rect[2] - image_rect[0]
-        rect_width = image_rect[3] - image_rect[1]
-
-        if rect_height < 0 or rect_width < 0:
-            showinfo('Poorly defined zoom rectangle', message='Zoom rectangle {}. Aborting zoom.'.format(image_rect))
-
-        if rect_height < self.variables.config.zoom_pixel_threshold or \
-                rect_width < self.variables.config.zoom_pixel_threshold:
-            # do not perform this zoom
-            return
 
         if animate is True:
             # TODO: animation is not currently functional
@@ -2373,8 +2393,11 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if shape_id:
-            self.itemconfigure(shape_id, state="hidden")
+        if shape_id is not None:
+            try:
+                self.itemconfigure(shape_id, state="hidden")
+            except:
+                pass
 
     def show_shape(self, shape_id):
         """
@@ -2389,7 +2412,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if shape_id:
+        if shape_id is not None:
             self.itemconfigure(shape_id, state="normal")
 
     def activate_shape_edit_mode(self, shape_id=None):
