@@ -2576,12 +2576,12 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        event_x = self.canvasx(event.x)
-        event_y = self.canvasy(event.y)
-        new_coords = (
-            event_x - self.variables.state.point_size, event_x - self.variables.state.point_size,
-            event_y + self.variables.state.point_size, event_y + self.variables.state.point_size)
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
+        # event_x = self.canvasx(event.x)
+        # event_y = self.canvasy(event.y)
+        # new_coords = (
+        #     event_x - self.variables.state.point_size, event_x - self.variables.state.point_size,
+        #     event_y + self.variables.state.point_size, event_y + self.variables.state.point_size)
+        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, (event.x, event.y), update_pixel_coords=True)
 
     def _modify_coords(self, coords, event_x_pos, event_y_pos, insert=False):
         """

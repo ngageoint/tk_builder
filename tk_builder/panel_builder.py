@@ -2,9 +2,10 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
+from typing import List, Generator
 import numpy
-from typing import Union, List, Generator
 import tkinter
+
 from tk_builder.widgets import basic_widgets
 
 
@@ -39,7 +40,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
         basic_widgets.LabelFrame.__init__(self, master)
         self.config(borderwidth=2)
 
-        self._rows = None  # type: List[basic_widgets.Frame]
+        self._rows = []  # type: List[basic_widgets.Frame]
 
     def _widget_objects(self, subtype_filter=None):
         """
@@ -150,10 +151,18 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
             if row_heights is not None:
                 if isinstance(row_heights, int):
-                    getattr(self, widget).config(height=row_heights)
+                    # noinspection PyBroadException
+                    try:
+                        getattr(self, widget).config(height=row_heights)
+                    except:
+                        pass  # some widgets don't have a height
                 else:
                     row_height = row_heights[row_num]
-                    getattr(self, widget).config(height=row_height)
+                    # noinspection PyBroadException
+                    try:
+                        getattr(self, widget).config(height=row_height)
+                    except:
+                        pass
 
     def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
         """
