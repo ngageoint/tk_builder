@@ -458,19 +458,16 @@ class CanvasImage(object):
 
         ny = full_image_rect[2] - full_image_rect[0]
         nx = full_image_rect[3] - full_image_rect[1]
-        decimation_y = ny / self.canvas_ny
-        decimation_x = nx / self.canvas_nx
+        decimation_y = numpy.ceil(ny/float(self.canvas_ny))
+        decimation_x = numpy.ceil(nx/float(self.canvas_nx))
         decimation_factor = max(decimation_y, decimation_x)
         decimation_factor = int(decimation_factor)
 
         min_decimation = 1
-        max_decimation = min(nx-1, ny-1)
+        max_decimation = min(int(nx-1), int(ny-1))
 
-        if decimation_factor < min_decimation:
-            decimation_factor = min_decimation
-        if decimation_factor > max_decimation:
-            decimation_factor = max_decimation
-
+        decimation_factor = max(min_decimation, decimation_factor)
+        decimation_factor = min(max_decimation, decimation_factor)
         return decimation_factor
 
     def get_decimation_from_canvas_rect(self, canvas_rect):
@@ -1100,11 +1097,11 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_tool_to_view()
         self.reinitialize_shapes()
         full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
         full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
         self.zoom_to_full_image_selection([0, 0, full_ny, full_nx])
+        self.set_current_tool_to_view()
 
     def set_image_reader(self, image_reader):
         """
@@ -1333,7 +1330,8 @@ class ImageCanvas(basic_widgets.Canvas):
         height : int
         """
 
-        if self.variables.canvas_image_object is None or self.variables.canvas_image_object.image_reader is None:
+        if self.variables.canvas_image_object is None or \
+                self.variables.canvas_image_object.image_reader is None:
             return  # nothing more to be done
 
         self.variables.state.canvas_width = width
@@ -1342,11 +1340,13 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.canvas_image_object.canvas_nx = width
             self.variables.canvas_image_object.canvas_ny = height
 
-        the_height = height*self.variables.canvas_image_object.decimation_factor
-        the_width = width*self.variables.canvas_image_object.decimation_factor
+        decimation = self.variables.canvas_image_object.decimation_factor
+        the_height = height*decimation  # in image pixels
+        the_width = width*decimation  # in image pixels
 
         # what is the current displayed image origin? (i.e. upper left)
         y_lower, x_lower = self.variables.canvas_image_object.canvas_full_image_upper_left_yx
+
         # what are the image limits?
         y_limit = self.variables.canvas_image_object.image_reader.full_image_ny  # row
         x_limit = self.variables.canvas_image_object.image_reader.full_image_nx  # column
@@ -1359,7 +1359,8 @@ class ImageCanvas(basic_widgets.Canvas):
         if x_upper > x_limit:
             x_upper = x_limit
             x_lower = max(0, x_limit-the_width)
-        self.zoom_to_full_image_selection([y_lower, x_lower, y_upper, x_upper])
+        full_rectangle = [y_lower, x_lower, y_upper, x_upper]
+        self.zoom_to_full_image_selection(full_rectangle)
 
     def set_remap(self, remap_value):
         """
@@ -1529,7 +1530,7 @@ class ImageCanvas(basic_widgets.Canvas):
             coord_index, the_distance, coord_x, coord_y = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
             if not self.variables.shape_drawing.actively_drawing:
                 self.variables.shape_drawing.set_active(insert_at_index=coord_index, anchor_point_xy=(coord_x, coord_y))
-                self.activate_shape_edit_mode()
+                self.activate_shape_edit_mode(self.variables.current_shape_id)
                 return
             elif the_distance < self.variables.config.vertex_selector_pixel_threshold:
                 self.variables.shape_drawing.insert_at_index = coord_index
@@ -2021,7 +2022,8 @@ class ImageCanvas(basic_widgets.Canvas):
 
     def zoom_to_full_image_selection(self, image_rect, animate=False):
         """
-        Zoom to the selection using image coordinates.
+        Zoom to the selection using image coordinates. This should fit the entire
+        given region.
 
         Parameters
         ----------
@@ -3372,6 +3374,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.deactivate_shape_edit_mode()
         self._set_current_shape_id(self.variables.select_rect.uid)
+        self.show_shape(self.variables.select_rect.uid)
         self._set_current_and_active_tool(ToolConstants.SELECT)
 
     def set_current_tool_to_pan(self):
@@ -3545,7 +3548,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.new_shape_type = ShapeTypeConstants.POLYGON
         self.set_tool_to_new_or_edit_shape(polygon_id)
 
-    def set_current_tool_to_edit_shape(self):
+    def set_current_tool_to_edit_shape(self, shape_id=None):
         """
         Sets the current tool to edit shape.
 
@@ -3556,7 +3559,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.deactivate_shape_edit_mode()
         self._set_current_and_active_tool(ToolConstants.EDIT_SHAPE)
-        self.activate_shape_edit_mode()
+        self.activate_shape_edit_mode(shape_id)
 
     def set_tool_to_new_or_edit_shape(self, shape_id=None):
         """

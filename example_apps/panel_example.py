@@ -67,8 +67,6 @@ class PrimaryPanel(WidgetPanel):
         self.init_w_horizontal_layout()
 
         primary_frame.pack()
-        self.panel_1.press_all_buttons()
-        self.panel_1.unpress_all_buttons()
 
 
 def main():

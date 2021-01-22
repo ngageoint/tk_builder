@@ -5,6 +5,7 @@ __author__ = "Jason Casey"
 from typing import List, Generator
 import numpy
 import tkinter
+from tkinter import ttk
 
 from tk_builder.widgets import basic_widgets
 
@@ -242,23 +243,18 @@ class WidgetPanel(basic_widgets.LabelFrame):
                 fill=tkinter.BOTH,
                 expand=tkinter.YES)
 
-    def unpress_all_buttons(self):
+    def enable_all_buttons(self):
         """
-        Restores the state of all buttons in a panel to be raised.  Can be used
-        if some buttons are configured to look depressed based on some previous
-        actions within the application.
+        Disable all buttons in a panel.
         """
 
         for widget in self._widget_objects(subtype_filter=basic_widgets.Button):
-            widget.config(relief="raised")
-
-    def press_all_buttons(self):
-        """
-        Makes all buttons within a panel appear to be pressed.
-        """
-
-        for widget in self._widget_objects(subtype_filter=basic_widgets.Button):
-            widget.config(relief="sunken")
+            # noinspection PyBroadException
+            try:
+                widget.config(state="disabled")
+            except:
+                if isinstance(widget, ttk.Widget):
+                    widget.state(['disabled'])
 
     def enable_all_buttons(self):
         """
@@ -268,7 +264,12 @@ class WidgetPanel(basic_widgets.LabelFrame):
         """
 
         for widget in self._widget_objects(subtype_filter=basic_widgets.Button):
-            widget.config(state="normal")
+            # noinspection PyBroadException
+            try:
+                widget.config(state="normal")
+            except:
+                if isinstance(widget, ttk.Widget):
+                    widget.state(['normal'])
 
     def disable_all_widgets(self):
         """
@@ -278,6 +279,12 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
         for widget in self._widget_objects():
             widget.config(state="disabled")
+            # noinspection PyBroadException
+            try:
+                widget.config(state="disabled")
+            except:
+                if isinstance(widget, ttk.Widget):
+                    widget.state(['disabled'])
 
     def enable_all_widgets(self):
         """
@@ -285,13 +292,12 @@ class WidgetPanel(basic_widgets.LabelFrame):
         """
 
         for widget in self._widget_objects():
-            widget.config(state="normal")
-
-    def set_active_button(self, button):
-        self.unpress_all_buttons()
-        self.enable_all_buttons()
-        button.config(state="disabled")
-        button.config(relief="sunken")
+            # noinspection PyBroadException
+            try:
+                widget.config(state="normal")
+            except:
+                if isinstance(widget, ttk.Widget):
+                    widget.state(['normal'])
 
     def do_not_expand(self):
         self.master.pack(expand=tkinter.NO)

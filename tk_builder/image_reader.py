@@ -70,6 +70,14 @@ class ImageReader(object):
         raise NotImplementedError
 
     @property
+    def remap_function(self):
+        """
+        None|Callable: The current remap function. This will be `None`, if `remapable` is False.
+        """
+
+        raise NotImplementedError
+
+    @property
     def image_count(self):
         """
         int: The number of image segments.
@@ -158,6 +166,10 @@ class NumpyImageReader(ImageReader):
     @property
     def remapable(self):
         return False
+
+    @property
+    def remap_function(self):
+        return None
 
     @property
     def image_count(self):
