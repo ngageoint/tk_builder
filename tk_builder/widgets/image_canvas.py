@@ -14,12 +14,11 @@ import platform
 import time
 import tkinter
 import tkinter.colorchooser as colorchooser
+from tkinter.messagebox import showinfo
 from typing import Union, Tuple, List, Dict
 from collections import OrderedDict
 
 import numpy
-
-from tkinter.messagebox import showinfo
 
 from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
     IntegerTupleDescriptor, StringDescriptor, TypedDescriptor, FloatDescriptor
@@ -42,13 +41,13 @@ _POINT_EXPLANATION = """
 _LINE_EXPLANATION = """
 """
 
+_ARROW_EXPLANATION = """
+"""
+
 _RECT_EXPLANATION = """
 """
 
 _ELLIPSE_EXPLANATION = """
-"""
-
-_ARROW_EXPLANATION = """
 """
 
 _POLYGON_EXPLANATION = """
@@ -116,18 +115,18 @@ class ToolConstants(object):
 class ShapeTypeConstants(object):
     POINT = 0
     LINE = 1
-    RECT = 2
-    ELLIPSE = 3
-    ARROW = 4
+    ARROW = 2
+    RECT = 3
+    ELLIPSE = 4
     POLYGON = 5
     TEXT = 6
 
     _names_to_values = OrderedDict([
         ('POINT', POINT),
         ('LINE', LINE),
+        ('ARROW', ARROW),
         ('RECT', RECT),
         ('ELLIPSE', ELLIPSE),
-        ('ARROW', ARROW),
         ('POLYGON', POLYGON),
         ('TEXT', TEXT)])
     _values_to_names = {value:key for key, value in _names_to_values.items()}
@@ -208,11 +207,11 @@ class CanvasImage(object):
         docstring='The decimation factor.')  # type: int
     display_rescaling_factor = FloatDescriptor(
         'display_rescaling_factor', default_value=1.0,
-        docstring='The display resclaing factor.')  # type: float
+        docstring='The display rescaling factor.')  # type: float
     canvas_full_image_upper_left_yx = IntegerTupleDescriptor(
         'canvas_full_image_upper_left_yx', length=2, default_value=(0, 0),
         docstring='The upper left corner of the full image canvas in '
-                  'yx order.')  # type: tuple
+                  'yx order.')  # type: Tuple
     canvas_ny = IntegerDescriptor(
         'canvas_ny', docstring='')  # type: int
     canvas_nx = IntegerDescriptor(
@@ -664,22 +663,6 @@ class RectangleTool(object):
         self.border_width = border_width
 
 
-class AnimationProperties(object):
-    """
-    Animation properties
-    """
-
-    zoom = BooleanDescriptor(
-        'zoom', default_value=True,
-        docstring='Specifies whether to animate zooming.')  # type: bool
-    animations = IntegerDescriptor(
-        'animations', default_value=5,
-        docstring='The number of zoom frames.')  # type: int
-    time = FloatDescriptor(
-        'time', default_value=0.3,
-        docstring='The animation time in seconds.')  # type: float
-
-
 class CanvasConfig(object):
     """
     Configuration state for the image canvas object
@@ -697,9 +680,6 @@ class CanvasConfig(object):
     highlight_n_colors_cycle = IntegerDescriptor(
         'highlight_n_colors_cycle', default_value=10,
         docstring='The length of highlight colors cycle.')  # type: int
-    zoom_on_wheel = BooleanDescriptor(
-        'zoom_on_wheel', default_value=True,
-        docstring='Zoom on the mouse wheel operation?')  # type: bool
     zoom_box_size_threshold = FloatDescriptor(
         'zoom_box_size_threshold', default_value=20.0,
         docstring='minimum size for the zoom box for any action to take place.')  # type: float
@@ -861,10 +841,6 @@ class AppVariables(object):
     select_rect = TypedDescriptor(
         'select_rect', RectangleTool,
         docstring='The select rectangle properties.')  # type: RectangleTool
-    # animation properties
-    animate = TypedDescriptor(
-        'animate', AnimationProperties,
-        docstring='The animation properties')  # type: AnimationProperties
     # some state properties
     state = TypedDescriptor(
         'state', CanvasState,
@@ -879,7 +855,6 @@ class AppVariables(object):
         self.state = CanvasState()
         self.zoom_rect = RectangleTool(-1, color='blue', border_width=3)
         self.select_rect = RectangleTool(-1, color='red', border_width=3)
-        self.animate = AnimationProperties()
         self.shape_drawing = ShapeDrawingState()
 
         self._shape_ids = []
@@ -992,7 +967,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.on_right_mouse_motion(self.callback_handle_right_mouse_motion)
         self.on_right_mouse_release(self.callback_handle_right_mouse_release)
         self.on_mouse_motion(self.callback_handle_mouse_motion)
-        self.on_mouse_wheel(self.callback_mouse_zoom)
         self._color_cycler = ColorCycler(n_colors=10)
 
     @property
@@ -1156,9 +1130,59 @@ class ImageCanvas(basic_widgets.Canvas):
         None|int
         """
 
-        if self.variables.canvas_image_object is None or self.variables.canvas_image_object.image_reader is None:
+        if self.variables.canvas_image_object is None or \
+                self.variables.canvas_image_object.image_reader is None:
             return None
         return self.variables.canvas_image_object.image_reader.index
+
+    def get_image_remap(self):
+        """
+        Gets the current remap function.
+
+        Returns
+        -------
+        None|Callable
+        """
+
+        if self.variables.canvas_image_object is None or \
+                self.variables.canvas_image_object.image_reader is None:
+            return None
+        return self.variables.canvas_image_object.image_reader.remap_function
+
+    def get_image_extent(self):
+        """
+        Get the actual extent of the displayed image. Note that the image
+        canvas might not be completely full.
+
+        Returns
+        -------
+        None|(Tuple, int)
+            The image extent of the form `(start y, start x, end y, end x)` and
+            the decimation factor. In the SICD convention `y = row` and `x = column`.
+        """
+
+        if self.variables.canvas_image_object is None or \
+                self.variables.canvas_image_object.image_reader is None:
+            return None
+
+        # the actual image bounds
+        y_limit = self.variables.canvas_image_object.image_reader.full_image_ny
+        x_limit = self.variables.canvas_image_object.image_reader.full_image_nx
+
+        # the basics about the canvas object
+        the_origin = self.variables.canvas_image_object.canvas_full_image_upper_left_yx
+        the_decimation = self.variables.canvas_image_object.decimation_factor
+        # the canvas size
+        the_height = self.variables.canvas_image_object.canvas_ny
+        the_width = self.variables.canvas_image_object.canvas_nx
+
+        the_bounds = (
+            int(the_origin[0]),
+            int(the_origin[1]),
+            int(min(the_origin[0] + the_decimation*the_height, y_limit)),
+            int(min(the_origin[1] + the_width*the_width, x_limit))
+        )
+        return the_bounds, the_decimation
 
     def get_vector_object(self, vector_id):
         """
@@ -1198,60 +1222,6 @@ class ImageCanvas(basic_widgets.Canvas):
         if current_id is None or current_id in self.get_tool_shape_ids():
             return None
         return self.get_vector_object(current_id)
-
-    def animate_with_numpy_frame_sequence(self, numpy_frame_sequence, frames_per_second=15):
-        """
-        Animate with a sequence of numpy arrays.
-
-        Parameters
-        ----------
-        numpy_frame_sequence : List[numpy.ndarray]
-        frames_per_second : float
-
-        Returns
-        -------
-        None
-        """
-
-        sleep_time = 1/frames_per_second
-        for animation_frame in numpy_frame_sequence:
-            tic = time.time()
-            self.set_image_from_numpy_array(animation_frame)
-            self.update()
-            toc = time.time()
-            frame_generation_time = toc-tic
-            if frame_generation_time < sleep_time:
-                new_sleep_time = sleep_time - frame_generation_time
-                time.sleep(new_sleep_time)
-            else:
-                pass
-
-    def animate_with_pil_frame_sequence(self, pil_frame_sequence, frames_per_second=15):
-        """
-        Animate with a sequence of PIL images.
-
-        Parameters
-        ----------
-        pil_frame_sequence : List[Image]
-        frames_per_second : float
-
-        Returns
-        -------
-        None
-        """
-
-        sleep_time = 1/frames_per_second
-        for animation_frame in pil_frame_sequence:
-            tic = time.time()
-            self._set_image_from_pil_image(animation_frame)
-            self.update()
-            toc = time.time()
-            frame_generation_time = toc-tic
-            if frame_generation_time < sleep_time:
-                new_sleep_time = sleep_time - frame_generation_time
-                time.sleep(new_sleep_time)
-            else:
-                pass
 
     def get_non_tool_shape_ids(self):
         """
@@ -1379,62 +1349,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.emit_remap_changed()
 
     # mouse event callbacks
-    def callback_mouse_zoom(self, event):
-        """
-        The mouse zoom callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        if self.variables.config.zoom_on_wheel:
-            delta = event.delta
-            single_delta = 120
-
-            # handle case where platform is linux:
-            if platform.system() == "Linux":
-                delta = single_delta
-                if event.num == 5:
-                    delta = delta*-1
-
-            display_image_dims = self.variables.canvas_image_object.display_image.shape
-            display_image_ny = display_image_dims[0]
-            display_image_nx = display_image_dims[1]
-
-            zoom_in_box_half_width = int(display_image_nx / self.variables.config.mouse_wheel_zoom_percent_per_event / 2)
-            zoom_out_box_half_width = int(display_image_nx * self.variables.config.mouse_wheel_zoom_percent_per_event / 2)
-            zoom_in_box_half_height = int(display_image_ny / self.variables.config.mouse_wheel_zoom_percent_per_event / 2)
-            zoom_out_box_half_height = int(display_image_ny * self.variables.config.mouse_wheel_zoom_percent_per_event / 2)
-
-            x = event.x
-            y = event.y
-
-            if self.variables.state.currently_zooming:
-                pass
-            else:
-                if delta > 0:
-                    zoom_in_box = (x - zoom_in_box_half_width,
-                                   y - zoom_in_box_half_height,
-                                   x + zoom_in_box_half_width,
-                                   y + zoom_in_box_half_height)
-                    self.zoom_to_canvas_selection(zoom_in_box, self.variables.animate.zoom)
-                else:
-                    zoom_out_box = (x - zoom_out_box_half_width,
-                                    y - zoom_out_box_half_height,
-                                    x + zoom_out_box_half_width,
-                                    y + zoom_out_box_half_height)
-                    self.zoom_to_canvas_selection(zoom_out_box, self.variables.animate.zoom)
-        else:
-            pass
-
-    def disable_mouse_zoom(self):
-        self.on_mouse_wheel(self.do_nothing)
-
     def callback_handle_left_mouse_click(self, event):
         """
         Left mouse click callback.
@@ -1631,7 +1545,7 @@ class ImageCanvas(basic_widgets.Canvas):
             y_diff = abs(rect_coords[1] - rect_coords[3])
             if x_diff >= self.variables.config.zoom_box_size_threshold and \
                     y_diff >= self.variables.config.zoom_box_size_threshold:
-                self.zoom_to_canvas_selection(rect_coords, self.variables.animate.zoom)
+                self.zoom_to_canvas_selection(rect_coords)
             self.variables.shape_drawing.set_inactive()
             self.hide_shape(self.variables.zoom_rect.uid)
             self.modify_existing_shape_using_canvas_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
@@ -1647,7 +1561,7 @@ class ImageCanvas(basic_widgets.Canvas):
                 y1 = -rect_coords[1]
                 y2 = self.variables.state.canvas_height + rect_coords[3]
                 zoom_rect = (x1, y1, x2, y2)
-                self.zoom_to_canvas_selection(zoom_rect, self.variables.animate.zoom)
+                self.zoom_to_canvas_selection(zoom_rect)
             self.variables.shape_drawing.set_inactive()
             self.hide_shape(self.variables.zoom_rect.uid)
             self.modify_existing_shape_using_canvas_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
@@ -1890,7 +1804,7 @@ class ImageCanvas(basic_widgets.Canvas):
             image_coords[3] = self.variables.canvas_image_object.image_reader.full_image_nx
 
         # apply the view to this rectangle
-        self.zoom_to_full_image_selection(image_coords, animate=False)
+        self.zoom_to_full_image_selection(image_coords)
         self.variables.shape_drawing.anchor_point_xy = event.x, event.y
 
     def _pan_finish(self, event):
@@ -2003,14 +1917,13 @@ class ImageCanvas(basic_widgets.Canvas):
             tmp_image_coords, decimation)
         return image_data_in_rect
 
-    def zoom_to_canvas_selection(self, canvas_rect, animate=False):
+    def zoom_to_canvas_selection(self, canvas_rect):
         """
         Zoom to the selection using canvas coordinates.
 
         Parameters
         ----------
         canvas_rect : Tuple|List
-        animate : bool
 
         Returns
         -------
@@ -2018,9 +1931,9 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         image_coords = self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_rect)
-        self.zoom_to_full_image_selection(image_coords, animate=animate)
+        self.zoom_to_full_image_selection(image_coords)
 
-    def zoom_to_full_image_selection(self, image_rect, animate=False):
+    def zoom_to_full_image_selection(self, image_rect):
         """
         Zoom to the selection using image coordinates. This should fit the entire
         given region.
@@ -2028,7 +1941,6 @@ class ImageCanvas(basic_widgets.Canvas):
         Parameters
         ----------
         image_rect : Tuple|List
-        animate : bool
 
         Returns
         -------
@@ -2073,13 +1985,11 @@ class ImageCanvas(basic_widgets.Canvas):
         if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
             image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
 
-        if animate is True:
-            # TODO: animation is not currently functional
-            pass
         self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.variables.state.currently_zooming = False
+        self.emit_image_extent_changed()
 
     def update_current_image(self):
         """
@@ -2709,7 +2619,8 @@ class ImageCanvas(basic_widgets.Canvas):
 
     def _update_polygon_event(self, event, insert=True):
         """
-        Click a polygon callback.
+        Click a polygon callback for editing the current polygon shape.
+        This also emits <<ShapeCoordsFinalized>> event.
 
         Parameters
         ----------
@@ -2731,6 +2642,7 @@ class ImageCanvas(basic_widgets.Canvas):
         old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
         new_coords = self._modify_coords(old_coords, event_x_pos, event_y_pos, insert=insert)
         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
+        self.emit_shape_coords_finalized()
 
     def _drag_rectangle_ellipse_arrow(self, event):
         """
@@ -3671,7 +3583,7 @@ class ImageCanvas(basic_widgets.Canvas):
     def emit_shape_coords_finalized(self):
         """
         Emits the <<ShapeCoordsFinalized>> event, indicating that the current
-        editing step for the current shape is finished.
+        editing step for the current shape is finished (i.e. not being dragged).
         """
 
         vector_object = self.get_current_vector_object()
@@ -3696,6 +3608,8 @@ class ImageCanvas(basic_widgets.Canvas):
     def emit_remap_changed(self):
         """
         Emits the <<RemapChanged>> event, after the remap value has been changed.
+        Note that the new image index can be determined from the `get_current_remap()`
+        method.
         """
 
         self.event_generate('<<RemapChanged>>')
@@ -3703,6 +3617,17 @@ class ImageCanvas(basic_widgets.Canvas):
     def emit_image_index_changed(self):
         """
         Emits the <<ImageIndexChanged>> event, after the index value has changed.
+        Note that the new image index can be determined from the `get_image_index()`
+        method.
         """
 
         self.event_generate('<<ImageIndexChanged>>')
+
+    def emit_image_extent_changed(self):
+        """
+        Emit the <<ImageExtentChanged>> event, after the image extent has changed.
+        Note that the new image extent can be determine from the `get_image_extent()`
+        method.
+        """
+
+        self.event_generate('<<ImageExtentChanged>>')

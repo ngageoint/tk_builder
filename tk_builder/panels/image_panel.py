@@ -22,7 +22,7 @@ class Toolbar(WidgetPanel):
     tool_controls = (
         'tool_label', 'zoom_in', 'zoom_out', 'pan', 'select', 'view',
         'select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape')
-    shape_controls = ('shape_label', 'point', 'line', 'rect', 'ellipse', 'arrow', 'polygon', 'text')
+    shape_controls = ('shape_label', 'point', 'line', 'arrow', 'rect', 'ellipse', 'polygon', 'text')
     other_controls = ("save_canvas", "save_image", "remap_combo", "select_index_label", "select_index_combo")
     _widget_list = (tool_controls, shape_controls, other_controls)
 
@@ -54,12 +54,12 @@ class Toolbar(WidgetPanel):
         'point', default_text='point', docstring='point selector.')  # type: basic_widgets.RadioButton
     line = widget_descriptors.RadioButtonDescriptor(
         'line', default_text='line', docstring='line selector.')  # type: basic_widgets.RadioButton
+    arrow = widget_descriptors.RadioButtonDescriptor(
+        'arrow', default_text='arrow', docstring='arrow selector.')  # type: basic_widgets.RadioButton
     rect = widget_descriptors.RadioButtonDescriptor(
         'rect', default_text='rect', docstring='rect selector.')  # type: basic_widgets.RadioButton
     ellipse = widget_descriptors.RadioButtonDescriptor(
         'ellipse', default_text='ellipse', docstring='ellipse selector.')  # type: basic_widgets.RadioButton
-    arrow = widget_descriptors.RadioButtonDescriptor(
-        'arrow', default_text='arrow', docstring='arrow selector.')  # type: basic_widgets.RadioButton
     polygon = widget_descriptors.RadioButtonDescriptor(
         'polygon', default_text='polygon', docstring='polygon selector.')  # type: basic_widgets.RadioButton
     text = widget_descriptors.RadioButtonDescriptor(
@@ -133,9 +133,9 @@ class ImagePanel(WidgetPanel):
         # set the toolbar shape callbacks
         self.toolbar.point.config(variable=self._the_shape, value=ShapeTypeConstants.POINT, command=self.callback_set_shape)
         self.toolbar.line.config(variable=self._the_shape, value=ShapeTypeConstants.LINE, command=self.callback_set_shape)
+        self.toolbar.arrow.config(variable=self._the_shape, value=ShapeTypeConstants.ARROW, command=self.callback_set_shape)
         self.toolbar.rect.config(variable=self._the_shape, value=ShapeTypeConstants.RECT, command=self.callback_set_shape)
         self.toolbar.ellipse.config(variable=self._the_shape, value=ShapeTypeConstants.ELLIPSE, command=self.callback_set_shape)
-        self.toolbar.arrow.config(variable=self._the_shape, value=ShapeTypeConstants.ARROW, command=self.callback_set_shape)
         self.toolbar.polygon.config(variable=self._the_shape, value=ShapeTypeConstants.POLYGON, command=self.callback_set_shape)
         self.toolbar.text.config(variable=self._the_shape, value=ShapeTypeConstants.TEXT, command=self.callback_set_shape)
         # set the save callbacks
@@ -288,7 +288,7 @@ class ImagePanel(WidgetPanel):
         else:
             self.toolbar.remap_combo.config(state='disabled')
 
-    # methods for showing or hiding elements
+    # methods for showing/hiding/enabling/disabling elements
     def hide_controls(self):
         """
         Hides all the controls.
@@ -393,6 +393,38 @@ class ImagePanel(WidgetPanel):
         self.toolbar.select_index_label.pack_forget()
         self.toolbar.select_index_combo.pack_forget()
 
+    def disable_shapes(self):
+        """
+        Disable the shapes selection.
+        """
+
+        for name in self.toolbar.shape_controls[1:]:
+            getattr(self.toolbar, name).state(['disabled'])
+
+    def enable_shapes(self):
+        """
+        Enable the shapes selection.
+        """
+
+        for name in self.toolbar.shape_controls[1:]:
+            getattr(self.toolbar, name).state(['normal'])
+
+    def disable_tools(self):
+        """
+        Disable the tools selection.
+        """
+
+        for name in self.toolbar.tool_controls[1:]:
+            getattr(self.toolbar, name).state(['disabled'])
+
+    def enable_tools(self):
+        """
+        Enable the tools selection.
+        """
+
+        for name in self.toolbar.tool_controls[1:]:
+            getattr(self.toolbar, name).state(['normal'])
+
     # callbacks
     def callback_select_index(self, event):
         """
@@ -422,14 +454,6 @@ class ImagePanel(WidgetPanel):
         selection = self.toolbar.remap_combo.get()
         remap_type = remap_dict[selection]
         self.canvas.set_remap(remap_type)
-
-    def callback_canvas_mouse_zoom(self, event):
-        """
-        Handles the canvas zoom event then updates axes
-        """
-
-        self.canvas.callback_mouse_zoom(event)
-        self.update_everything()
 
     def callback_set_tool(self):
         """
