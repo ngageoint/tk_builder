@@ -382,31 +382,39 @@ class CanvasImage(object):
         full_image_rect = (0, 0, self.image_reader.full_image_ny, self.image_reader.full_image_nx)
         self.update_canvas_display_image_from_full_image_rect(full_image_rect)
 
-    def update_canvas_display_image_from_full_image_rect(self, full_image_rect):
+    def update_canvas_display_image_from_full_image_rect(self, full_image_rect, decimation=None):
         """
         Update the canvas to the given image rectangle.
 
         Parameters
         ----------
         full_image_rect : Tuple|List
+        decimation : None|int
+            The decimation to use. If not provided, then an appropriate decimation
+            will be determined.
 
         Returns
         -------
         None
         """
         int_rect = (int(full_image_rect[0]), int(full_image_rect[1]), int(full_image_rect[2]), int(full_image_rect[3]))
-        self.set_decimation_from_full_image_rect(int_rect)
+        if decimation is None:
+            self.set_decimation_from_full_image_rect(int_rect)
+        else:
+            self.decimation_factor = decimation
         decimated_image_data = self.get_decimated_image_data_in_full_image_rect(int_rect, self.decimation_factor)
         self.update_canvas_display_from_numpy_array(decimated_image_data)
         self.canvas_full_image_upper_left_yx = (int_rect[0], int_rect[1])
 
-    def update_canvas_display_image_from_canvas_rect(self, canvas_rect):
+    def update_canvas_display_image_from_canvas_rect(self, canvas_rect, decimation=None):
         """
         Update the canvas to the given canvas rectangle.
 
         Parameters
         ----------
         canvas_rect : Tuple|List
+        decimation : None|int
+            The decimation to use. An appropriate value will be calculated if not provided here.
 
         Returns
         -------
@@ -418,7 +426,7 @@ class CanvasImage(object):
                            int(round(full_image_rect[1])),
                            int(round(full_image_rect[2])),
                            int(round(full_image_rect[3])))
-        self.update_canvas_display_image_from_full_image_rect(full_image_rect)
+        self.update_canvas_display_image_from_full_image_rect(full_image_rect, decimation=decimation)
 
     def update_canvas_display_from_numpy_array(self, image_data):
         """
@@ -1180,7 +1188,7 @@ class ImageCanvas(basic_widgets.Canvas):
             int(the_origin[0]),
             int(the_origin[1]),
             int(min(the_origin[0] + the_decimation*the_height, y_limit)),
-            int(min(the_origin[1] + the_width*the_width, x_limit))
+            int(min(the_origin[1] + the_decimation*the_width, x_limit))
         )
         return the_bounds, the_decimation
 
@@ -1380,8 +1388,10 @@ class ImageCanvas(basic_widgets.Canvas):
             self.active_tool = ToolConstants.EDIT_SHAPE
             return
         elif self.current_tool == ToolConstants.PAN:
+            self.modify_existing_shape_using_canvas_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
             self._set_current_shape_id(self.variables.zoom_rect.uid)
             self.variables.shape_drawing.set_active(anchor_point_xy=(event.x, event.y))
+            self.variables.shape_drawing.tmp_anchor_point_xy = (event.x, event.y)
             return
         elif self.active_tool == ToolConstants.SHIFT_SHAPE:
             if self.variables.current_shape_id is None:
@@ -1755,7 +1765,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         pass
 
-    def _pan(self, event):
+    def _pan(self, event, check_distance=True):
         """
         Perform the pan operation.
 
@@ -1768,44 +1778,49 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        def get_shift_limit(the_shift, the_limit, lower_value, upper_value):
+            if lower_value < 0 or upper_value > the_limit:
+                raise ValueError('This is not sensible.')
+
+            if the_shift < 0:
+                return max(the_shift, -lower_value)
+            else:
+                return min(the_shift, the_limit - upper_value)
+
+        # get the current image bounds
+        image_bounds, decimation = self.get_image_extent()
+        # get the full image size
+        full_y = self.variables.canvas_image_object.image_reader.full_image_ny
+        full_x = self.variables.canvas_image_object.image_reader.full_image_nx
+
+        # determine how to modify the current image bounds
         anchor = self.variables.shape_drawing.anchor_point_xy
-        x_diff = anchor[0] - event.x
-        y_diff = anchor[1] - event.y
-        if (x_diff*x_diff + y_diff*y_diff)**0.5 < self.variables.config.pan_pixel_threshold:
+        canvas_x_diff = anchor[0] - event.x
+        canvas_y_diff = anchor[1] - event.y
+        canvas_diff = (canvas_x_diff*canvas_x_diff + canvas_y_diff*canvas_y_diff)**0.5
+
+        if check_distance and (canvas_diff < self.variables.config.pan_pixel_threshold):
             # we haven't moved far enough
             return
 
-        canvas_coords = (x_diff, y_diff, x_diff + self.variables.state.canvas_width, y_diff + self.variables.state.canvas_height)
-        # convert to image coordinates and accoutn for panning beyond feasible limits
-        image_coords = list(self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_coords))
-        if image_coords[2] - image_coords[0] >= self.variables.canvas_image_object.image_reader.full_image_ny:
-            image_coords[0] = 0
-            image_coords[2] = self.variables.canvas_image_object.image_reader.full_image_ny
-        if image_coords[3] - image_coords[1] >= self.variables.canvas_image_object.image_reader.full_image_nx:
-            image_coords[1] = 0
-            image_coords[3] = self.variables.canvas_image_object.image_reader.full_image_nx
+        x_diff = decimation*canvas_x_diff
+        y_diff = decimation*canvas_y_diff
 
-        # account for panning beyond feasible limits
-        if image_coords[0] < 0:
-            diff = image_coords[2] - image_coords[0]
-            image_coords[0] = 0
-            image_coords[2] = diff
-        if image_coords[1] < 0:
-            diff = image_coords[3] - image_coords[1]
-            image_coords[1] = 0
-            image_coords[3] = diff
-        if image_coords[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
-            diff = image_coords[2] - image_coords[0]
-            image_coords[0] = self.variables.canvas_image_object.image_reader.full_image_ny - diff
-            image_coords[2] = self.variables.canvas_image_object.image_reader.full_image_ny
-        if image_coords[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
-            diff = image_coords[3] - image_coords[1]
-            image_coords[1] = self.variables.canvas_image_object.image_reader.full_image_nx - diff
-            image_coords[3] = self.variables.canvas_image_object.image_reader.full_image_nx
+        # verify that the shift limits make sense
+        y_diff = get_shift_limit(y_diff, full_y, image_bounds[0], image_bounds[2])
+        x_diff = get_shift_limit(x_diff, full_x, image_bounds[1], image_bounds[3])
 
-        # apply the view to this rectangle
-        self.zoom_to_full_image_selection(image_coords)
+        new_image_bounds = list(image_bounds)
+        new_image_bounds[0] += y_diff
+        new_image_bounds[1] += x_diff
+        new_image_bounds[2] += y_diff
+        new_image_bounds[3] += x_diff
+
+        # apply view to the new rectangle
+        self.zoom_to_full_image_selection(new_image_bounds, decimation=decimation)  # ensure use of constant decimation
+        # update the anchor point to the current point
         self.variables.shape_drawing.anchor_point_xy = event.x, event.y
+        return
 
     def _pan_finish(self, event):
         """
@@ -1820,7 +1835,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self._pan(event)
+        self._pan(event, check_distance=False)
         self.variables.shape_drawing.set_inactive()
         self._set_current_shape_id(None)
         self.hide_shape(self.variables.zoom_rect.uid)  # this should never have been unhidden?
@@ -1933,7 +1948,7 @@ class ImageCanvas(basic_widgets.Canvas):
         image_coords = self.variables.canvas_image_object.canvas_coords_to_full_image_yx(canvas_rect)
         self.zoom_to_full_image_selection(image_coords)
 
-    def zoom_to_full_image_selection(self, image_rect):
+    def zoom_to_full_image_selection(self, image_rect, decimation=None):
         """
         Zoom to the selection using image coordinates. This should fit the entire
         given region.
@@ -1941,6 +1956,9 @@ class ImageCanvas(basic_widgets.Canvas):
         Parameters
         ----------
         image_rect : Tuple|List
+        decimation : None|int
+            The decimation to use. If not provided, then the appropriate decimation
+            will be calculated.
 
         Returns
         -------
@@ -1950,6 +1968,19 @@ class ImageCanvas(basic_widgets.Canvas):
         # what is the aspect ratio of the zoom rectangle?
         zoom_height = image_rect[2] - image_rect[0]
         zoom_width = image_rect[3] - image_rect[1]
+        if zoom_height < 0:
+            temp_image_rect = image_rect.copy()
+            temp_image_rect[0] = image_rect[2]
+            temp_image_rect[2] = image_rect[0]
+            zoom_height *= -1
+            image_rect = temp_image_rect
+        if zoom_width < 0:
+            temp_image_rect = image_rect.copy()
+            temp_image_rect[1] = image_rect[3]
+            temp_image_rect[3] = image_rect[1]
+            zoom_width *= -1
+            image_rect = temp_image_rect
+
         # validate that our sizes make sense
         if zoom_width <= 0 or zoom_height <= 0:
             showinfo('Poorly defined zoom rectangle', message='Zoom rectangle {}. Aborting zoom.'.format(image_rect))
@@ -1985,7 +2016,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
             image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
 
-        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect)
+        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect, decimation=decimation)
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.variables.state.currently_zooming = False
@@ -2425,7 +2456,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.coords(shape_id, canvas_drawing_coords)
 
         if update_pixel_coords:
-            self.set_shape_pixel_coords_from_canvas_coords(shape_id, new_coords)
+            self._set_shape_pixel_coords_from_canvas_coords(shape_id, new_coords)
 
     def modify_existing_shape_using_image_coords(self, shape_id, image_coords):
         """
@@ -2441,7 +2472,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_shape_pixel_coords(shape_id, image_coords)
+        self._set_shape_pixel_coords(shape_id, image_coords)
         canvas_coords = self.image_coords_to_canvas_coords(image_coords)
         self.modify_existing_shape_using_canvas_coords(shape_id, canvas_coords, update_pixel_coords=False)
 
@@ -2688,9 +2719,11 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             self.itemconfigure(shape_id, fill=color)
 
-    def set_shape_pixel_coords_from_canvas_coords(self, shape_id, coords):
+    def _set_shape_pixel_coords_from_canvas_coords(self, shape_id, coords):
         """
-        Sets the shape pixel coordinates from the canvas coordinates.
+        Sets the shape pixel coordinates from the canvas coordinates. This only
+        modifies the vector object, and does not update the tkinter canvas
+        shape. This should not be used directly.
 
         Parameters
         ----------
@@ -2704,11 +2737,13 @@ class ImageCanvas(basic_widgets.Canvas):
 
         if self.variables.canvas_image_object is not None:
             image_coords = self.canvas_coords_to_image_coords(coords)
-            self.set_shape_pixel_coords(shape_id, image_coords)
+            self._set_shape_pixel_coords(shape_id, image_coords)
 
-    def set_shape_pixel_coords(self, shape_id, image_coords):
+    def _set_shape_pixel_coords(self, shape_id, image_coords):
         """
-        Set the pixel coordinates for the given shape.
+        Set the pixel coordinates for the given shape. This only
+        modifies the vector object, and does not update the tkinter canvas
+        shape. This should not be used directly.
 
         Parameters
         ----------

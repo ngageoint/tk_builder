@@ -407,7 +407,7 @@ class ImagePanel(WidgetPanel):
         """
 
         for name in self.toolbar.shape_controls[1:]:
-            getattr(self.toolbar, name).state(['normal'])
+            getattr(self.toolbar, name).state(['!disabled'])
 
     def disable_tools(self):
         """
@@ -423,7 +423,7 @@ class ImagePanel(WidgetPanel):
         """
 
         for name in self.toolbar.tool_controls[1:]:
-            getattr(self.toolbar, name).state(['normal'])
+            getattr(self.toolbar, name).state(['!disabled'])
 
     # callbacks
     def callback_select_index(self, event):

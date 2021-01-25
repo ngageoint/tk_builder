@@ -297,7 +297,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
                 widget.config(state="normal")
             except:
                 if isinstance(widget, ttk.Widget):
-                    widget.state(['normal'])
+                    widget.state(['!disabled'])
 
     def do_not_expand(self):
         self.master.pack(expand=tkinter.NO)
