@@ -23,7 +23,7 @@ class Toolbar(WidgetPanel):
         'tool_label', 'zoom_in', 'zoom_out', 'pan', 'select', 'view',
         'select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape')
     shape_controls = ('shape_label', 'point', 'line', 'arrow', 'rect', 'ellipse', 'polygon', 'text')
-    other_controls = ("save_canvas", "save_image", "remap_combo", "select_index_label", "select_index_combo")
+    other_controls = ("save_canvas", "save_image", "remap_label", "remap_combo", "select_index_label", "select_index_combo")
     _widget_list = (tool_controls, shape_controls, other_controls)
 
     # create the tool descriptors
@@ -158,7 +158,7 @@ class ImagePanel(WidgetPanel):
 
     @property
     def the_shape(self):
-        return self._the_shape
+        return self._the_shape.get()
 
     @the_shape.setter
     def the_shape(self, value):
@@ -383,6 +383,7 @@ class ImagePanel(WidgetPanel):
         Hides the remap combobox.
         """
 
+        self.toolbar.remap_label.pack_forget()
         self.toolbar.remap_combo.pack_forget()
 
     def hide_select_index(self):

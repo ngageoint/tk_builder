@@ -970,7 +970,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.on_left_mouse_click(self.callback_handle_left_mouse_click)
         self.on_left_mouse_motion(self.callback_handle_left_mouse_motion)
         self.on_left_mouse_release(self.callback_handle_left_mouse_release)
-        self.on_left_mouse_double_click(self.callback_handle_left_double_click)
+        self.on_left_mouse_double_click(self.callback_handle_left_mouse_double_click)
         self.on_right_mouse_click(self.callback_handle_right_mouse_click)
         self.on_right_mouse_motion(self.callback_handle_right_mouse_motion)
         self.on_right_mouse_release(self.callback_handle_right_mouse_release)
@@ -1084,6 +1084,11 @@ class ImageCanvas(basic_widgets.Canvas):
         full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
         self.zoom_to_full_image_selection([0, 0, full_ny, full_nx])
         self.set_current_tool_to_view()
+        # update drag limits for the tools
+        zoom_object = self.get_vector_object(self.variables.zoom_rect.uid)
+        zoom_object.image_drag_limits = (0, 0, full_ny, full_nx)
+        select_object = self.get_vector_object(self.variables.select_rect.uid)
+        select_object.image_drag_limits = (0, 0, full_ny, full_nx)
 
     def set_image_reader(self, image_reader):
         """
@@ -1388,7 +1393,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self.active_tool = ToolConstants.EDIT_SHAPE
             return
         elif self.current_tool == ToolConstants.PAN:
-            self.modify_existing_shape_using_canvas_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
+            self.modify_existing_shape_using_image_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
             self._set_current_shape_id(self.variables.zoom_rect.uid)
             self.variables.shape_drawing.set_active(anchor_point_xy=(event.x, event.y))
             self.variables.shape_drawing.tmp_anchor_point_xy = (event.x, event.y)
@@ -1444,11 +1449,8 @@ class ImageCanvas(basic_widgets.Canvas):
                 return
 
             vector_object = self.get_current_vector_object()
-            if vector_object.type == ShapeTypeConstants.POINT:
-                self._update_point_event(event)
-                return
-            elif vector_object.type == ShapeTypeConstants.TEXT:
-                self.modify_existing_shape_using_canvas_coords(vector_object.uid, (event.x, event.y))
+            if vector_object.type in [ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
+                self._update_text_or_point_event(event)
                 return
 
             coord_index, the_distance, coord_x, coord_y = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
@@ -1467,14 +1469,13 @@ class ImageCanvas(basic_widgets.Canvas):
                 self._update_arrow_event(event)
             elif vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
                 self.modify_existing_shape_using_canvas_coords(
-                    self.variables.select_rect.uid, (event.x, event.y, event.x, event.y))
+                    vector_object.uid, (event.x, event.y, event.x, event.y))
                 anchor = (event.x, event.y)
                 self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=anchor)
                 self.variables.shape_drawing.tmp_anchor_point_xy = anchor
+                return
             elif vector_object.type == ShapeTypeConstants.POLYGON:
                 self._update_polygon_event(event, insert=True)
-            else:
-                raise ValueError('Got unhandled shape type ShapeTypeConstants.{}'.format(ShapeTypeConstants.get_name(vector_object.type)))
         else:
             raise ValueError('Got unhandled tool type ToolConstants.{}'.format(ToolConstants.get_name(self.active_tool)))
 
@@ -1496,7 +1497,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if active_tool in [ToolConstants.VIEW, ToolConstants.NEW_SHAPE, ToolConstants.SELECT_CLOSEST_SHAPE]:
             return  # nothing to be done
         if active_tool in [ToolConstants.ZOOM_IN, ToolConstants.ZOOM_OUT]:
-            self._drag_rectangle_ellipse_arrow(event)
+            self._drag_zoom_rectangle(event)
         elif active_tool == ToolConstants.PAN:
             self._pan(event)
         elif active_tool == ToolConstants.SHIFT_SHAPE:
@@ -1577,12 +1578,15 @@ class ImageCanvas(basic_widgets.Canvas):
             self.modify_existing_shape_using_canvas_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
             return
         elif self.current_tool == ToolConstants.SELECT:
+            canvas_coords = self.get_shape_canvas_coords(self.variables.select_rect.uid)
             rect_coords = self.coords(self.variables.select_rect.uid)
             x_diff = abs(rect_coords[0] - rect_coords[2])
             y_diff = abs(rect_coords[1] - rect_coords[3])
             if x_diff < self.variables.config.select_size_threshold or \
                     y_diff < self.variables.config.select_size_threshold:
-                self.hide_shape(self.variables.select_rect.uid)
+                # reset things, and start the selection over
+                self.modify_existing_shape_using_canvas_coords(self.variables.select_rect.uid, (0, 0, 0, 0))
+                self.variables.shape_drawing.set_inactive()
                 return
             self.emit_select_finalized()
             return
@@ -1622,12 +1626,16 @@ class ImageCanvas(basic_widgets.Canvas):
                 self.active_tool = ToolConstants.EDIT_SHAPE
                 if dists[0] < self.variables.config.vertex_selector_pixel_threshold:
                     self.config(cursor="top_left_corner")
+                    self.variables.shape_drawing.tmp_anchor_point_xy = int(the_coords[0, 0]), int(the_coords[0, 1])
                 elif dists[1] < self.variables.config.vertex_selector_pixel_threshold:
                     self.config(cursor="top_right_corner")
+                    self.variables.shape_drawing.tmp_anchor_point_xy = int(the_coords[1, 0]), int(the_coords[1, 1])
                 elif dists[2] < self.variables.config.vertex_selector_pixel_threshold:
                     self.config(cursor="bottom_right_corner")
+                    self.variables.shape_drawing.tmp_anchor_point_xy = int(the_coords[2, 0]), int(the_coords[2, 1])
                 elif dists[3] < self.variables.config.vertex_selector_pixel_threshold:
                     self.config(cursor="bottom_left_corner")
+                    self.variables.shape_drawing.tmp_anchor_point_xy = int(the_coords[3, 0]), int(the_coords[3, 1])
                 elif the_coords[0, 0] < event.x < the_coords[1, 0] and \
                         the_coords[0, 1] < event.y < the_coords[3, 1]:
                     # inside the rectangle
@@ -1693,7 +1701,7 @@ class ImageCanvas(basic_widgets.Canvas):
                 raise ValueError('Unhandled shape type ShapeTypeConstants.{}'.format(ShapeTypeConstants.get_name(vector_object.type)))
 
     # noinspection PyUnusedLocal
-    def callback_handle_left_double_click(self, event):
+    def callback_handle_left_mouse_double_click(self, event):
         """
         Callback for left mouse double click.
 
@@ -1706,9 +1714,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if self.active_tool == ToolConstants.EDIT_SHAPE:
-            self.variables.shape_drawing.set_inactive()
-            self.deactivate_shape_edit_mode()
+        pass
 
     # noinspection PyUnusedLocal
     def callback_handle_right_mouse_click(self, event):
@@ -2505,9 +2511,9 @@ class ImageCanvas(basic_widgets.Canvas):
             event_y = trim(event_y, canvas_lims[1], canvas_lims[3])
         return event_x, event_y
 
-    def _update_point_event(self, event):
+    def _update_text_or_point_event(self, event):
         """
-        Actions for updating point coordinates based on some mouse event. This implicitly
+        Actions for updating text or point coordinates based on some mouse event. This implicitly
         assumes that the current shape is a point.
 
         Parameters
@@ -2519,11 +2525,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        # event_x = self.canvasx(event.x)
-        # event_y = self.canvasy(event.y)
-        # new_coords = (
-        #     event_x - self.variables.state.point_size, event_x - self.variables.state.point_size,
-        #     event_y + self.variables.state.point_size, event_y + self.variables.state.point_size)
         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, (event.x, event.y), update_pixel_coords=True)
 
     def _modify_coords(self, coords, event_x_pos, event_y_pos, insert=False):
@@ -2675,9 +2676,9 @@ class ImageCanvas(basic_widgets.Canvas):
         self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
         self.emit_shape_coords_finalized()
 
-    def _drag_rectangle_ellipse_arrow(self, event):
+    def _drag_zoom_rectangle(self, event):
         """
-        Drag a rectangle, ellipse, or arrow end location.
+        Function for dragging the zoom rectangle.
 
         Parameters
         ----------
@@ -2688,15 +2689,11 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        shape_id = self.variables.current_shape_id
-        if shape_id is None:
-            return
-
+        shape_id = self.variables.zoom_rect.uid
         event_x_pos = self.canvasx(event.x)
         event_y_pos = self.canvasy(event.y)
-        coords = self.variables.shape_drawing.anchor_point_xy + (event_x_pos, event_y_pos)
-        new_coords = self._modify_coords(coords, event_x_pos, event_y_pos, insert=False)
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
+        new_coords = self.variables.shape_drawing.anchor_point_xy + (event_x_pos, event_y_pos)
+        self.modify_existing_shape_using_canvas_coords(shape_id, new_coords, update_pixel_coords=True)
 
     def change_shape_color(self, shape_id, color):
         """
