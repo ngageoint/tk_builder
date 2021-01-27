@@ -615,11 +615,14 @@ class VectorObject(object):
         self.image_coords = image_coords
         self.point_size = point_size
         self.image_drag_limits = image_drag_limits
-        if v_type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE, ShapeTypeConstants.POINT]:
-            self.color = outline
-        elif v_type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
-            self.color = fill
-        # TODO: text?
+        if 'color' in kwargs:
+            self.color = kwargs['color']
+        else:
+            if v_type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE, ShapeTypeConstants.POINT]:
+                self.color = outline
+            elif v_type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
+                self.color = fill
+            # TODO: text?
 
         if self.color is None:
             self.color = 'cyan'
@@ -2300,13 +2303,19 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        if self.variables.canvas_image_object is None:
+            return  # nothing to be done
+
         shape_ids = self.variables.shape_ids.copy()
         tool_shapes = self.get_tool_shape_ids()
         for shape_id in shape_ids:
             if shape_id in tool_shapes:
                 self.hide_shape(shape_id)
             else:
-                self.delete_shape(shape_id)
+                try:
+                    self.delete_shape(shape_id)
+                except:
+                    continue
         self.redraw_all_shapes()
         # reset the initial coordinates for zoom and select rectangles.
         self.modify_existing_shape_using_image_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
@@ -2320,6 +2329,9 @@ class ImageCanvas(basic_widgets.Canvas):
         -------
         None
         """
+
+        if self.variables.canvas_image_object is None:
+            return  # nothing to be done
 
         for shape_id in self.variables.shape_ids:
             vector_object = self.get_vector_object(shape_id)
@@ -2451,7 +2463,9 @@ class ImageCanvas(basic_widgets.Canvas):
             return tuple(int(entry) for entry in the_coords)
 
         vector_object = self.get_vector_object(shape_id)
-        if vector_object.type == ShapeTypeConstants.POINT:
+        if vector_object is None:
+            return
+        elif vector_object.type == ShapeTypeConstants.POINT:
             point_size = vector_object.point_size
             x1, y1 = (new_coords[0] - point_size), (new_coords[1] - point_size)
             x2, y2 = (new_coords[0] + point_size), (new_coords[1] + point_size)
@@ -2459,10 +2473,12 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             canvas_drawing_coords = make_int(new_coords)
 
-        self.coords(shape_id, canvas_drawing_coords)
-
-        if update_pixel_coords:
-            self._set_shape_pixel_coords_from_canvas_coords(shape_id, new_coords)
+        try:
+            self.coords(shape_id, canvas_drawing_coords)
+            if update_pixel_coords:
+                self._set_shape_pixel_coords_from_canvas_coords(shape_id, new_coords)
+        except:
+            pass
 
     def modify_existing_shape_using_image_coords(self, shape_id, image_coords):
         """

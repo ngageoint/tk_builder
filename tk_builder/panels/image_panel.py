@@ -101,6 +101,7 @@ class ImagePanel(WidgetPanel):
     """
 
     def __init__(self, parent):
+        self.parent = parent
         WidgetPanel.__init__(self, parent)
         self._the_tool = tkinter.IntVar(self, value=ToolConstants.VIEW)
         self._the_shape = tkinter.IntVar(self, value=ShapeTypeConstants.POLYGON)
@@ -114,6 +115,11 @@ class ImagePanel(WidgetPanel):
         self.canvas.bind('<<ShapeTypeChanged>>', self.callback_update_shape)
 
         self.pack()
+        # handle the appearance of several toolbar labels
+        self.toolbar.tool_label.configure(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
+        self.toolbar.shape_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
+        self.toolbar.remap_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
+        self.toolbar.select_index_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
         self.toolbar.pack(side='top', expand=tkinter.NO, fill=tkinter.BOTH)
         self.canvas.pack(side='bottom', fill=tkinter.BOTH, expand=1)
 

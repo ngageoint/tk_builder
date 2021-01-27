@@ -160,7 +160,7 @@ def main():
     root = tkinter.Tk()
     # use the theme, must be after the root element is created
     the_style = ttk.Style()
-    the_style.theme_use('clam')
+    the_style.theme_use('classic')
 
     app = CanvasResize(root)
     root.mainloop()
