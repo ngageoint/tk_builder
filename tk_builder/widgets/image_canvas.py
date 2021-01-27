@@ -11,7 +11,6 @@ import logging
 import io
 from PIL import ImageTk, Image
 import platform
-import time
 import tkinter
 import tkinter.colorchooser as colorchooser
 from tkinter.messagebox import showinfo
@@ -22,11 +21,10 @@ import numpy
 
 from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
     IntegerTupleDescriptor, StringDescriptor, TypedDescriptor, FloatDescriptor
-from tk_builder.widgets import basic_widgets
-from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
-from tk_builder.utils.color_utils import color_utils
 from tk_builder.image_reader import ImageReader
 from tk_builder.utils.color_utils.color_cycler import ColorCycler
+from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
+from tk_builder.widgets import basic_widgets
 
 from sarpy.geometry.geometry_elements import GeometryObject, LinearRing, LineString, Point
 import sarpy.visualization.remap as remap
@@ -590,7 +588,9 @@ class VectorObject(object):
     """
 
     # noinspection PyUnusedLocal
-    def __init__(self, uid, vector_type, image_coords=None, point_size=None, image_drag_limits=None, outline=None, fill=None, **kwargs):
+    def __init__(self,
+                 uid, vector_type, image_coords=None, point_size=None,
+                 image_drag_limits=None, outline=None, fill=None, **kwargs):
         """
 
         Parameters
@@ -748,9 +748,6 @@ class CanvasState(object):
     foreground_color = StringDescriptor(
         'foreground_color', default_value='red',
         docstring='The foreground color (named or hexidecimal string).')  # type: str
-    currently_zooming = BooleanDescriptor(
-        'currently_zooming', default_value=False,
-        docstring='Is the canvas object currently zooming?')  # type: bool
 
 
 class ShapeDrawingState(object):
@@ -1867,7 +1864,6 @@ class ImageCanvas(basic_widgets.Canvas):
         closest_shape_id = self.find_closest_shape(event.x, event.y)
         if closest_shape_id is not None:
             self._set_current_shape_id(closest_shape_id)
-            self.highlight_existing_shape(self.variables.current_shape_id)
         return closest_shape_id
 
     # image properties and manipulation
@@ -2028,7 +2024,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect, decimation=decimation)
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
-        self.variables.state.currently_zooming = False
         self.emit_image_extent_changed()
 
     def update_current_image(self):
@@ -2312,6 +2307,7 @@ class ImageCanvas(basic_widgets.Canvas):
             if shape_id in tool_shapes:
                 self.hide_shape(shape_id)
             else:
+                # noinspection PyBroadException
                 try:
                     self.delete_shape(shape_id)
                 except:
@@ -2335,11 +2331,13 @@ class ImageCanvas(basic_widgets.Canvas):
 
         for shape_id in self.variables.shape_ids:
             vector_object = self.get_vector_object(shape_id)
-            if vector_object is not None:
-                pixel_coords = vector_object.image_coords
-                if pixel_coords:
-                    new_canvas_coords = self.shape_image_coords_to_canvas_coords(shape_id)
-                    self.modify_existing_shape_using_canvas_coords(shape_id, new_canvas_coords, update_pixel_coords=False)
+            if vector_object is None:
+                continue
+            pixel_coords = vector_object.image_coords
+            if pixel_coords is None:
+                continue
+            new_canvas_coords = self.shape_image_coords_to_canvas_coords(shape_id)
+            self.modify_existing_shape_using_canvas_coords(shape_id, new_canvas_coords, update_pixel_coords=False)
 
     def hide_shape(self, shape_id):
         """
@@ -2354,11 +2352,14 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if shape_id is not None:
-            try:
-                self.itemconfigure(shape_id, state="hidden")
-            except:
-                pass
+        if shape_id is None:
+            return
+
+        # noinspection PyBroadException
+        try:
+            self.itemconfigure(shape_id, state="hidden")
+        except:
+            pass
 
     def show_shape(self, shape_id):
         """
@@ -2373,8 +2374,9 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if shape_id is not None:
-            self.itemconfigure(shape_id, state="normal")
+        if shape_id is None:
+            return
+        self.itemconfigure(shape_id, state="normal")
 
     def activate_shape_edit_mode(self, shape_id=None):
         """
@@ -2405,15 +2407,6 @@ class ImageCanvas(basic_widgets.Canvas):
                 shape_id not in self.get_tool_shape_ids():
             self.itemconfigure(shape_id, dash=(5, 5))
 
-    def deactivate_shape_edit_mode(self):
-        for shape_id in self.get_non_tool_shape_ids():
-            vector_object = self.get_vector_object(shape_id)
-            if vector_object is None:
-                return
-            shape_type = vector_object.type
-            if shape_type in ShapeTypeConstants.geometric_shapes():
-                self.itemconfigure(shape_id, dash=())
-
     def highlight_existing_shape(self, shape_id):
         """
         Highlights an existing shape, according to provided id.
@@ -2427,19 +2420,22 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        original_color = self.get_vector_object(shape_id).color
-        colors = color_utils.get_full_hex_palette(self.variables.highlight_color_palette,
-                                                  self.variables.config.highlight_n_colors_cycle)
-        for color in colors:
-            self.change_shape_color(shape_id, color)
-            time.sleep(0.001)
-            self.update()
-        colors.reverse()
-        for color in colors:
-            self.change_shape_color(shape_id, color)
-            time.sleep(0.001)
-            self.update()
-        self.change_shape_color(shape_id, original_color)
+        vector_object = self.get_vector_object(shape_id)
+        if vector_object is None:
+            return
+        shape_type = vector_object.type
+        if shape_type in ShapeTypeConstants.geometric_shapes() and \
+                shape_id not in self.get_tool_shape_ids():
+            self.itemconfigure(shape_id, dash=(5, 5))
+
+    def lowlight_existing_shape(self, shape_id):
+        vector_object = self.get_vector_object(shape_id)
+        if vector_object is None:
+            return
+        shape_type = vector_object.type
+        if shape_type in ShapeTypeConstants.geometric_shapes() and \
+                shape_id not in self.get_tool_shape_ids():
+            self.itemconfigure(shape_id, dash=())
 
     def modify_existing_shape_using_canvas_coords(self, shape_id, new_coords, update_pixel_coords=True):
         """
@@ -2473,6 +2469,7 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             canvas_drawing_coords = make_int(new_coords)
 
+        # noinspection PyBroadException
         try:
             self.coords(shape_id, canvas_drawing_coords)
             if update_pixel_coords:
@@ -2810,7 +2807,9 @@ class ImageCanvas(basic_widgets.Canvas):
         if (old_id is None and shape_id is None) or (old_id == shape_id):
             return  # nothing to be done
 
+        self.lowlight_existing_shape(old_id)
         self.variables.current_shape_id = shape_id
+        self.highlight_existing_shape(shape_id)
         self.emit_shape_deselect(old_id, old_type)
         self.show_shape(shape_id)
         if shape_id is not None:
@@ -3294,7 +3293,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_and_active_tool(ToolConstants.VIEW)
 
     def set_current_tool_to_zoom_in(self):
@@ -3306,7 +3304,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_shape_id(self.variables.zoom_rect.uid)
         self._set_current_and_active_tool(ToolConstants.ZOOM_IN)
 
@@ -3319,7 +3316,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_shape_id(self.variables.zoom_rect.uid)
         self._set_current_and_active_tool(ToolConstants.ZOOM_OUT)
 
@@ -3332,7 +3328,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_shape_id(self.variables.select_rect.uid)
         self.show_shape(self.variables.select_rect.uid)
         self._set_current_and_active_tool(ToolConstants.SELECT)
@@ -3346,7 +3341,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_shape_id(self.variables.zoom_rect.uid)
         self._set_current_and_active_tool(ToolConstants.PAN)
 
@@ -3359,7 +3353,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_and_active_tool(ToolConstants.SELECT_CLOSEST_SHAPE)
 
     def set_current_tool_to_shift_shape(self):
@@ -3371,7 +3364,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_shape_id(None)
         self._set_current_and_active_tool(ToolConstants.SHIFT_SHAPE)
 
@@ -3388,7 +3380,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_shape_id(shape_id)
         self.show_shape(shape_id)
 
@@ -3517,7 +3508,6 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.deactivate_shape_edit_mode()
         self._set_current_and_active_tool(ToolConstants.EDIT_SHAPE)
         self.activate_shape_edit_mode(shape_id)
 
