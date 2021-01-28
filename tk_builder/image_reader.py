@@ -6,6 +6,7 @@ __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
 import numpy
+from typing import Tuple, Union, Callable
 
 
 class ImageReader(object):
@@ -30,7 +31,7 @@ class ImageReader(object):
 
     @property
     def data_size(self):
-        # type: () -> (int, int)
+        # type: () -> Tuple[int, int]
         """
         (int, int): This defines the row, column bounds for the underlying image.
         """
@@ -55,6 +56,7 @@ class ImageReader(object):
 
     @property
     def file_name(self):
+        # type: () -> Union[None, str, Tuple[str]]
         """
         None|str|Tuple[str]: The filename(s) for the given images.
         """
@@ -71,6 +73,7 @@ class ImageReader(object):
 
     @property
     def remap_function(self):
+        # type: () -> Union[None, Callable]
         """
         None|Callable: The current remap function. This will be `None`, if `remapable` is False.
         """
@@ -121,7 +124,7 @@ class ImageReader(object):
 
         Parameters
         ----------
-        remap_type : str|callable
+        remap_type : str|Callable
 
         Returns
         -------
