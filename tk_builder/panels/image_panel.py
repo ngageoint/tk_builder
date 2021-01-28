@@ -1,7 +1,11 @@
+
+__classification__ = "UNCLASSIFIED"
+__author__ = ("Jason Casey", "Thomas McCullough")
+
+
 import os
 import tkinter
 from tkinter.filedialog import asksaveasfilename
-from tkinter.messagebox import showinfo
 import PIL.Image
 from typing import List
 
@@ -14,8 +18,6 @@ from tk_builder import file_filters
 from sarpy.compliance import string_types
 from sarpy.visualization import remap
 
-__classification__ = "UNCLASSIFIED"
-__author__ = ("Jason Casey", "Thomas McCullough")
 
 
 class Toolbar(WidgetPanel):
@@ -92,12 +94,13 @@ class Toolbar(WidgetPanel):
 
 class ImagePanel(WidgetPanel):
     """
-    This utilizes the ImageCanvas to display raster and vector data.  A toolbar
-    providing a set of common tools such as pan and zoom functionality is included.
+    The main base widget on which to base most apps where image viewing is central
+    to operation.
 
-    Mouse zoom operations using the mouse wheel are enabled by default. Other
-    functionality includes axes and margins in the case the user wishes to display
-    X/Y axes, titles, etc for 2 dimensional data displays or plots.
+    Image data display functionality is provided by an embedded ImageCanvas widget.
+    Also embedded is toolbar allowing easy selection of functionality like zooming,
+    panning, region selection, creation of a variety of vector shapes, and saving
+    of the presently displayed image to an image file.
     """
 
     def __init__(self, parent):

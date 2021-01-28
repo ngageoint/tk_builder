@@ -26,6 +26,7 @@ from tk_builder.utils.color_utils.color_cycler import ColorCycler
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.widgets import basic_widgets
 
+from sarpy.compliance import string_types
 from sarpy.geometry.geometry_elements import GeometryObject, LinearRing, LineString, Point
 import sarpy.visualization.remap as remap
 
@@ -590,7 +591,7 @@ class VectorObject(object):
     # noinspection PyUnusedLocal
     def __init__(self,
                  uid, vector_type, image_coords=None, point_size=None,
-                 image_drag_limits=None, outline=None, fill=None, **kwargs):
+                 image_drag_limits=None, outline=None, fill=None, color=None, **kwargs):
         """
 
         Parameters
@@ -610,13 +611,12 @@ class VectorObject(object):
             raise ValueError('Unable to validate vector type {}'.format(vector_type))
 
         self._type = v_type
-        self.color = None
-
+        self._color = None
         self.image_coords = image_coords
         self.point_size = point_size
         self.image_drag_limits = image_drag_limits
-        if 'color' in kwargs:
-            self.color = kwargs['color']
+        if color is not None:
+            self.color = color
         else:
             if v_type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE, ShapeTypeConstants.POINT]:
                 self.color = outline
@@ -624,8 +624,8 @@ class VectorObject(object):
                 self.color = fill
             # TODO: text?
 
-        if self.color is None:
-            self.color = 'cyan'
+        if self._color is None:
+            self._color = 'cyan'
 
     @property
     def uid(self):
@@ -642,6 +642,30 @@ class VectorObject(object):
         """
 
         return self._type
+
+    @property
+    def color(self):
+        """
+        None|str: The color.
+        """
+
+        return self._color
+
+    @color.setter
+    def color(self, value):
+        """
+
+        Parameters
+        ----------
+        value : None|str
+        """
+
+        if value is None:
+            self._color = 'cyan'
+            return
+        if not isinstance(value, string_types):
+            raise TypeError('Requires a string.')
+        self._color = value
 
 
 ########
@@ -681,29 +705,23 @@ class CanvasConfig(object):
 
     vertex_selector_pixel_threshold = FloatDescriptor(
         'vertex_selector_pixel_threshold', default_value=10.0,
-        docstring='The pixel threshold for vertex selection.')  # type: float
+        docstring='The threshold in canvas pixel distance for vertex selection.')  # type: float
     shape_selector_pixel_threshold = FloatDescriptor(
         'shape_selector_pixel_threshold', default_value=10.0,
-        docstring='The pixel distance threshold for shape selection.')  # type: float
-    mouse_wheel_zoom_percent_per_event = FloatDescriptor(
-        'mouse_wheel_zoom_percent_per_event', default_value=1.5,
-        docstring='The percent to zoom in/out on mouse wheel detection.')  # type: float
-    highlight_n_colors_cycle = IntegerDescriptor(
-        'highlight_n_colors_cycle', default_value=10,
-        docstring='The length of highlight colors cycle.')  # type: int
+        docstring='The threshold in canvas pixel distance for shape selection.')  # type: float
     zoom_box_size_threshold = FloatDescriptor(
         'zoom_box_size_threshold', default_value=20.0,
-        docstring='minimum size for the zoom box for any action to take place.')  # type: float
+        docstring='minimum size in canvas pixels for the zoom box for any action to take place.')  # type: float
     pan_pixel_threshold = FloatDescriptor(
         'pan_pixel_threshold', default_value=10,
-        docstring='The threshold for actually performing a pan operation.')  # type: float
+        docstring='The threshold for in canvas pixels for actually performing a pan operation.')  # type: float
     zoom_pixel_threshold = FloatDescriptor(
         'zoom_pixel_threshold', default_value=20,
-        docstring='The threshold in image pixels (either dimension) beyond which '
+        docstring='The threshold in canvas pixels (either dimension) beyond which '
                   'zooming will not actually occur.')  # type: float
     select_size_threshold = FloatDescriptor(
         'select_size_threshold', default_value=10,
-        docstring='The threshold in image pixels (either dimension) beyond which '
+        docstring='The threshold in canvas pixels (either dimension) beyond which '
                   'selection should not occur.')  # type: float
 
 
@@ -2248,8 +2266,11 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-        (int, float, int, int)
-            The index of the nearest coordinate, and the corresponding distance in pixels.
+        Tuple[int, float, int, int]
+            The index of the nearest coordinate.
+            The distance in canvas pixel units.
+            The integer y canvas coordinate of the nearest vertex.
+            The integer x canvas coordinate of the nearest vertex.
         """
 
         the_point = numpy.array([canvas_x, canvas_y])
@@ -2286,7 +2307,8 @@ class ImageCanvas(basic_widgets.Canvas):
         coords_diff = the_coords - the_point
         dists = numpy.sqrt(numpy.sum(coords_diff*coords_diff, axis=1))
         min_ind = numpy.argmin(dists)
-        return int(min_ind), float(dists[min_ind]), int(the_coords[min_ind, 0]), int(the_coords[min_ind, 1])
+        the_index = int(min_ind)
+        return the_index, float(dists[min_ind]), int(the_coords[min_ind, 0]), int(the_coords[min_ind, 1])
 
     # shape modification and manipulation methods
     def reinitialize_shapes(self):
@@ -2781,9 +2803,9 @@ class ImageCanvas(basic_widgets.Canvas):
             Make this new object the current object?
         """
 
+        self.variables.track_shape(vector_object, make_current=make_current)
         if not is_tool:
             self.emit_shape_create(vector_object.uid, vector_object.type)
-        self.variables.track_shape(vector_object, make_current=make_current)
 
     def _set_current_shape_id(self, shape_id):
         """
@@ -2844,7 +2866,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._set_current_shape_id(None)
         self.emit_shape_delete(shape_id, the_type)
 
-    def create_new_point(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
+    def create_new_point(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
         """
         Create a new point.
 
@@ -2857,6 +2879,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the color after creating this object?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
         options
             Optional keyword arguments.
 
@@ -2877,14 +2901,14 @@ class ImageCanvas(basic_widgets.Canvas):
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(
             shape_id, ShapeTypeConstants.POINT,
-            image_coords=image_coords, point_size=self.variables.state.point_size, **options)
+            image_coords=image_coords, point_size=self.variables.state.point_size, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
 
         if increment_color:
             self._increment_color()
         return shape_id
 
-    def create_new_text(self, *args, make_current=True, increment_color=True, is_tool=False, **kwargs):
+    def create_new_text(self, *args, make_current=True, increment_color=True, is_tool=False, color=None, **kwargs):
         """
         Create text with coordinates x1,y1.
 
@@ -2897,6 +2921,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the foreground color?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
         kwargs
             The keyword arguments
 
@@ -2909,7 +2935,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.shape_ids.append(shape_id)
         canvas_coords = args[0]
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords)
+        vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords, color=color)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
@@ -2917,7 +2943,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._increment_color()
         return shape_id
 
-    def create_new_rect(self, canvas_coords, make_current=True, increment_color=True, is_tool=False, **options):
+    def create_new_rect(self, canvas_coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
         """
         Create a new rectangle.
 
@@ -2930,6 +2956,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the foreground color?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
         options
             Optional Keyword arguments.
 
@@ -2944,7 +2972,7 @@ class ImageCanvas(basic_widgets.Canvas):
             options['width'] = self.variables.state.rect_border_width
         shape_id = self.create_rectangle(*canvas_coords, **options)
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, **options)
+        vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
@@ -2952,7 +2980,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._increment_color()
         return shape_id
 
-    def create_new_ellipse(self, canvas_coords, make_current=True, increment_color=True, is_tool=False, **options):
+    def create_new_ellipse(self, canvas_coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
         """
         Create a new rectangle.
 
@@ -2965,6 +2993,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the foreground color?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
         options
             Optional Keyword arguments.
 
@@ -2979,7 +3009,7 @@ class ImageCanvas(basic_widgets.Canvas):
             options['width'] = self.variables.state.rect_border_width
         shape_id = self.create_oval(*canvas_coords, **options)
         image_coords = self.canvas_coords_to_image_coords(canvas_coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, **options)
+        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
@@ -2987,7 +3017,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._increment_color()
         return shape_id
 
-    def create_new_line(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
+    def create_new_line(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
         """
         Create a new line.
 
@@ -3000,6 +3030,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the foreground color?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
         options
             Optional keyword arguments.
 
@@ -3015,7 +3047,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         shape_id = self.create_line(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, **options)
+        vector_obj = VectorObject(shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
@@ -3023,7 +3055,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._increment_color()
         return shape_id
 
-    def create_new_arrow(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
+    def create_new_arrow(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
         """
         Create a new arrow.
 
@@ -3036,6 +3068,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the foreground color?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
         options
             Optional keyword arguments.
 
@@ -3053,7 +3087,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         shape_id = self.create_line(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, **options)
+        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
@@ -3061,7 +3095,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._increment_color()
         return shape_id
 
-    def create_new_polygon(self, coords, make_current=True, increment_color=True, is_tool=False, **options):
+    def create_new_polygon(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
         """
         Create a new polygon.
 
@@ -3074,6 +3108,8 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the foreground color?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
         options
             Optional keyword arguments.
 
@@ -3091,7 +3127,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         shape_id = self.create_polygon(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, **options)
+        vector_obj = VectorObject(shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
