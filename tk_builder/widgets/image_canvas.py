@@ -2889,9 +2889,6 @@ class ImageCanvas(basic_widgets.Canvas):
         int
         """
 
-        if options.get('increment_color', True):
-            self._increment_color()
-
         if 'fill' not in options:
             options['fill'] = self.variables.state.foreground_color
 
@@ -2904,7 +2901,7 @@ class ImageCanvas(basic_widgets.Canvas):
             image_coords=image_coords, point_size=self.variables.state.point_size, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
 
-        if increment_color:
+        if color is None and increment_color:
             self._increment_color()
         return shape_id
 
@@ -2939,7 +2936,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
-        if increment_color:
+        if color is None and increment_color:
             self._increment_color()
         return shape_id
 
@@ -2976,7 +2973,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
-        if increment_color:
+        if color is None and increment_color:
             self._increment_color()
         return shape_id
 
@@ -3013,7 +3010,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
-        if increment_color:
+        if color is None and increment_color:
             self._increment_color()
         return shape_id
 
@@ -3051,7 +3048,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
-        if increment_color:
+        if color is None and increment_color:
             self._increment_color()
         return shape_id
 
@@ -3091,7 +3088,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
-        if increment_color:
+        if color is None and increment_color:
             self._increment_color()
         return shape_id
 
@@ -3131,7 +3128,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.activate_shape_edit_mode(shape_id)
-        if increment_color:
+        if color is None and increment_color:
             self._increment_color()
         return shape_id
 

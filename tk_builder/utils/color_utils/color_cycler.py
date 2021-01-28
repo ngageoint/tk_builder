@@ -12,7 +12,7 @@ class ColorCycler:
         Parameters
         ----------
         n_colors : int
-        color_palette : list
+        hex_color_palette : list
         """
         self._n_colors = n_colors
         self._color_counter = 0
@@ -21,7 +21,5 @@ class ColorCycler:
     @property
     def next_color(self):
         next_color = self._color_list[self._color_counter]
-        self._color_counter += 1
-        if self._color_counter >= self._n_colors:
-            self._color_counter = 0
+        self._color_counter = ((self._color_counter + 1) % self._n_colors)
         return next_color
