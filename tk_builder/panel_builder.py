@@ -247,7 +247,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
                 fill=tkinter.BOTH,
                 expand=tkinter.YES)
 
-    def enable_all_buttons(self):
+    def disable_all_buttons(self):
         """
         Disable all buttons in a panel.
         """
