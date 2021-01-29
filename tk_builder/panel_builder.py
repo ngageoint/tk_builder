@@ -100,7 +100,7 @@ class WidgetPanel(basic_widgets.LabelFrame):
             for widget in widget_list:
                 flattened_list.append(widget)
         self._widget_list = tuple(flattened_list)
-        self.init_w_basic_widget_list(len(self._widget_list), widgets_per_row)
+        self.init_w_basic_widget_list(len(widgets_per_row), widgets_per_row)
 
     def init_w_box_layout(self, n_columns, column_widths=None, row_heights=None):
         """
@@ -184,6 +184,10 @@ class WidgetPanel(basic_widgets.LabelFrame):
         None
         """
 
+        if n_rows != len(n_widgets_per_row_list):
+            raise ValueError(
+                'Argument mismatch for class {}. The number of rows must match the '
+                'length of the provided list.'.format(self.__class__))
 
         self._rows = [basic_widgets.Frame(self) for _ in range(n_rows)]
         for row in self._rows:
