@@ -906,15 +906,13 @@ class AppVariables(object):
         """
         return self._vector_objects
 
-    def track_shape(self, vector_object, make_current=False):
+    def track_shape(self, vector_object):
         """
         Adds the provided vector object to tracking.
 
         Parameters
         ----------
         vector_object : VectorObject
-        make_current : bool
-            Make this the current shape?
 
         Returns
         -------
@@ -923,8 +921,6 @@ class AppVariables(object):
 
         self._shape_ids.append(vector_object.uid)
         self._vector_objects[vector_object.uid] = vector_object
-        if make_current:
-            self.current_shape_id = vector_object.uid
 
     @property
     def remap_function(self):
@@ -1732,6 +1728,9 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        if self.current_tool == ToolConstants.EDIT_SHAPE:
+            self.set_current_tool_to_view()
+
         pass
 
     # noinspection PyUnusedLocal
@@ -2423,12 +2422,6 @@ class ImageCanvas(basic_widgets.Canvas):
         if shape_id is None:
             return
 
-        vector_object = self.get_vector_object(shape_id)
-        shape_type = vector_object.type
-        if shape_type in ShapeTypeConstants.geometric_shapes() and \
-                shape_id not in self.get_tool_shape_ids():
-            self.itemconfigure(shape_id, dash=(5, 5))
-
     def highlight_existing_shape(self, shape_id):
         """
         Highlights an existing shape, according to provided id.
@@ -2618,17 +2611,21 @@ class ImageCanvas(basic_widgets.Canvas):
         point_count = int(len(coords)/2)
 
         if point_count < 3:
-            return coords
+            return
 
         index_remove = 2*self.variables.shape_drawing.insert_at_index
         if index_remove == 0:
-            self.modify_existing_shape_using_canvas_coords(shape_id, coords[2:], update_pixel_coords=True)
+            self.modify_existing_shape_using_canvas_coords(
+                shape_id, coords[2:], update_pixel_coords=True)
         elif index_remove >= point_count:
-            self.modify_existing_shape_using_canvas_coords(shape_id, coords[:-2], update_pixel_coords=True)
+            self.modify_existing_shape_using_canvas_coords(
+                shape_id, coords[:-2], update_pixel_coords=True)
             self.variables.shape_drawing.insert_at_index = index_remove-1
         else:
-            self.modify_existing_shape_using_canvas_coords(shape_id, coords[:index_remove] + coords[index_remove+2:], update_pixel_coords=True)
+            self.modify_existing_shape_using_canvas_coords(
+                shape_id, coords[:index_remove] + coords[index_remove+2:], update_pixel_coords=True)
             self.variables.shape_drawing.insert_at_index = index_remove-1
+        self.emit_shape_coords_finalized()
 
     def _update_arrow_event(self, event):
         """
@@ -2803,7 +2800,10 @@ class ImageCanvas(basic_widgets.Canvas):
             Make this new object the current object?
         """
 
-        self.variables.track_shape(vector_object, make_current=make_current)
+        self.variables.track_shape(vector_object)
+        if make_current:
+            self._set_current_shape_id(vector_object.uid)
+
         if not is_tool:
             self.emit_shape_create(vector_object.uid, vector_object.type)
 
@@ -3400,22 +3400,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self._set_current_shape_id(None)
         self._set_current_and_active_tool(ToolConstants.SHIFT_SHAPE)
 
-    def _deactivate_shape_edit_stub(self, shape_id=None):
-        """
-        Common use stub for setting tool status.
-
-        Parameters
-        ----------
-        shape_id : None|int
-
-        Returns
-        -------
-        None
-        """
-
-        self._set_current_shape_id(shape_id)
-        self.show_shape(shape_id)
-
     def set_current_tool_to_new_shape(self, shape_type=None):
         """
         Sets the current tool to new shape of the type given. If shape_type is given
@@ -3431,7 +3415,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self._deactivate_shape_edit_stub()
+        self._set_current_shape_id(None)
         if shape_type is not None:
             self.new_shape_type = shape_type
         self._set_current_and_active_tool(ToolConstants.NEW_SHAPE)
@@ -3558,7 +3542,8 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self._deactivate_shape_edit_stub(shape_id)
+        self._set_current_shape_id(shape_id)
+        self.show_shape(shape_id)
         if shape_id is None:
             self._set_current_and_active_tool(ToolConstants.NEW_SHAPE)
         else:
