@@ -1622,8 +1622,8 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         if self.current_tool == ToolConstants.VIEW:
-            # TODO: set our variable capturing pixel locations
-            pass
+            self.emit_coordinate_changed(event)
+            return
         elif self.current_tool in [ToolConstants.EDIT_SHAPE, ToolConstants.SELECT]:
             if not self.variables.shape_drawing.actively_drawing:
                 return
@@ -3551,6 +3551,18 @@ class ImageCanvas(basic_widgets.Canvas):
             self._set_current_and_active_tool(ToolConstants.EDIT_SHAPE)
 
     # custom event creation methods
+    def emit_coordinate_changed(self, event):
+        """
+        Emits the <<CoordinateChanged>> event. This passes through the x and y
+        canvas coordinates.
+
+        Parameters
+        ----------
+        event
+        """
+
+        self.event_generate('<<CoordinateChanged>>', x=event.x, y=event.y)
+
     def emit_shape_create(self, shape_id, shape_type):
         """
         Emit the <<ShapeCreate>> event. This will be emitted after the shape has been created.
