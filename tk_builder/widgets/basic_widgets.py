@@ -11,7 +11,7 @@ from typing import Callable
 import tkinter
 from tkinter import ttk
 
-from tk_builder.widgets.widget_utils.widget_events import WidgetEvents
+from tk_builder.widgets.widget_events import WidgetEvents
 
 
 ########

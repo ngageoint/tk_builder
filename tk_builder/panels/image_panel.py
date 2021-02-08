@@ -9,7 +9,7 @@ from tkinter.filedialog import asksaveasfilename
 import PIL.Image
 from typing import List
 
-from tk_builder.panel_builder import WidgetPanel
+from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
 from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ImageCanvas, ToolConstants, ShapeTypeConstants
 from tk_builder.image_reader import ImageReader
@@ -20,7 +20,7 @@ from sarpy.visualization import remap
 
 
 
-class Toolbar(WidgetPanel):
+class Toolbar(WidgetPanelNoLabel):
     tool_controls = (
         'tool_label', 'zoom_in', 'zoom_out', 'pan', 'select', 'view',
         'select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape')
@@ -88,7 +88,7 @@ class Toolbar(WidgetPanel):
         parent : ImagePanel
         """
 
-        WidgetPanel.__init__(self, parent)
+        WidgetPanelNoLabel.__init__(self, parent)
         self.init_w_rows()
 
 
@@ -111,6 +111,7 @@ class ImagePanel(WidgetPanel):
         self._image_save_directory = os.path.expanduser('~')
         self.canvas = ImageCanvas(self)
         self.toolbar = Toolbar(self)
+        self.toolbar.config(relief=tkinter.RIDGE)
         self._set_toolbar_callbacks()
 
         # set up callbacks - sync changes from image canvas

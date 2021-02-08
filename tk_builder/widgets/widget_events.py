@@ -86,8 +86,8 @@ class WidgetEvents(tkinter.Misc):
         """
 
         if platform.system() == "Darwin":
-            # self.event_binding('<Button-2>', callback, *args, **kwargs)
-            self.event_binding('<Button-3>', callback, *args, **kwargs)
+            self.event_binding('<Button-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<Button-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<Button-3>', callback, *args, **kwargs)
 
@@ -129,8 +129,8 @@ class WidgetEvents(tkinter.Misc):
         None
         """
         if platform.system() == "Darwin":
-            # self.event_binding('<Double-Button-2>', callback, *args, **kwargs)
-            self.event_binding('<Double-Button-3>', callback, *args, **kwargs)
+            self.event_binding('<Double-Button-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<Double-Button-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<Double-Button-3>', callback, *args, **kwargs)
 
@@ -172,8 +172,8 @@ class WidgetEvents(tkinter.Misc):
         None
         """
         if platform.system() == "Darwin":
-            # self.event_binding('<ButtonPress-2>', callback, *args, **kwargs)
-            self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)
+            self.event_binding('<ButtonPress-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)
 
@@ -216,8 +216,8 @@ class WidgetEvents(tkinter.Misc):
         """
 
         if platform.system() == "Darwin":
-            # self.event_binding('<ButtonRelease-2>', callback, *args, **kwargs)
-            self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)
+            self.event_binding('<ButtonRelease-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)
 
@@ -280,8 +280,8 @@ class WidgetEvents(tkinter.Misc):
         """
 
         if platform.system() == "Darwin":
-            # self.event_binding('<B2-Motion>', callback, *args, **kwargs)
-            self.event_binding('<B3-Motion>', callback, *args, **kwargs)
+            self.event_binding('<B2-Motion>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<B3-Motion>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<B3-Motion>', callback, *args, **kwargs)
 
