@@ -396,6 +396,7 @@ class CanvasImage(object):
         -------
         None
         """
+
         int_rect = (int(full_image_rect[0]), int(full_image_rect[1]), int(full_image_rect[2]), int(full_image_rect[3]))
         if decimation is None:
             self.set_decimation_from_full_image_rect(int_rect)
@@ -579,7 +580,7 @@ class CanvasImage(object):
         for i in range(siz):
             out.extend(
                 (float(full_image_yx[2*i+1] - self.canvas_full_image_upper_left_yx[1]) / decimation_factor,
-                 float(full_image_yx[2 * i] - self.canvas_full_image_upper_left_yx[0]) / decimation_factor))
+                 float(full_image_yx[2*i] - self.canvas_full_image_upper_left_yx[0]) / decimation_factor))
         return out
 
 
@@ -752,17 +753,14 @@ class CanvasState(object):
         'rect_border_width', default_value=2,
         docstring='The (margin) rectangular border width, in pixels.')  # type: int
     line_width = IntegerDescriptor(
-        'line_width', default_value=2,
+        'line_width', default_value=3,
         docstring='The line width, in pixels.')  # type: int
     point_size = IntegerDescriptor(
-        'point_size', default_value=3,
+        'point_size', default_value=5,
         docstring='The point size, in pixels.')  # type: int
     poly_border_width = IntegerDescriptor(
-        'poly_border_width', default_value=2,
+        'poly_border_width', default_value=3,
         docstring='The polygon border width, in pixels.')  # type: int
-    poly_fill = StringDescriptor(
-        'poly_fill',
-        docstring='The polygon fill color(named or hexidecimal string).')  # type: Union[None, str]
     foreground_color = StringDescriptor(
         'foreground_color', default_value='red',
         docstring='The foreground color (named or hexidecimal string).')  # type: str
@@ -1238,18 +1236,17 @@ class ImageCanvas(basic_widgets.Canvas):
 
         # the basics about the canvas object
         the_origin = self.variables.canvas_image_object.canvas_full_image_upper_left_yx
-        the_decimation = self.variables.canvas_image_object.decimation_factor
+        the_decimation = self.variables.canvas_image_object.decimation_factor/self.variables.canvas_image_object.display_rescaling_factor
         # the canvas size
         the_height = self.variables.canvas_image_object.canvas_ny
         the_width = self.variables.canvas_image_object.canvas_nx
 
         the_bounds = (
-            int(the_origin[0]),
-            int(the_origin[1]),
-            int(min(the_origin[0] + the_decimation*the_height, y_limit)),
-            int(min(the_origin[1] + the_decimation*the_width, x_limit))
-        )
-        return the_bounds, the_decimation
+            the_origin[0],
+            the_origin[1],
+            the_origin[0] + the_decimation*min(int(the_height), int((y_limit-the_origin[0])/float(the_decimation))),
+            the_origin[1] + the_decimation*min(int(the_width), int((x_limit-the_origin[1])/float(the_decimation))))
+        return the_bounds, self.variables.canvas_image_object.decimation_factor
 
     def get_vector_object(self, vector_id):
         """
@@ -1367,15 +1364,17 @@ class ImageCanvas(basic_widgets.Canvas):
         height : int
         """
 
-        if self.variables.canvas_image_object is None or \
-                self.variables.canvas_image_object.image_reader is None:
-            return  # nothing more to be done
-
         self.variables.state.canvas_width = width
         self.variables.state.canvas_height = height
-        if self.variables.canvas_image_object is not None:
-            self.variables.canvas_image_object.canvas_nx = width
-            self.variables.canvas_image_object.canvas_ny = height
+
+        if self.variables.canvas_image_object is None:
+            return
+
+        self.variables.canvas_image_object.canvas_nx = width
+        self.variables.canvas_image_object.canvas_ny = height
+
+        if self.variables.canvas_image_object.image_reader is None:
+            return  # nothing more to be done
 
         decimation = self.variables.canvas_image_object.decimation_factor
         the_height = height*decimation  # in image pixels
@@ -1879,6 +1878,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         # apply view to the new rectangle
         self.zoom_to_full_image_selection(new_image_bounds, decimation=decimation)  # ensure use of constant decimation
+        image_bounds, decimation = self.get_image_extent()
         # update the anchor point to the current point
         self.variables.shape_drawing.anchor_point_xy = event.x, event.y
         return
@@ -2052,8 +2052,8 @@ class ImageCanvas(basic_widgets.Canvas):
         zoom_ratio = zoom_height/float(zoom_width)
 
         # what is the aspect ratio of the canvas?
-        window_height = self.winfo_height()
-        window_width = self.winfo_width()
+        window_height = self.variables.canvas_image_object.canvas_ny
+        window_width = self.variables.canvas_image_object.canvas_nx
         window_ratio = window_height/float(window_width)
 
         # craft an image rectangle containing the input rectangle, of the same ratio as the window rectangle
