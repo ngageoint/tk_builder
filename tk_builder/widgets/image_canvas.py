@@ -963,6 +963,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._new_shape_type = ShapeTypeConstants.POLYGON
         self._current_tool = ToolConstants.VIEW
         self._active_tool = ToolConstants.VIEW
+        self._current_shape_id = None
 
         basic_widgets.Canvas.__init__(self, master, highlightthickness=0)
         self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
@@ -1057,6 +1058,45 @@ class ImageCanvas(basic_widgets.Canvas):
             self._new_shape_type = the_value
             self.emit_new_shape_type_changed()
 
+    @property
+    def current_shape_id(self):
+        """
+        None|int: The current shape id.
+        """
+
+        return self._current_shape_id
+
+    @current_shape_id.setter
+    def current_shape_id(self, shape_id):
+        """
+        Set the current shape id as appropriate. Emits signals, as required.
+
+        Parameters
+        ----------
+        shape_id : None|int
+        """
+
+        old_vector_obj = self.get_vector_object(self._current_shape_id)
+        new_vector_obj = self.get_vector_object(shape_id)
+        if old_vector_obj is None:
+            old_id = None
+            old_type = None
+        else:
+            old_id = old_vector_obj.uid
+            old_type = old_vector_obj.type
+
+
+        if (old_id is None and shape_id is None) or (old_id == shape_id):
+            return  # nothing to be done
+
+        self.lowlight_existing_shape(old_id)
+        self._current_shape_id = shape_id
+        self.highlight_existing_shape(shape_id)
+        self.emit_shape_deselect(old_id, old_type)
+        self.show_shape(shape_id)
+        if shape_id is not None:
+            self.emit_shape_select(shape_id, new_vector_obj.type)
+
     def activate_color_selector(self):
         """
         The activate color selector callback function.
@@ -1068,7 +1108,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         color = colorchooser.askcolor()[1]
         self.variables.state.foreground_color = color
-        self.change_shape_color(self.variables.current_shape_id, color)
+        self.change_shape_color(self._current_shape_id, color)
 
     def _increment_color(self):
         """
@@ -1234,7 +1274,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None|VectorObject
         """
 
-        return self.get_vector_object(self.variables.current_shape_id)
+        return self.get_vector_object(self._current_shape_id)
 
     def get_current_nontool_vector_object(self):
         """
@@ -1245,7 +1285,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None|VectorObject
         """
 
-        current_id = self.variables.current_shape_id
+        current_id = self._current_shape_id
         if current_id is None or current_id in self.get_tool_shape_ids():
             return None
         return self.get_vector_object(current_id)
@@ -1408,12 +1448,12 @@ class ImageCanvas(basic_widgets.Canvas):
             return
         elif self.current_tool == ToolConstants.PAN:
             self.modify_existing_shape_using_image_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
-            self.set_current_shape_id(self.variables.zoom_rect.uid)
+            self.current_shape_id = self.variables.zoom_rect.uid
             self.variables.shape_drawing.set_active(anchor_point_xy=(event.x, event.y))
             self.variables.shape_drawing.tmp_anchor_point_xy = (event.x, event.y)
             return
         elif self.active_tool == ToolConstants.SHIFT_SHAPE:
-            if self.variables.current_shape_id is None:
+            if self._current_shape_id is None:
                 self._select_closest_shape(event)
                 return
             self.variables.shape_drawing.tmp_anchor_point_xy = event.x, event.y
@@ -1453,10 +1493,10 @@ class ImageCanvas(basic_widgets.Canvas):
 
             self._set_current_and_active_tool(ToolConstants.EDIT_SHAPE)
         elif self.active_tool == ToolConstants.EDIT_SHAPE:
-            if self.variables.current_shape_id is None:
+            if self.current_shape_id is None:
                 closest_shape_id = self._select_closest_shape(event)
                 if closest_shape_id is not None:
-                    self.activate_shape_edit_mode(closest_shape_id)
+                    self.current_shape_id = closest_shape_id
                     coord_index, the_distance, coord_x, coord_y = self.find_closest_shape_coord(closest_shape_id, event.x, event.y)
                     self.variables.shape_drawing.set_active(insert_at_index=coord_index, anchor_point_xy=(coord_x, coord_y))
                     # TODO: we should somehow indicate this event?
@@ -1470,7 +1510,6 @@ class ImageCanvas(basic_widgets.Canvas):
             coord_index, the_distance, coord_x, coord_y = self.find_closest_shape_coord(vector_object.uid, event.x, event.y)
             if not self.variables.shape_drawing.actively_drawing:
                 self.variables.shape_drawing.set_active(insert_at_index=coord_index, anchor_point_xy=(coord_x, coord_y))
-                self.activate_shape_edit_mode(self.variables.current_shape_id)
                 return
             elif the_distance < self.variables.config.vertex_selector_pixel_threshold:
                 self.variables.shape_drawing.insert_at_index = coord_index
@@ -1515,7 +1554,7 @@ class ImageCanvas(basic_widgets.Canvas):
         elif active_tool == ToolConstants.PAN:
             self._pan(event)
         elif active_tool == ToolConstants.SHIFT_SHAPE:
-            shape_id = self.variables.current_shape_id
+            shape_id = self.current_shape_id
             anchor = self.variables.shape_drawing.tmp_anchor_point_xy
             x_dist = event.x - anchor[0]
             y_dist = event.y - anchor[1]
@@ -1544,9 +1583,9 @@ class ImageCanvas(basic_widgets.Canvas):
             self.modify_existing_shape_using_canvas_coords(shape_id, new_coords)
             self.variables.shape_drawing.tmp_anchor_point_xy = event.x, event.y
         elif active_tool == ToolConstants.EDIT_SHAPE:
-            previous_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+            previous_coords = self.get_shape_canvas_coords(self.current_shape_id)
             new_coords = self._modify_coords(previous_coords, event.x, event.y, insert=False)
-            self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords)
+            self.modify_existing_shape_using_canvas_coords(self.current_shape_id, new_coords)
 
     def callback_handle_left_mouse_release(self, event):
         """
@@ -1632,7 +1671,7 @@ class ImageCanvas(basic_widgets.Canvas):
                 return
             if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
                 the_point = numpy.array([event.x, event.y])
-                coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+                coords = self.get_shape_canvas_coords(self.current_shape_id)
                 the_coords = self._normalized_rectangle_coordinates(coords)
                 coords_diff = the_coords - the_point
                 dists = numpy.sum(coords_diff * coords_diff, axis=1)
@@ -1752,9 +1791,8 @@ class ImageCanvas(basic_widgets.Canvas):
                 return
 
             vector_object = self.get_current_vector_object()
-            if vector_object is None:
-                return
-            if vector_object.type in [ShapeTypeConstants.LINE or ShapeTypeConstants.POLYGON]:
+            if vector_object is not None and \
+                    vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.POLYGON]:
                 # delete the coordinate at the current insertion index
                 self._remove_current_coord()
 
@@ -1860,7 +1898,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self._pan(event, check_distance=False)
         self.variables.shape_drawing.set_inactive()
-        self.set_current_shape_id(None)
+        self.current_shape_id = None
         self.hide_shape(self.variables.zoom_rect.uid)  # this should never have been unhidden?
 
     def _select_closest_shape(self, event):
@@ -1880,7 +1918,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         closest_shape_id = self.find_closest_shape(event.x, event.y)
         if closest_shape_id is not None:
-            self.set_current_shape_id(closest_shape_id)
+            self.current_shape_id = closest_shape_id
         return closest_shape_id
 
     # image properties and manipulation
@@ -2273,7 +2311,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         the_point = numpy.array([canvas_x, canvas_y])
-        vector_object = self.get_vector_object(self.variables.current_shape_id)
+        vector_object = self.get_vector_object(self.current_shape_id)
         coords = self.get_shape_canvas_coords(shape_id)
         if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
             # we may have to reformat the shape for the selection to make sense
@@ -2293,13 +2331,13 @@ class ImageCanvas(basic_widgets.Canvas):
                 ll = the_coords[3, :].tolist()
 
                 if the_index == 0:  # upper left
-                    self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, ul+lr)
+                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ul+lr)
                 elif the_index == 1:  # upper right
-                    self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, ur+ll)
+                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ur+ll)
                 elif the_index == 2:  # lower right
-                    self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, ul+lr)
+                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ul+lr)
                 else:  # lower left
-                    self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, ll+ur)
+                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ll+ur)
                 coords = self.get_shape_canvas_coords(shape_id)
 
         the_coords = numpy.array(coords).reshape((-1, 2))
@@ -2398,29 +2436,6 @@ class ImageCanvas(basic_widgets.Canvas):
         if shape_id is None:
             return
         self.itemconfigure(shape_id, state="normal")
-
-    def activate_shape_edit_mode(self, shape_id=None):
-        """
-        Activate shape editing mode. If provided, the shape_id will be
-        set to the current shape. Otherwise, the current_shape_id will
-        be used.
-
-        Parameters
-        ----------
-        shape_id : None|int
-
-        Returns
-        -------
-        None
-        """
-
-        if shape_id is not None:
-            self.set_current_shape_id(shape_id)
-        else:
-            shape_id = self.variables.current_shape_id
-
-        if shape_id is None:
-            return
 
     def highlight_existing_shape(self, shape_id):
         """
@@ -2553,7 +2568,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, (event.x, event.y), update_pixel_coords=True)
+        self.modify_existing_shape_using_canvas_coords(self.current_shape_id, (event.x, event.y), update_pixel_coords=True)
 
     def _modify_coords(self, coords, event_x_pos, event_y_pos, insert=False):
         """
@@ -2572,7 +2587,7 @@ class ImageCanvas(basic_widgets.Canvas):
         List
         """
 
-        drag_lims = self.get_vector_object(self.variables.current_shape_id).image_drag_limits
+        drag_lims = self.get_vector_object(self.current_shape_id).image_drag_limits
         event_x_pos, event_y_pos = self._trim_to_drag_limits(event_x_pos, event_y_pos, drag_lims)
         if insert:
             if 2*self.variables.shape_drawing.insert_at_index == len(coords) - 2:
@@ -2603,7 +2618,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        shape_id = self.variables.current_shape_id
+        shape_id = self.current_shape_id
         if shape_id is None or not self.variables.shape_drawing.actively_drawing:
             return
 
@@ -2642,7 +2657,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
 
-        if self.variables.current_shape_id is None or \
+        if self.current_shape_id is None or \
                 not self.variables.shape_drawing.actively_drawing:
             return
 
@@ -2652,9 +2667,9 @@ class ImageCanvas(basic_widgets.Canvas):
             self.variables.shape_drawing.insert_at_index = 0
         event_x_pos = self.canvasx(event.x)
         event_y_pos = self.canvasy(event.y)
-        old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+        old_coords = self.get_shape_canvas_coords(self.current_shape_id)
         new_coords = self._modify_coords(old_coords, event_x_pos, event_y_pos, insert=False)
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
+        self.modify_existing_shape_using_canvas_coords(self.current_shape_id, new_coords, update_pixel_coords=True)
 
     def _update_line_event(self, event, insert=True):
         """
@@ -2671,15 +2686,14 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if self.variables.current_shape_id is None or \
-                not self.variables.shape_drawing.actively_drawing:
+        if self.current_shape_id is None or not self.variables.shape_drawing.actively_drawing:
             return
 
         event_x_pos = self.canvasx(event.x)
         event_y_pos = self.canvasy(event.y)
-        old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+        old_coords = self.get_shape_canvas_coords(self.current_shape_id)
         new_coords = self._modify_coords(old_coords, event_x_pos, event_y_pos, insert=insert)
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
+        self.modify_existing_shape_using_canvas_coords(self.current_shape_id, new_coords, update_pixel_coords=True)
 
     def _update_polygon_event(self, event, insert=True):
         """
@@ -2697,15 +2711,14 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if self.variables.current_shape_id is None or \
-                not self.variables.shape_drawing.actively_drawing:
+        if self.current_shape_id is None or not self.variables.shape_drawing.actively_drawing:
             return
 
         event_x_pos = self.canvasx(event.x)
         event_y_pos = self.canvasy(event.y)
-        old_coords = self.get_shape_canvas_coords(self.variables.current_shape_id)
+        old_coords = self.get_shape_canvas_coords(self.current_shape_id)
         new_coords = self._modify_coords(old_coords, event_x_pos, event_y_pos, insert=insert)
-        self.modify_existing_shape_using_canvas_coords(self.variables.current_shape_id, new_coords, update_pixel_coords=True)
+        self.modify_existing_shape_using_canvas_coords(self.current_shape_id, new_coords, update_pixel_coords=True)
         self.emit_shape_coords_finalized()
 
     def _drag_zoom_rectangle(self, event):
@@ -2801,41 +2814,10 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.track_shape(vector_object)
-        if make_current:
-            self.set_current_shape_id(vector_object.uid)
-
         if not is_tool:
             self.emit_shape_create(vector_object.uid, vector_object.type)
-
-    def set_current_shape_id(self, shape_id):
-        """
-        Set the current shape id as appropriate. Emits signals, as required.
-
-        Parameters
-        ----------
-        shape_id : None|int
-        """
-
-        old_vector_obj = self.get_vector_object(self.variables.current_shape_id)
-        new_vector_obj = self.get_vector_object(shape_id)
-        if old_vector_obj is None:
-            old_id = None
-            old_type = None
-        else:
-            old_id = old_vector_obj.uid
-            old_type = old_vector_obj.type
-
-
-        if (old_id is None and shape_id is None) or (old_id == shape_id):
-            return  # nothing to be done
-
-        self.lowlight_existing_shape(old_id)
-        self.variables.current_shape_id = shape_id
-        self.highlight_existing_shape(shape_id)
-        self.emit_shape_deselect(old_id, old_type)
-        self.show_shape(shape_id)
-        if shape_id is not None:
-            self.emit_shape_select(shape_id, new_vector_obj.type)
+        if make_current:
+            self.current_shape_id = vector_object.uid
 
     def delete_shape(self, shape_id):
         """
@@ -2862,8 +2844,8 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.shape_ids.remove(shape_id)
         del self.variables.vector_objects[shape_id]
         self.delete(shape_id)
-        if shape_id == self.variables.current_shape_id:
-            self.set_current_shape_id(None)
+        if shape_id == self.current_shape_id:
+            self.current_shape_id = None
         self.emit_shape_delete(shape_id, the_type)
 
     def create_new_point(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
@@ -2935,7 +2917,7 @@ class ImageCanvas(basic_widgets.Canvas):
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords, color=color)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
-            self.activate_shape_edit_mode(shape_id)
+            self.current_shape_id = shape_id
         if color is None and increment_color:
             self._increment_color()
         return shape_id
@@ -2972,7 +2954,7 @@ class ImageCanvas(basic_widgets.Canvas):
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
-            self.activate_shape_edit_mode(shape_id)
+            self.current_shape_id = shape_id
         if color is None and increment_color:
             self._increment_color()
         return shape_id
@@ -3009,7 +2991,7 @@ class ImageCanvas(basic_widgets.Canvas):
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
-            self.activate_shape_edit_mode(shape_id)
+            self.current_shape_id = shape_id
         if color is None and increment_color:
             self._increment_color()
         return shape_id
@@ -3047,7 +3029,7 @@ class ImageCanvas(basic_widgets.Canvas):
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
-            self.activate_shape_edit_mode(shape_id)
+            self.current_shape_id = shape_id
         if color is None and increment_color:
             self._increment_color()
         return shape_id
@@ -3087,7 +3069,7 @@ class ImageCanvas(basic_widgets.Canvas):
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
-            self.activate_shape_edit_mode(shape_id)
+            self.current_shape_id = shape_id
         if color is None and increment_color:
             self._increment_color()
         return shape_id
@@ -3127,7 +3109,7 @@ class ImageCanvas(basic_widgets.Canvas):
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
-            self.activate_shape_edit_mode(shape_id)
+            self.current_shape_id = shape_id
         if color is None and increment_color:
             self._increment_color()
         return shape_id
@@ -3337,7 +3319,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_shape_id(self.variables.zoom_rect.uid)
+        self.current_shape_id = self.variables.zoom_rect.uid
         self._set_current_and_active_tool(ToolConstants.ZOOM_IN)
 
     def set_current_tool_to_zoom_out(self):
@@ -3349,7 +3331,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_shape_id(self.variables.zoom_rect.uid)
+        self.current_shape_id = self.variables.zoom_rect.uid
         self._set_current_and_active_tool(ToolConstants.ZOOM_OUT)
 
     def set_current_tool_to_select(self):
@@ -3361,7 +3343,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_shape_id(self.variables.select_rect.uid)
+        self.current_shape_id = self.variables.select_rect.uid
         self.show_shape(self.variables.select_rect.uid)
         self._set_current_and_active_tool(ToolConstants.SELECT)
 
@@ -3374,7 +3356,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_shape_id(self.variables.zoom_rect.uid)
+        self.current_shape_id = self.variables.zoom_rect.uid
         self._set_current_and_active_tool(ToolConstants.PAN)
 
     def set_current_tool_to_select_closest_shape(self):
@@ -3397,7 +3379,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_shape_id(None)
+        self.current_shape_id = None
         self._set_current_and_active_tool(ToolConstants.SHIFT_SHAPE)
 
     def set_current_tool_to_new_shape(self, shape_type=None):
@@ -3415,7 +3397,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_shape_id(None)
+        self.current_shape_id = None
         if shape_type is not None:
             self.new_shape_type = shape_type
         self._set_current_and_active_tool(ToolConstants.NEW_SHAPE)
@@ -3526,7 +3508,8 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self._set_current_and_active_tool(ToolConstants.EDIT_SHAPE)
-        self.activate_shape_edit_mode(shape_id)
+        if shape_id is not None:
+            self.current_shape_id = shape_id
 
     def set_tool_to_new_or_edit_shape(self, shape_id=None):
         """
@@ -3542,13 +3525,12 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        self.set_current_shape_id(shape_id)
-        self.show_shape(shape_id)
         if shape_id is None:
+            self.current_shape_id = None
             self._set_current_and_active_tool(ToolConstants.NEW_SHAPE)
         else:
-            self.activate_shape_edit_mode(shape_id)
-            self._set_current_and_active_tool(ToolConstants.EDIT_SHAPE)
+            self.show_shape(shape_id)
+            self.set_current_tool_to_edit_shape(shape_id)
 
     # custom event creation methods
     def emit_coordinate_changed(self, event):

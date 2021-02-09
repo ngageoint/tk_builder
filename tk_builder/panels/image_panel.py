@@ -485,7 +485,7 @@ class ImagePanel(WidgetPanel):
         event
         """
 
-        if self.current_tool != self.the_tool:
+        if self.the_tool != self.current_tool:
             self.the_tool = self.current_tool
 
     def callback_set_shape(self):
