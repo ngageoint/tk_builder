@@ -2,41 +2,43 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
+from typing import List, Generator
 import numpy
-from typing import Union, List, Generator
 import tkinter
+from tkinter import ttk
+
 from tk_builder.widgets import basic_widgets
 
 
-class WidgetPanel(basic_widgets.LabelFrame):
+class _BaseWidgetPanel(object):
     """
-    This is the WidgetPanel class, which is used to create panels consisting of multiple widgets that can be
-    placed and nested within applications.  When building a panel a subclass of WidgetPanel should be created.
-    When creating the subclass definition the following variable should be set:
-    _widget_list
-    which should be a tuple of strings that define the widgets that will be incorporated into the panel.
-    Next, descriptors should created that correspond to the elements within _widget_list.  The descriptor definitions
-    are located in:
-    tk_builder.widgets.widget_descriptors
-    Each descriptor should have a variable name that matches a string within _widget_list.
-    The panel will be constructed by calling one of the following methods:
-    init_w_horizontal_layout
-    init_w_vertical_layout
-    init_w_rows
-    init_w_box_layout
-    init_w_basic_widget_list
+    This lays out the basic convenience building block for tool to allow simple
+    construction and packing of the tkinter elements. This is just a packing
+    convenience, and can be safely approached in other ways.
+
+    When creating the subclass definition the following CLASS variable should be
+    set `_widget_list` which should be a tuple of strings that define the widgets
+    that will be incorporated into the panel.
+
+    Next, descriptors should created that correspond to the elements within `_widget_list`.
+    The descriptor definitions are located in `tk_builder.widgets.widget_descriptors`.
+    Each descriptor should have a variable name that matches a string within `_widget_list`.
+
+    The panel will be packed by calling one of the following methods:
+      * `init_w_horizontal_layout`
+      * `init_w_vertical_layout`
+      * `init_w_rows`
+      * `init_w_box_layout`
+      * `init_w_basic_widget_list`
     """
 
     _widget_list = ()  # the list of names of the widget element variables
     padx = 5
     pady = 5
 
-    def __init__(self, parent):
-        self.parent = parent
-        basic_widgets.LabelFrame.__init__(self, parent)
-        self.config(borderwidth=2)
-
-        self._rows = None  # type: List[basic_widgets.Frame]
+    def __init__(self, master):
+        self.master = master
+        self._rows = []  # type: List[basic_widgets.Frame]
 
     def _widget_objects(self, subtype_filter=None):
         """
@@ -55,9 +57,6 @@ class WidgetPanel(basic_widgets.LabelFrame):
             widget = getattr(self, widget_name)
             if subtype_filter is None or isinstance(widget, subtype_filter):
                 yield widget
-
-    def close_window(self):
-        self.parent.withdraw()
 
     def init_w_horizontal_layout(self):
         """
@@ -95,13 +94,15 @@ class WidgetPanel(basic_widgets.LabelFrame):
             for widget in widget_list:
                 flattened_list.append(widget)
         self._widget_list = tuple(flattened_list)
-        self.init_w_basic_widget_list(len(self._widget_list), widgets_per_row)
+        self.init_w_basic_widget_list(len(widgets_per_row), widgets_per_row)
 
     def init_w_box_layout(self, n_columns, column_widths=None, row_heights=None):
         """
         Create the layout of the panel with a box layout defined by a certain number
         of columns. It is assumed that elements of `_widget_list` are defined
         sequentially, and the layout is defined across columns first.
+
+        NOTE! This will fail if `_widget_list` is not a flat list.
 
         For example, suppose `_widget_list = ("one", "two", "three", "four", "five" "six")`.
         Initializing with `init_w_box_layout`, the layout will be 3 rows of 2 columns each.
@@ -145,10 +146,18 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
             if row_heights is not None:
                 if isinstance(row_heights, int):
-                    getattr(self, widget).config(height=row_heights)
+                    # noinspection PyBroadException
+                    try:
+                        getattr(self, widget).config(height=row_heights)
+                    except:
+                        pass  # some widgets don't have a height
                 else:
                     row_height = row_heights[row_num]
-                    getattr(self, widget).config(height=row_height)
+                    # noinspection PyBroadException
+                    try:
+                        getattr(self, widget).config(height=row_height)
+                    except:
+                        pass
 
     def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
         """
@@ -169,6 +178,11 @@ class WidgetPanel(basic_widgets.LabelFrame):
         None
         """
 
+        if n_rows != len(n_widgets_per_row_list):
+            raise ValueError(
+                'Argument mismatch for class {}. The number of rows must match the '
+                'length of the provided list.'.format(self.__class__))
+
         self._rows = [basic_widgets.Frame(self) for _ in range(n_rows)]
         for row in self._rows:
             row.config(borderwidth=2)
@@ -180,9 +194,11 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
         for i, widget_name in enumerate(self._widget_list):
             widget_descriptor = getattr(self.__class__, widget_name, None)
+
             if widget_descriptor is None:
                 raise ValueError(
-                    'widget class {} has no widget named {}'.format(
+                    'widget class {} has no widget descriptor named {}. The tk_builder init...() '
+                    'methods cannot be used for initialization without the descriptor pattern.'.format(
                         self.__class__.__name__, widget_name))
 
             if widget_name != widget_descriptor.name:
@@ -211,48 +227,6 @@ class WidgetPanel(basic_widgets.LabelFrame):
             setattr(self, widget_name, widget)
         self.pack(fill=tkinter.BOTH, expand=tkinter.YES)
 
-    def set_text_formatting(self, formatting_list):
-        pass
-
-    def set_spacing_between_buttons(self, spacing_npix_x=0, spacing_npix_y=None):
-        if spacing_npix_y is None:
-            spacing_npix_y = spacing_npix_x
-        for widget in self._widget_objects():
-            widget.pack(
-                side="left",
-                padx=spacing_npix_x,
-                pady=spacing_npix_y,
-                fill=tkinter.BOTH,
-                expand=tkinter.YES)
-
-    def unpress_all_buttons(self):
-        """
-        Restores the state of all buttons in a panel to be raised.  Can be used
-        if some buttons are configured to look depressed based on some previous
-        actions within the application.
-        """
-
-        for widget in self._widget_objects(subtype_filter=basic_widgets.Button):
-            widget.config(relief="raised")
-
-    def press_all_buttons(self):
-        """
-        Makes all buttons within a panel appear to be pressed.
-        """
-
-        for widget in self._widget_objects(subtype_filter=basic_widgets.Button):
-            widget.config(relief="sunken")
-
-    def enable_all_buttons(self):
-        """
-        Enables all buttons in a panel.  This is useful if some buttons have been
-        disabled at some point during the runtime of an application and for some
-        action all buttons within a panel should be restored to being enabled.
-        """
-
-        for widget in self._widget_objects(subtype_filter=basic_widgets.Button):
-            widget.config(state="normal")
-
     def disable_all_widgets(self):
         """
         Disables all widgets. This may be an appropriate first step in an
@@ -261,6 +235,12 @@ class WidgetPanel(basic_widgets.LabelFrame):
 
         for widget in self._widget_objects():
             widget.config(state="disabled")
+            # noinspection PyBroadException
+            try:
+                widget.config(state="disabled")
+            except:
+                if isinstance(widget, ttk.Widget):
+                    widget.state(['disabled'])
 
     def enable_all_widgets(self):
         """
@@ -268,28 +248,42 @@ class WidgetPanel(basic_widgets.LabelFrame):
         """
 
         for widget in self._widget_objects():
-            widget.config(state="normal")
+            # noinspection PyBroadException
+            try:
+                widget.config(state="normal")
+            except:
+                if isinstance(widget, ttk.Widget):
+                    widget.state(['!disabled'])
 
-    def set_active_button(self, button):
-        self.unpress_all_buttons()
-        self.enable_all_buttons()
-        button.config(state="disabled")
-        button.config(relief="sunken")
+    def forget_row(self, row_value):
+        if row_value < 0 or row_value >= len(self._rows):
+            return
+        self._rows[row_value].pack_forget()
 
-    def do_not_expand(self):
-        self.parent.pack(expand=tkinter.NO)
+    def pack_row(self, row_value):
+        if row_value < 0 or row_value >= len(self._rows):
+            return
+        self._rows[row_value].pack()
 
-    def fill_x(self, value):
-        if value is True:
-            self.parent.pack(fill=tkinter.X)
-        else:
-            self.parent.pack(fill=tkinter.NONE)
 
-    def fill_y(self, value):
-        if value is True:
-            self.parent.pack(fill=tkinter.Y)
-        else:
-            self.parent.pack(fill=tkinter.NONE)
+class WidgetPanel(basic_widgets.LabelFrame, _BaseWidgetPanel):
+    def __init__(self, master):
+        _BaseWidgetPanel.__init__(self, master)
+        basic_widgets.LabelFrame.__init__(self, master)
+        self.config(borderwidth=2)
+
+    def close_window(self):
+        self.master.withdraw()
+
+
+class WidgetPanelNoLabel(basic_widgets.Frame, _BaseWidgetPanel):
+    def __init__(self, master):
+        _BaseWidgetPanel.__init__(self, master)
+        basic_widgets.Frame.__init__(self, master)
+        self.config(borderwidth=2)
+
+    def close_window(self):
+        self.master.withdraw()
 
 
 class RadioButtonPanel(WidgetPanel):
@@ -299,9 +293,9 @@ class RadioButtonPanel(WidgetPanel):
     custom panel of radiobuttons.
     """
 
-    def __init__(self, parent):
+    def __init__(self, master):
         self._selection_dict = {}
-        WidgetPanel.__init__(self, parent)
+        WidgetPanel.__init__(self, master)
         self._selected_value = tkinter.IntVar()
 
     def init_w_vertical_layout(self):

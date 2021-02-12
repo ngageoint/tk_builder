@@ -1,3 +1,9 @@
+# TODO: revamp or eliminate this module...
+
+__classification__ = "UNCLASSIFIED"
+__author__ = "Jason Casey"
+
+
 import logging
 try:
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -8,24 +14,67 @@ except ImportError:
                   'will be functional.')
     FigureCanvasTkAgg = None
 
+import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import time
+import math
 import numpy
 
-from tk_builder.widgets import basic_widgets
-from tk_builder.panels.pyplot_panel_utils.plot_style_utils import PlotStyleUtils
 from tk_builder.panel_builder import WidgetPanel
-from tk_builder.widgets import widget_descriptors
+from tk_builder.utils.color_utils.hex_color_palettes import SeabornPaletteNames, \
+    SeabornHexPalettes
+import tk_builder.utils.color_utils.color_converter as color_converter
+from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.pyplot_canvas import PyplotCanvas
-
-__classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
 
 
 SCALE_Y_AXIS_PER_FRAME_TRUE = "scale y axis per frame"
 SCALE_Y_AXIS_PER_FRAME_FALSE = "don't scale y axis per frame"
 
-PYPLOT_UTILS = PlotStyleUtils()
+
+class PlotStyleUtils(object):
+    def __init__(self):
+        self.n_color_bins = 3
+        self.rgb_array_fixed_bin_palette = None           # type: [[float]]
+        self.rgb_array_full_palette = None          # type: [[float]]
+        self.set_palette_by_name(SeabornPaletteNames.muted)
+        self.linewidths = 0.5
+        self.linestyle = 'solid'
+
+    def set_palette_by_name(self, palette_name):
+        hex_palette = SeabornHexPalettes.get_palette_by_name(palette_name)
+        rgb_palette = color_converter.hex_list_to_rgb_list(hex_palette)
+        self.rgb_array_fixed_bin_palette = rgb_palette
+        full_palette = self.get_full_rgb_palette(rgb_palette, self.n_color_bins)
+        self.rgb_array_full_palette = full_palette
+
+    def set_n_colors(self, n_colors):
+        self.n_color_bins = n_colors
+        full_palette = self.get_full_rgb_palette(self.rgb_array_fixed_bin_palette, n_colors)
+        self.rgb_array_full_palette = full_palette
+
+    @staticmethod
+    def get_full_rgb_palette(rgb_palette, n_colors=None):
+        if n_colors is None:
+            n_colors = len(rgb_palette)
+        color_array = []
+        n_color_bins = len(rgb_palette)
+        indices = numpy.linspace(0, n_colors, n_colors)
+        for i in indices:
+            index = i / n_colors * (n_color_bins-1)
+            low = int(index)
+            high = int(math.ceil(index))
+            interp_float = index - low
+            color_array.append(list(numpy.array(rgb_palette[low]) * (1 - interp_float) + numpy.array(rgb_palette[high]) * interp_float))
+        return color_array
+
+    @staticmethod
+    def get_available_matplotlib_styles():
+        return ['default', 'classic'] + sorted(style for style in plt.style.available if style != 'classic')
+
+    @staticmethod
+    def get_all_palettes_list():
+        return SeabornPaletteNames.get_seaborn_palette_names_list()
 
 
 class PyplotControlPanel(WidgetPanel):
@@ -52,7 +101,7 @@ class PyplotControlPanel(WidgetPanel):
         WidgetPanel.__init__(self, parent)
 
         self.init_w_basic_widget_list(4, [4, 1, 1, 3])
-        self.color_palette.update_combobox_values(PYPLOT_UTILS.get_all_palettes_list())
+        self.color_palette.update_combobox_values(SeabornPaletteNames.get_seaborn_palette_names_list())
         self.n_colors.config(from_=0)
         self.n_colors.config(to=10)
         self.scale.set(0)
@@ -94,7 +143,6 @@ class PyplotPanel(WidgetPanel):
 
     def __init__(self, primary):
         WidgetPanel.__init__(self, primary)
-
         self.variables = AppVariables()
         self.pyplot_utils = PlotStyleUtils()
         self.init_w_vertical_layout()

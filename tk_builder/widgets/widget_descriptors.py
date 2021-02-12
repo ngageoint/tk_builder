@@ -183,19 +183,6 @@ class CheckButtonDescriptor(BaseWidgetDescriptor):
                                                     docstring=docstring)
 
 
-class AxesImageCanvasDescriptor(BaseWidgetDescriptor):
-    """
-    A descriptor for a image canvas with axes type.
-    """
-
-    def __init__(self, name, default_text=None, docstring=None):
-        from tk_builder.widgets.axes_image_canvas import AxesImageCanvas
-        super(AxesImageCanvasDescriptor, self).__init__(name,
-                                                        AxesImageCanvas,
-                                                        default_text=default_text,
-                                                        docstring=docstring)
-
-
 class ImagePanelDescriptor(BaseWidgetDescriptor):
     def __init__(self, name, default_text=None, docstring=None):
         from tk_builder.panels.image_panel import ImagePanel
@@ -263,16 +250,3 @@ class TreeviewDescriptor(BaseWidgetDescriptor):
                                                  basic_widgets.Treeview,
                                                  default_text=default_text,
                                                  docstring=docstring)
-
-
-class FileSelectorDescriptor(BaseWidgetDescriptor):
-    """
-    A descriptor for a tree FileSelector type.
-    """
-
-    def __init__(self, name, default_text=None, docstring=None):
-        from tk_builder.panels.file_selector import FileSelector
-        super(FileSelectorDescriptor, self).__init__(name,
-                                                     FileSelector,
-                                                     default_text=default_text,
-                                                     docstring=docstring)

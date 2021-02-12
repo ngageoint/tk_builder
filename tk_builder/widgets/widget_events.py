@@ -1,3 +1,11 @@
+"""
+Basically defining an interface for convenience of binding GUI events using a clear
+common naming scheme.
+
+Note that most widgets only emit a limited number of events, so this permits nonsensical
+binding for events that never happen, but is completely harmless.
+"""
+
 import platform
 import tkinter
 
@@ -5,15 +13,11 @@ __classification__ = "UNCLASSIFIED"
 __author__ = "Jason Casey"
 
 
-
 class WidgetEvents(tkinter.Misc):
     """
     A base class intended for simplifying the association of callback functions with
     the possible GUI events.
     """
-
-    def __init__(self):
-        pass
 
     def event_binding(self, event_string, callback, *args, **kwargs):
         """
@@ -82,7 +86,8 @@ class WidgetEvents(tkinter.Misc):
         """
 
         if platform.system() == "Darwin":
-            self.event_binding('<Button-2>', callback, *args, **kwargs)
+            self.event_binding('<Button-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<Button-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<Button-3>', callback, *args, **kwargs)
 
@@ -124,7 +129,8 @@ class WidgetEvents(tkinter.Misc):
         None
         """
         if platform.system() == "Darwin":
-            self.event_binding('<Double-Button-2>', callback, *args, **kwargs)
+            self.event_binding('<Double-Button-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<Double-Button-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<Double-Button-3>', callback, *args, **kwargs)
 
@@ -166,7 +172,8 @@ class WidgetEvents(tkinter.Misc):
         None
         """
         if platform.system() == "Darwin":
-            self.event_binding('<ButtonPress-2>', callback, *args, **kwargs)
+            self.event_binding('<ButtonPress-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)
 
@@ -209,7 +216,8 @@ class WidgetEvents(tkinter.Misc):
         """
 
         if platform.system() == "Darwin":
-            self.event_binding('<ButtonRelease-2>', callback, *args, **kwargs)
+            self.event_binding('<ButtonRelease-2>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<ButtonRelease-3>', callback, *args, **kwargs)
 
@@ -272,7 +280,8 @@ class WidgetEvents(tkinter.Misc):
         """
 
         if platform.system() == "Darwin":
-            self.event_binding('<B2-Motion>', callback, *args, **kwargs)
+            self.event_binding('<B2-Motion>', callback, *args, **kwargs)  # if using a mac mouse
+            self.event_binding('<B3-Motion>', callback, *args, **kwargs)  # if using a different mouse
         else:
             self.event_binding('<B3-Motion>', callback, *args, **kwargs)
 
