@@ -27,8 +27,10 @@ from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.widgets import basic_widgets
 
 from sarpy.compliance import string_types
+from sarpy.io.general.base import BaseReader
 from sarpy.geometry.geometry_elements import GeometryObject, LinearRing, LineString, Point
 import sarpy.visualization.remap as remap
+
 
 #######
 # shape drawing explanations
@@ -1161,6 +1163,28 @@ class ImageCanvas(basic_widgets.Canvas):
         self.variables.canvas_image_object.image_reader.set_remap_type(self.variables.remap_function)
         # update the canvas elements
         self._reinitialize_reader()
+
+    def get_image_reader(self):
+        """
+        Gets the underlying image reader.
+
+        Returns
+        -------
+        None|ImageReader
+        """
+
+        return self.variables.canvas_image_object.image_reader
+
+    def get_base_reader(self):
+        """
+        Gets the base reader underlying image reader.
+
+        Returns
+        -------
+        None|BaseReader
+        """
+
+        return getattr(self.variables.canvas_image_object.image_reader, 'base_reader', None)
 
     def set_image_index(self, the_value):
         """

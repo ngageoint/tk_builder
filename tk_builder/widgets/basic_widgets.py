@@ -56,6 +56,8 @@ class Entry(tkinter.Entry, WidgetEvents):
         self._text_variable = kwargs.get('textvariable', tkinter.StringVar())
         kwargs['textvariable'] = self._text_variable
         tkinter.Entry.__init__(self, master=master, **kwargs)
+        if 'text' in kwargs:
+            self.set_text(kwargs['text'])
 
     def set_text(self, text):
         self._text_variable.set(text)
