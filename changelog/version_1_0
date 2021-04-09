@@ -1,6 +1,7 @@
 # This details the important differences introduced in tk_builder 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .8 - Adding a object for handling logging to a Text Widget
 * .7 - Significant refactoring of most functionality for ease and clarity
 * .6 - Clarification of implementations for image reader class structure
 * .5 - Clarification of a implementations for a variety of classes
