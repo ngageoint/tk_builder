@@ -44,7 +44,9 @@ class TextHandler(logging.Handler):
         Clear the text widget.
         """
 
+        self.text.configure(state='normal')
         self.text.delete('1.0', 'end')
+        self.text.configure(state='disabled')
 
     def get_value(self):
         """
