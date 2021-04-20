@@ -1464,10 +1464,7 @@ class ImageCanvas(basic_widgets.Canvas):
         elif self.active_tool == ToolConstants.SELECT:
             self.modify_existing_shape_using_canvas_coords(self.variables.select_rect.uid, (event.x, event.y, event.x, event.y))
             anchor = (event.x, event.y)
-            self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=anchor)
-            self.variables.shape_drawing.tmp_anchor_point_xy = anchor
-            self.show_shape(self.variables.select_rect.uid)
-            self.active_tool = ToolConstants.EDIT_SHAPE
+            self.set_select_initial_state(anchor)
             return
         elif self.current_tool == ToolConstants.PAN:
             self.modify_existing_shape_using_image_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
@@ -3555,6 +3552,20 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             self.show_shape(shape_id)
             self.set_current_tool_to_edit_shape(shape_id)
+
+    def set_select_initial_state(self, anchor):
+        """
+        Set the initial state for select too for the given anchor point.
+
+        Parameters
+        ----------
+        anchor : tuple
+        """
+
+        self.variables.shape_drawing.set_active(insert_at_index=1, anchor_point_xy=anchor)
+        self.variables.shape_drawing.tmp_anchor_point_xy = anchor
+        self.show_shape(self.variables.select_rect.uid)
+        self.active_tool = ToolConstants.EDIT_SHAPE
 
     # custom event creation methods
     def emit_coordinate_changed(self, event):
