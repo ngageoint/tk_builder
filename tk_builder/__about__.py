@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2020 National Geospatial-Intelligence Agency
+# Copyright (c) 2020-2021 National Geospatial-Intelligence Agency
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ __all__ = ['__version__',
            '__license__', '__copyright__']
 
 
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 
 
 __classification__ = "UNCLASSIFIED"  # This should be set appropriately in any high-side version
