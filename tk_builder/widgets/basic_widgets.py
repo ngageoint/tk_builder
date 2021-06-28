@@ -26,6 +26,7 @@ class Canvas(tkinter.Canvas, WidgetEvents):
     def __init__(self, master=None, **kwargs):
         tkinter.Canvas.__init__(self, master=master, **kwargs)
 
+
 #########
 # The basic tkinter widget, where we can use the ttk version
 
@@ -115,11 +116,12 @@ class Scrollbar(ttk.Scrollbar, WidgetEvents):
         ttk.Scrollbar.__init__(self, master=master, **kwargs)
 
 
-class Spinbox(ttk.Spinbox, WidgetEvents):
+class Spinbox(tkinter.Spinbox, WidgetEvents):
+    # NB: ttk.Spinbox is broken in Python 3.6, so use "non themed" tkinter version
     def __init__(self, master=None, **kwargs):
         self._text_variable = kwargs.get('textvariable', tkinter.StringVar())
         kwargs['textvariable'] = self._text_variable
-        ttk.Spinbox.__init__(self, master=master, **kwargs)
+        tkinter.Spinbox.__init__(self, master=master, **kwargs)
 
     def set_text(self, text):
         self._text_variable.set(text)
