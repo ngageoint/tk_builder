@@ -307,7 +307,7 @@ class RadioButtonPanel(WidgetPanel):
         self._setup_radiobuttons()
 
     def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
-        super().init_w_basic_widget_list(n_rows, n_widgets_per_row_list)
+        WidgetPanel.init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list)
         self._setup_radiobuttons()
 
     def init_w_box_layout(self, n_columns, column_widths=None,  row_heights=None):

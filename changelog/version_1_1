@@ -1,0 +1,4 @@
+# This details the important differences introduced in tk_builder 1.0
+# NB: bump the version number in __about__.py to reflect the below.
+
+* .0 - Architecture changes to make tool handling more stable, clear, and extensible

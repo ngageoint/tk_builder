@@ -10,6 +10,7 @@ from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants, ShapeTypeConstants
 from tk_builder.widgets.basic_widgets import Button
 
+# TODO: review this example
 
 class Buttons(WidgetPanel):
     _widget_list = (

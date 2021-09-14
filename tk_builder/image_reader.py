@@ -96,6 +96,10 @@ class ImageReader(object):
 
         raise NotImplementedError
 
+    @index.setter
+    def index(self, value):
+        raise NotImplementedError
+
     def __getitem__(self, item):
         """
         This is expected to accompany a basic two element slice, with bounds

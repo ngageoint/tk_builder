@@ -7,6 +7,9 @@ from tk_builder.widgets import widget_descriptors
 from tk_builder.panel_builder import RadioButtonPanel
 
 
+# TODO: review this, there's nothing worse that bad or non-functional examples
+
+
 class RadioPanel(RadioButtonPanel):
     _widget_list = ("button_1", "button_2", "button_3", )
     button_1 = widget_descriptors.RadioButtonDescriptor("button_1")  # type: basic_widgets.RadioButton

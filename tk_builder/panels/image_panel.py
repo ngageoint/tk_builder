@@ -6,16 +6,19 @@ __author__ = ("Jason Casey", "Thomas McCullough")
 import os
 import tkinter
 from tkinter.filedialog import asksaveasfilename
+from tkinter.messagebox import askokcancel
 import PIL.Image
 from typing import List
 
 from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
 from tk_builder.widgets import basic_widgets, widget_descriptors
-from tk_builder.widgets.image_canvas import ImageCanvas, ToolConstants, ShapeTypeConstants
+from tk_builder.widgets.image_canvas import ImageCanvas
+from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
+    ShapeTypeConstants, get_tool_enum
 from tk_builder.image_reader import ImageReader
 from tk_builder import file_filters
 
-from sarpy.compliance import string_types
+from sarpy.compliance import string_types, integer_types
 from sarpy.visualization import remap
 
 
@@ -106,7 +109,7 @@ class ImagePanel(WidgetPanel):
     def __init__(self, parent):
         self.parent = parent
         WidgetPanel.__init__(self, parent)
-        self._the_tool = tkinter.IntVar(self, value=ToolConstants.VIEW)
+        self._the_tool = tkinter.IntVar(self, value=get_tool_enum('VIEW'))
         self._the_shape = tkinter.IntVar(self, value=ShapeTypeConstants.POLYGON)
         self._image_save_directory = os.path.expanduser('~')
         self.canvas = ImageCanvas(self)
@@ -131,23 +134,40 @@ class ImagePanel(WidgetPanel):
 
     def _set_toolbar_callbacks(self):
         # set the toolbar tool callbacks
-        self.toolbar.zoom_in.config(variable=self._the_tool, value=ToolConstants.ZOOM_IN, command=self.callback_set_tool)
-        self.toolbar.zoom_out.config(variable=self._the_tool, value=ToolConstants.ZOOM_OUT, command=self.callback_set_tool)
-        self.toolbar.pan.config(variable=self._the_tool, value=ToolConstants.PAN, command=self.callback_set_tool)
-        self.toolbar.select.config(variable=self._the_tool, value=ToolConstants.SELECT, command=self.callback_set_tool)
-        self.toolbar.view.config(variable=self._the_tool, value=ToolConstants.VIEW, command=self.callback_set_tool)
-        self.toolbar.select_closest_shape.config(variable=self._the_tool, value=ToolConstants.SELECT_CLOSEST_SHAPE, command=self.callback_set_tool)
-        self.toolbar.edit_shape.config(variable=self._the_tool, value=ToolConstants.EDIT_SHAPE, command=self.callback_set_tool)
-        self.toolbar.shift_shape.config(variable=self._the_tool, value=ToolConstants.SHIFT_SHAPE, command=self.callback_set_tool)
-        self.toolbar.new_shape.config(variable=self._the_tool, value=ToolConstants.NEW_SHAPE, command=self.callback_set_tool)
+        self.toolbar.zoom_in.config(
+            variable=self._the_tool, value=get_tool_enum('ZOOM_IN'), command=self.callback_set_tool)
+        self.toolbar.zoom_out.config(
+            variable=self._the_tool, value=get_tool_enum('ZOOM_OUT'), command=self.callback_set_tool)
+        self.toolbar.pan.config(
+            variable=self._the_tool, value=get_tool_enum('PAN'), command=self.callback_set_tool)
+        self.toolbar.select.config(
+            variable=self._the_tool, value=get_tool_enum('SELECT'), command=self.callback_set_tool)
+        self.toolbar.view.config(
+            variable=self._the_tool, value=get_tool_enum('VIEW'), command=self.callback_set_tool)
+        self.toolbar.select_closest_shape.config(
+            variable=self._the_tool, value=get_tool_enum('SHAPE_SELECT'), command=self.callback_set_tool)
+        self.toolbar.edit_shape.config(
+            variable=self._the_tool, value=get_tool_enum('EDIT_SHAPE'), command=self.callback_set_tool)
+        self.toolbar.shift_shape.config(
+            variable=self._the_tool, value=get_tool_enum('SHIFT_SHAPE'), command=self.callback_set_tool)
+        self.toolbar.new_shape.config(
+            variable=self._the_tool, value=get_tool_enum('NEW_SHAPE'), command=self.callback_set_tool)
+
         # set the toolbar shape callbacks
-        self.toolbar.point.config(variable=self._the_shape, value=ShapeTypeConstants.POINT, command=self.callback_set_shape)
-        self.toolbar.line.config(variable=self._the_shape, value=ShapeTypeConstants.LINE, command=self.callback_set_shape)
-        self.toolbar.arrow.config(variable=self._the_shape, value=ShapeTypeConstants.ARROW, command=self.callback_set_shape)
-        self.toolbar.rect.config(variable=self._the_shape, value=ShapeTypeConstants.RECT, command=self.callback_set_shape)
-        self.toolbar.ellipse.config(variable=self._the_shape, value=ShapeTypeConstants.ELLIPSE, command=self.callback_set_shape)
-        self.toolbar.polygon.config(variable=self._the_shape, value=ShapeTypeConstants.POLYGON, command=self.callback_set_shape)
-        self.toolbar.text.config(variable=self._the_shape, value=ShapeTypeConstants.TEXT, command=self.callback_set_shape)
+        self.toolbar.point.config(
+            variable=self._the_shape, value=ShapeTypeConstants.POINT, command=self.callback_set_shape)
+        self.toolbar.line.config(
+            variable=self._the_shape, value=ShapeTypeConstants.LINE, command=self.callback_set_shape)
+        self.toolbar.arrow.config(
+            variable=self._the_shape, value=ShapeTypeConstants.ARROW, command=self.callback_set_shape)
+        self.toolbar.rect.config(
+            variable=self._the_shape, value=ShapeTypeConstants.RECT, command=self.callback_set_shape)
+        self.toolbar.ellipse.config(
+            variable=self._the_shape, value=ShapeTypeConstants.ELLIPSE, command=self.callback_set_shape)
+        self.toolbar.polygon.config(
+            variable=self._the_shape, value=ShapeTypeConstants.POLYGON, command=self.callback_set_shape)
+        self.toolbar.text.config(
+            variable=self._the_shape, value=ShapeTypeConstants.TEXT, command=self.callback_set_shape)
         # set the save callbacks
         self.toolbar.save_canvas.config(command=self.callback_save_canvas)
         self.toolbar.save_image.config(command=self.callback_save_image)
@@ -161,10 +181,12 @@ class ImagePanel(WidgetPanel):
 
     @the_tool.setter
     def the_tool(self, value):
-        the_value = ToolConstants.validate(value)
-        if the_value is None:
+        if isinstance(value, integer_types):
+            self._the_tool.set(value)
+        elif isinstance(value, string_types):
+            self._the_tool.set(get_tool_enum(value))
+        else:
             raise ValueError('Unhandled tool value {}'.format(value))
-        self._the_tool.set(the_value)
 
     @property
     def the_shape(self):
@@ -179,8 +201,9 @@ class ImagePanel(WidgetPanel):
 
     @property
     def current_tool(self):
+        # type: () -> ImageCanvasTool
         """
-        int: The current tool
+        ImageCanvasTool: The current tool
         """
 
         return self.canvas.current_tool
@@ -188,8 +211,7 @@ class ImagePanel(WidgetPanel):
     @current_tool.setter
     def current_tool(self, value):
         """
-        Sets the image canvas current tool. This should be in keeping with the ToolConstants
-        class in "image_canvas.py".
+        Sets the image canvas current tool.
 
         Parameters
         ----------
@@ -200,7 +222,18 @@ class ImagePanel(WidgetPanel):
         None
         """
 
-        self.canvas.set_tool(value)
+        if isinstance(value, integer_types) or isinstance(value, string_types):
+            self.canvas.current_tool = value
+        else:
+            raise TypeError('Expected an integer or string value')
+
+    @property
+    def current_tool_enum(self):
+        """
+        int: The enum value for the current tool.
+        """
+
+        return self.canvas.variables.get_tool_enum(self.canvas.current_tool)
 
     def set_min_canvas_size(self, x, y):
         """
@@ -436,7 +469,10 @@ class ImagePanel(WidgetPanel):
         for name in self.toolbar.tool_controls[1:]:
             getattr(self.toolbar, name).state(['!disabled'])
 
+    ###########
     # callbacks
+
+    # noinspection PyUnusedLocal
     def callback_select_index(self, event):
         """
         Handles setting the image index.
@@ -472,7 +508,7 @@ class ImagePanel(WidgetPanel):
         """
 
         # NB: this is bound by the toolbar itself.
-        if self.current_tool != self.the_tool:
+        if self.current_tool_enum != self.the_tool:
             self.current_tool = self.the_tool
 
     # noinspection PyUnusedLocal
@@ -485,8 +521,8 @@ class ImagePanel(WidgetPanel):
         event
         """
 
-        if self.the_tool != self.current_tool:
-            self.the_tool = self.current_tool
+        if self.the_tool != self.current_tool_enum:
+            self.the_tool = self.current_tool_enum
 
     def callback_set_shape(self):
         """
@@ -512,22 +548,33 @@ class ImagePanel(WidgetPanel):
 
     def callback_save_canvas(self):
         """
-        Saves the image canvas as a png image.  This will save the entire canvas,
-        including axes labels and titles.
+        Saves the image canvas as a postscript (.ps) file.  This will save the entire
+        canvas, including axes labels and titles.
+
+        Note that postscript is an older vector format which can be processed in a
+        variety of ways using the ghostscript application.
         """
 
+        ps_filter = file_filters.create_filter_entry('postscript', '.ps')
         save_fname = asksaveasfilename(
             initialdir=self._image_save_directory,
-            title="Select output image file",
-            filetypes=file_filters.basic_image_collection)
+            title="Select output postscript file",
+            filetypes=ps_filter)
 
         if save_fname in ['', ()]:
             return
-        if os.path.splitext(save_fname)[1] == '':
-            save_fname += '.png'
+        save_fstem, save_fext = os.path.splitext(save_fname)
+        if save_fext not in ['.ps', '.PS']:
+            answer = askokcancel(
+                'This permits saving only a postscript file, which should have extension `.ps`.\n'
+                'Should we change the file extension from `{}` to `.ps`?')
+            if answer is True:
+                save_fname = save_fstem + '.ps'
+            elif answer is None: # Cancel
+                return
         self._update_image_save_directory(save_fname)
 
-        self.canvas.save_full_canvas_as_image_file(save_fname)
+        self.canvas.save_full_canvas_as_postscript_file(save_fname)
 
     def callback_save_image(self):
         """

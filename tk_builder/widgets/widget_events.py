@@ -10,7 +10,7 @@ import platform
 import tkinter
 
 __classification__ = "UNCLASSIFIED"
-__author__ = "Jason Casey"
+__author__ = ("Jason Casey", "Thomas McCullough")
 
 
 class WidgetEvents(tkinter.Misc):
@@ -46,7 +46,6 @@ class WidgetEvents(tkinter.Misc):
         else:
             self.bind(event_string, callback)
 
-    # specific events
     def on_left_mouse_click(self, callback, *args, **kwargs):
         """
         The left mouse click event callback registration.
@@ -423,6 +422,51 @@ class WidgetEvents(tkinter.Misc):
         None
         """
         self.event_binding('<Up>', callback, *args, **kwargs)
+
+    def on_down_arrow_key(self, callback, *args, **kwargs):
+        """
+
+        Parameters
+        ----------
+        callback
+        args
+        kwargs
+
+        Returns
+        -------
+        None
+        """
+        self.event_binding('<Down>', callback, *args, **kwargs)
+
+    def on_left_arrow_key(self, callback, *args, **kwargs):
+        """
+
+        Parameters
+        ----------
+        callback
+        args
+        kwargs
+
+        Returns
+        -------
+        None
+        """
+        self.event_binding('<Left>', callback, *args, **kwargs)
+
+    def on_right_arrow_key(self, callback, *args, **kwargs):
+        """
+
+        Parameters
+        ----------
+        callback
+        args
+        kwargs
+
+        Returns
+        -------
+        None
+        """
+        self.event_binding('<Right>', callback, *args, **kwargs)
 
     def on_resize(self, callback, *args, **kwargs):
         """
