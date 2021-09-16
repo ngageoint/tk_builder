@@ -228,8 +228,8 @@ class ImageCanvasTool(object):
     """
 
     _name = 'ImageCanvasTool'
-    _mode = "normal"  # the default value
-    _mode_values = {"normal", }  # the list of allowed values
+    _mode = "normal"
+    _mode_values = {"normal", }  # the allowed mode values
 
     def __init__(self, image_canvas):
         """
@@ -248,20 +248,40 @@ class ImageCanvasTool(object):
         """
 
         return self._name
-
     @property
     def mode(self):
-        """str: The mode"""
+        """
+        str: The mode
+        """
+
         return self._mode
 
     @mode.setter
     def mode(self, value):
+        if self._mode == value:
+            return
+
         if not isinstance(value, string_types):
-            raise TypeError('string type required')
+            raise TypeError('string value required')
         value = value.lower()
+
         if value not in self._mode_values:
             raise ValueError('Got disallowed value `{}`'.format(value))
         self._mode = value
+
+    def initialize_tool(self):
+        """
+        This should be executed as an step step for this tool (as the tool gets set).
+        """
+
+        pass
+
+    def finalize_tool(self):
+        """
+        This should be executed as a final step for this tool.
+        """
+
+        pass
 
     def on_left_mouse_click(self, event):
         """
@@ -300,30 +320,6 @@ class ImageCanvasTool(object):
             pass
 
     def on_right_mouse_double_click(self, event):
-        """
-        Handle the event pass through behavior.
-        
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-        
-        pass
-
-    def on_left_mouse_press(self, event):
-        """
-        Handle the event pass through behavior.
-        
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-        
-        pass
-
-    def on_right_mouse_press(self, event):
         """
         Handle the event pass through behavior.
         
@@ -431,104 +427,6 @@ class ImageCanvasTool(object):
         
         pass
 
-    def on_focus_in(self, event):
-        """
-        Handle the event pass through behavior.
-        
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-        
-        pass
-
-    def on_focus_out(self, event):
-        """
-        Handle the event pass through behavior.
-        
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-        
-        pass
-
-    def on_enter_or_return_key(self, event):
-        """
-        Handle the event pass through behavior.
-        
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-        
-        pass
-
-    def on_up_arrow_key(self, event):
-        """
-        Handle the event pass through behavior.
-        
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-        
-        pass
-
-    def on_down_arrow_key(self, event):
-        """
-        Handle the event pass through behavior.
-
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-
-        pass
-
-    def on_left_arrow_key(self, event):
-        """
-        Handle the event pass through behavior.
-
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-
-        pass
-
-    def on_right_arrow_key(self, event):
-        """
-        Handle the event pass through behavior.
-
-        Parameters
-        ----------
-        event
-            the tkinter event
-        """
-
-        pass
-
-    def initialize_tool(self):
-        """
-        This should be executed as an step step for this tool (as the tool gets set).
-        """
-
-        pass
-
-    def finalize_tool(self):
-        """
-        This should be executed as a final step for this tool.
-        """
-
-        pass
-
 
 ############
 # rectangle based tools
@@ -553,7 +451,6 @@ class _RectTool(ImageCanvasTool):
         self.image_canvas.modify_existing_shape_using_canvas_coords(
             self.shape_id, canvas_event + canvas_event)
         self.anchor = canvas_event
-        self.image_canvas.show_shape(self.shape_id)
 
     def on_left_mouse_motion(self, event):
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
@@ -578,6 +475,12 @@ class _ZoomTool(_RectTool):
         _RectTool.__init__(self, image_canvas)
         self.shape_id = self.image_canvas.variables.zoom_rect.uid
         self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
+
+    def initialize_tool(self):
+        self.shape_id = self.image_canvas.variables.zoom_rect.uid
+        self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
+        self.anchor = (0, 0)
+        self.rect_coords = (0, 0, 0, 0)
 
     def finalize_tool(self):
         self.image_canvas.hide_shape(self.shape_id)
@@ -690,10 +593,10 @@ class PanTool(ImageCanvasTool):
 
 class SelectTool(_RectTool):
     _name = 'SELECT'
+    _mode_values = {"normal", "edit", "shift"}
 
     def __init__(self, image_canvas):
         _RectTool.__init__(self, image_canvas)
-        self.shape_id = self.image_canvas.variables.select_rect.uid
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
@@ -701,83 +604,100 @@ class SelectTool(_RectTool):
     def initialize_tool(self):
         _RectTool.initialize_tool(self)
         self.mode = "normal"
+        self.shape_id = self.image_canvas.variables.select_rect.uid
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
+        self.image_canvas.show_shape(self.shape_id)
 
     def finalize_tool(self):
-        self.image_canvas.hide_shape(self.shape_id)
         self.image_canvas.modify_existing_shape_using_canvas_coords(
             self.shape_id, (0, 0, 0, 0))
+        self.image_canvas.hide_shape(self.shape_id)
 
-    def _perform_shift(self, event, emit=True):
-        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+    def _perform_shift(self, canvas_event, emit=True):
         _perform_shape_shift(
             self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=False)
         self.anchor = canvas_event
         if emit:
             self.image_canvas.emit_select_changed()
 
+    def _perform_edit(self, canvas_event, emit=True):
+        new_coords = [canvas_event[0], canvas_event[1], self.anchor[0], self.anchor[1]]
+        self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords, emit=False)
+        if emit:
+            self.image_canvas.emit_select_changed()
+
     def on_left_mouse_click(self, event):
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         if self.mode == "normal":
+            self.anchor = canvas_event
             self.image_canvas.modify_existing_shape_using_canvas_coords(
                 self.shape_id, canvas_event + canvas_event)
-            self.image_canvas.show_shape(self.shape_id)
             self.mode = "edit"
-        elif self.mode == "edit":
-            self.anchor = canvas_event
         elif self.mode == "shift":
             self.anchor = canvas_event
+        elif self.mode == "edit":
+            return  # nothing to be done here
 
     def on_mouse_motion(self, event):
         vector_object = self.image_canvas.get_vector_object(self.shape_id)
         if vector_object is None:
             return
 
-        the_point = numpy.array(_get_canvas_event_coords(self.image_canvas, event))
+        previous_mode = self.mode
+
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        the_point = numpy.array(canvas_event)
         coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
         the_coords = normalized_rectangle_coordinates(coords)
         coords_diff = the_coords - the_point
-        dists = numpy.sum(coords_diff * coords_diff, axis=1)
+        dists = numpy.sqrt(numpy.sum(coords_diff * coords_diff, axis=1))
 
         if dists[0] < self.vertex_threshold:
-            self.image_canvas.config(cursor="top_left_corner")
-            self.anchor = int(the_coords[0, 0]), int(the_coords[0, 1])
-            self.mode = "edit"
-        elif dists[1] < self.vertex_threshold:
-            self.image_canvas.config(cursor="top_right_corner")
-            self.anchor = int(the_coords[1, 0]), int(the_coords[1, 1])
-            self.mode = "edit"
-        elif dists[2] < self.vertex_threshold:
-            self.image_canvas.config(cursor="bottom_right_corner")
+            # set the anchor as the bottom right coordinate
             self.anchor = int(the_coords[2, 0]), int(the_coords[2, 1])
-            self.mode = "edit"
-        elif dists[3] < self.vertex_threshold:
-            self.image_canvas.config(cursor="bottom_left_corner")
+            new_mode = "edit"
+            cursor = "top_left_corner"
+        elif dists[1] < self.vertex_threshold:
+            # set the anchor as the bottom left coordinate
             self.anchor = int(the_coords[3, 0]), int(the_coords[3, 1])
-            self.mode = "edit"
+            new_mode = "edit"
+            cursor = "top_right_corner"
+        elif dists[2] < self.vertex_threshold:
+            # set the anchor as the upper left coordinate
+            self.anchor = int(the_coords[0, 0]), int(the_coords[0, 1])
+            new_mode = "edit"
+            cursor = "bottom_right_corner"
+        elif dists[3] < self.vertex_threshold:
+            # set the anchor as the upper right coordinate
+            self.anchor = int(the_coords[1, 0]), int(the_coords[1, 1])
+            new_mode = "edit"
+            cursor = "bottom_left_corner"
         elif the_coords[0, 0] < coords[0] < the_coords[1, 0] and \
-                the_coords[0, 1] < coords[1] < the_coords[3, 1]:
-            # inside the rectangle
-            self.mode = "shift"
+                the_coords[3, 0] < coords[1] < the_coords[3, 1]:
+            new_mode = "shift"
+            cursor = "fleur"
         else:
-            self.image_canvas.config(cursor="arrow")
-            self.mode = "normal"
+            new_mode = "edit"
+            cursor = "arrow"
+        if previous_mode != new_mode:
+            self.mode = new_mode
+            self.image_canvas.config(cursor=cursor)
 
     def on_left_mouse_motion(self, event):
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         if self.mode == "shift":
-            self._perform_shift(event, emit=True)
+            self._perform_shift(canvas_event, emit=True)
         elif self.mode == "edit":
-            canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-            new_coords = [self.anchor[0], self.anchor[1], canvas_event[0], canvas_event[1]]
-            self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords)
-            self.image_canvas.emit_select_changed()
+            self._perform_edit(canvas_event, emit=True)
 
     def on_left_mouse_release(self, event):
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         if self.mode == "shift":
-            self._perform_shift(event, emit=False)
-            self.mode = "normal"
+            self._perform_shift(canvas_event, emit=False)
+        elif self.mode == "edit":
+            self._perform_edit(canvas_event, emit=False)
         self.image_canvas.emit_select_finalized()
 
     def on_mouse_wheel(self, event):
@@ -973,12 +893,14 @@ class EditShapeTool(ImageCanvasTool):
     def __init__(self, image_canvas):
         ImageCanvasTool.__init__(self, image_canvas)
         self.shape_id = None
+        self.vector_object = None
         self.insert_at_index = 0
         self.anchor = (0, 0)
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
 
     def initialize_tool(self):
         self.shape_id = self.image_canvas.current_shape_id
+        self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
         self.insert_at_index = 0
         self.anchor = (0, 0)
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
@@ -1017,136 +939,136 @@ class EditShapeTool(ImageCanvasTool):
             closest_shape_id = self.image_canvas.select_closest_shape(event, set_as_current=True)
             if closest_shape_id is not None:
                 self.image_canvas.current_shape_id = closest_shape_id
+                self.vector_object = self.image_canvas.get_vector_object(closest_shape_id)
                 coord_index, the_distance, coord_x, coord_y = self.image_canvas.find_closest_shape_coord(
                     closest_shape_id, canvas_event[0], canvas_event[1])
                 self.insert_at_index = coord_index
                 self.anchor = (coord_x, coord_y)
             self.mode = "normal"
             return
+        if self.vector_object is None:
+            raise ValueError('Bad state')
 
-        if self.mode == "normal":
-            vector_object = self.image_canvas.get_vector_object(self.shape_id)
-            if vector_object.type in [ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
-                self._update_text_or_point(event)
-                return
-
-            coord_index, the_distance, coord_x, coord_y = self.image_canvas.find_closest_shape_coord(
-                vector_object.uid, canvas_event[0], canvas_event[1])
-            if the_distance < self.vertex_threshold:
-                self.insert_at_index = coord_index
-                return
-
-            if vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.POLYGON]:
-                self._update_line_or_polygon(event, insert=True)
-            elif vector_object.type == ShapeTypeConstants.ARROW:
-                self._update_arrow(event)
-            elif vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
-                self.image_canvas.modify_existing_shape_using_canvas_coords(
-                    self.shape_id, canvas_event + canvas_event)
-                self.anchor = canvas_event
-                self.insert_at_index = 1
-        elif self.mode == "shift":
+        if self.mode == "shift":
             self.anchor = canvas_event
+            return
+
+        if self.vector_object.type in [ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
+            self._update_text_or_point(event)
+            return
+
+        coord_index, the_distance, coord_x, coord_y = self.image_canvas.find_closest_shape_coord(
+            self.shape_id, canvas_event[0], canvas_event[1])
+        if the_distance < self.vertex_threshold:
+            self.insert_at_index = coord_index
+            return
+
+        if self.vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.POLYGON]:
+            self._update_line_or_polygon(event, insert=True)
+        elif self.vector_object.type == ShapeTypeConstants.ARROW:
+            self._update_arrow(event)
+        elif self.vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
+            self.image_canvas.modify_existing_shape_using_canvas_coords(
+                self.shape_id, canvas_event + canvas_event)
+            self.anchor = canvas_event
+            self.insert_at_index = 1
 
     def on_mouse_motion(self, event):
         if self.shape_id is None:
             return
+        if self.vector_object is None:
+            raise ValueError('Bad state')
 
-        if self.mode == "normal":
-            vector_object = self.image_canvas.get_vector_object(self.shape_id)
-            if vector_object is None:
-                return
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        if self.vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
+            the_point = numpy.array(canvas_event, dtype='float64')
+            coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
+            the_coords = normalized_rectangle_coordinates(coords)
+            coords_diff = the_coords - the_point
+            dists = numpy.sum(coords_diff * coords_diff, axis=1)
 
-            canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-            if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
-                the_point = numpy.array(canvas_event, dtype='float64')
-                coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
-                the_coords = normalized_rectangle_coordinates(coords)
-                coords_diff = the_coords - the_point
-                dists = numpy.sum(coords_diff * coords_diff, axis=1)
-
+            if dists[0] < self.vertex_threshold:
+                self.image_canvas.config(cursor="top_left_corner")
+                self.anchor = int(the_coords[0, 0]), int(the_coords[0, 1])
                 self.mode = "normal"
-                if dists[0] < self.vertex_threshold:
-                    self.image_canvas.config(cursor="top_left_corner")
-                    self.anchor = int(the_coords[0, 0]), int(the_coords[0, 1])
-                elif dists[1] < self.vertex_threshold:
-                    self.image_canvas.config(cursor="top_right_corner")
-                    self.anchor = int(the_coords[1, 0]), int(the_coords[1, 1])
-                elif dists[2] < self.vertex_threshold:
-                    self.image_canvas.config(cursor="bottom_right_corner")
-                    self.anchor = int(the_coords[2, 0]), int(the_coords[2, 1])
-                elif dists[3] < self.vertex_threshold:
-                    self.image_canvas.config(cursor="bottom_left_corner")
-                    self.anchor = int(the_coords[3, 0]), int(the_coords[3, 1])
-                elif the_coords[0, 0] < canvas_event[0] < the_coords[1, 0] and \
-                        the_coords[0, 1] < canvas_event[1] < the_coords[3, 1]:
-                    # inside the rectangle
-                    self.image_canvas.config(cursor="fleur")
-                    self.anchor = canvas_event
-                    self.mode = "shift"
-                else:
-                    self.image_canvas.config(cursor="arrow")
-            elif vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
-                the_dist = self.image_canvas.find_distance_from_shape(
-                    vector_object.uid, canvas_event[0], canvas_event[1])
-                the_vertex, vertex_distance, _, _ = self.image_canvas.find_closest_shape_coord(
-                    vector_object.uid, canvas_event[0], canvas_event[1])
-
+            elif dists[1] < self.vertex_threshold:
+                self.image_canvas.config(cursor="top_right_corner")
+                self.anchor = int(the_coords[1, 0]), int(the_coords[1, 1])
                 self.mode = "normal"
-                if vertex_distance < self.vertex_threshold:
-                    self.image_canvas.config(cursor='cross')
-                elif the_dist < self.vertex_threshold:
-                    self.image_canvas.config(cursor='fleur')
-                    self.mode = "shift"
-                    self.anchor = canvas_event
-                else:
-                    self.image_canvas.config(cursor='arrow')
-            elif vector_object.type == ShapeTypeConstants.POLYGON:
-                the_vertex, vertex_distance, _, _ = self.image_canvas.find_closest_shape_coord(
-                    vector_object.uid, canvas_event[0], canvas_event[1])
+            elif dists[2] < self.vertex_threshold:
+                self.image_canvas.config(cursor="bottom_right_corner")
+                self.anchor = int(the_coords[2, 0]), int(the_coords[2, 1])
+                self.mode = "normal"
+            elif dists[3] < self.vertex_threshold:
+                self.image_canvas.config(cursor="bottom_left_corner")
+                self.anchor = int(the_coords[3, 0]), int(the_coords[3, 1])
+                self.mode = "normal"
+            elif the_coords[0, 0] < canvas_event[0] < the_coords[1, 0] and \
+                    the_coords[0, 1] < canvas_event[1] < the_coords[3, 1]:
+                # inside the rectangle
+                self.image_canvas.config(cursor="fleur")
+                self.mode = "shift"
+            else:
+                self.image_canvas.config(cursor="arrow")
+                self.mode = "normal"
+        elif self.vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
+            the_dist = self.image_canvas.find_distance_from_shape(
+                self.vector_object.uid, canvas_event[0], canvas_event[1])
+            the_vertex, vertex_distance, _, _ = self.image_canvas.find_closest_shape_coord(
+                self.vector_object.uid, canvas_event[0], canvas_event[1])
+
+            if vertex_distance < self.vertex_threshold:
+                self.image_canvas.config(cursor='cross')
+                self.mode = "normal"
+            elif the_dist < self.vertex_threshold:
+                self.image_canvas.config(cursor='fleur')
+                self.mode = "shift"
+            else:
+                self.mode = "normal"
+                self.image_canvas.config(cursor='arrow')
+        elif self.vector_object.type == ShapeTypeConstants.POLYGON:
+            the_vertex, vertex_distance, _, _ = self.image_canvas.find_closest_shape_coord(
+                self.shape_id, canvas_event[0], canvas_event[1])
+
+            # noinspection PyBroadException
+            try:
+                geometry_object = self.image_canvas.get_geometry_for_shape(
+                    self.shape_id, coordinate_type='canvas')
+            except Exception:
+                geometry_object = None
+
+            if geometry_object is None:
+                contained = False
+                the_dist = float('inf')
+            else:
+                assert isinstance(geometry_object, LinearRing)
 
                 # noinspection PyBroadException
                 try:
-                    geometry_object = self.image_canvas.get_geometry_for_shape(
-                        vector_object.uid, coordinate_type='canvas')
+                    contained = geometry_object.contain_coordinates(canvas_event[0], canvas_event[1])
                 except Exception:
-                    geometry_object = None
-
-                if geometry_object is None:
+                    # should only be from a feeble linear ring
                     contained = False
-                    the_dist = float('inf')
-                else:
-                    assert isinstance(geometry_object, LinearRing)
+                the_dist = geometry_object.get_minimum_distance(canvas_event)
 
-                    # noinspection PyBroadException
-                    try:
-                        contained = geometry_object.contain_coordinates(canvas_event[0], canvas_event[1])
-                    except Exception:
-                        # should only be from a feeble linear ring
-                        contained = False
-                    the_dist = geometry_object.get_minimum_distance(canvas_event)
-
+            if vertex_distance < self.vertex_threshold:
+                self.image_canvas.config(cursor='cross')
                 self.mode = "normal"
-                if vertex_distance < self.vertex_threshold:
-                    self.image_canvas.config(cursor='cross')
-                elif contained or the_dist < self.vertex_threshold:
-                    self.image_canvas.config(cursor='fleur')
-                    self.anchor = canvas_event
-                    self.mode = "shift"
-                else:
-                    self.image_canvas.config(cursor='arrow')
-            elif vector_object.type in [ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
-                the_dist = self.image_canvas.find_distance_from_shape(
-                    vector_object.uid, canvas_event[0], canvas_event[1])
-                if the_dist < self.vertex_threshold:
-                    self.image_canvas.config(cursor='fleur')
-                    self.anchor = canvas_event
-                    self.mode = "shift"
-                else:
-                    self.image_canvas.config(cursor='arrow')
-                    self.mode = "normal"
-        elif self.mode == "shift":
-            pass  # nothing to be done
+            elif contained or the_dist < self.vertex_threshold:
+                self.image_canvas.config(cursor='fleur')
+                self.mode = "shift"
+            else:
+                self.image_canvas.config(cursor='arrow')
+                self.mode = "normal"
+        elif self.vector_object.type in [ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
+            the_dist = self.image_canvas.find_distance_from_shape(
+                self.shape_id, canvas_event[0], canvas_event[1])
+            if the_dist < self.vertex_threshold:
+                self.image_canvas.config(cursor='fleur')
+                self.mode = "shift"
+            else:
+                self.image_canvas.config(cursor='arrow')
+                self.mode = "normal"
 
     def on_left_mouse_motion(self, event):
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
@@ -1178,9 +1100,7 @@ class EditShapeTool(ImageCanvasTool):
             return
 
         if self.mode == "normal":
-            vector_object = self.image_canvas.get_vector_object(self.shape_id)
-            if vector_object is None or \
-                    vector_object.type not in [ShapeTypeConstants.LINE, ShapeTypeConstants.POLYGON]:
+            if self.vector_object.type not in [ShapeTypeConstants.LINE, ShapeTypeConstants.POLYGON]:
                 return
 
             # delete the coordinate at the current insertion index

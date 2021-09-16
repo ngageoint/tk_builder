@@ -615,10 +615,10 @@ class CanvasConfig(object):
     """
 
     vertex_selector_pixel_threshold = FloatDescriptor(
-        'vertex_selector_pixel_threshold', default_value=10.0,
+        'vertex_selector_pixel_threshold', default_value=5.0,
         docstring='The threshold in canvas pixel distance for vertex selection.')  # type: float
     shape_selector_pixel_threshold = FloatDescriptor(
-        'shape_selector_pixel_threshold', default_value=10.0,
+        'shape_selector_pixel_threshold', default_value=8.0,
         docstring='The threshold in canvas pixel distance for shape selection.')  # type: float
     zoom_box_size_threshold = FloatDescriptor(
         'zoom_box_size_threshold', default_value=20.0,
@@ -893,8 +893,6 @@ class ImageCanvas(basic_widgets.Canvas):
         self.on_right_mouse_click(self.callback_handle_right_mouse_click)
         self.on_left_mouse_double_click(self.callback_handle_left_mouse_double_click)
         self.on_right_mouse_double_click(self.callback_handle_right_mouse_double_click)
-        self.on_left_mouse_press(self.callback_handle_left_mouse_press)
-        self.on_right_mouse_press(self.callback_handle_right_mouse_press)
         self.on_left_mouse_release(self.callback_handle_left_mouse_release)
         self.on_right_mouse_release(self.callback_handle_right_mouse_release)
         self.on_mouse_motion(self.callback_handle_mouse_motion)
@@ -1385,36 +1383,6 @@ class ImageCanvas(basic_widgets.Canvas):
 
         self.current_tool.on_right_mouse_double_click(event)
 
-    def callback_handle_left_mouse_press(self, event):
-        """
-        Left mouse press callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_left_mouse_press(event)
-
-    def callback_handle_right_mouse_press(self, event):
-        """
-        Right mouse press callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_right_mouse_press(event)
-
     def callback_handle_left_mouse_release(self, event):
         """
         Left mouse release callback.
@@ -1503,6 +1471,7 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        print(f'mouse wheel - current tool is {self.current_tool}')
         self.current_tool.on_mouse_wheel(event)
 
     def callback_handle_mouse_enter(self, event):
@@ -1534,111 +1503,6 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.current_tool.on_mouse_leave(event)
-
-    def callback_handle_focus_in(self, event):
-        """
-        Focus in callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_focus_in(event)
-
-    def callback_handle_focus_out(self, event):
-        """
-        Focus out callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_focus_out(event)
-
-    def callback_handle_enter_key(self, event):
-        """
-        On enter key/return key press callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_enter_or_return_key(event)
-
-    def callback_handle_up_arrow(self, event):
-        """
-        On up arrow press callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_up_arrow_key(event)
-
-    def callback_handle_down_arrow(self, event):
-        """
-        On down arrow press callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_down_arrow_key(event)
-
-    def callback_handle_left_arrow(self, event):
-        """
-        On left arrow press callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_left_arrow_key(event)
-
-    def callback_handle_right_arrow(self, event):
-        """
-        On right arrow press callback.
-
-        Parameters
-        ----------
-        event
-
-        Returns
-        -------
-        None
-        """
-
-        self.current_tool.on_right_arrow_key(event)
 
     # image properties and manipulation
     def set_image_from_numpy_array(self, numpy_data):
