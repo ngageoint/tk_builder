@@ -133,49 +133,6 @@ class WidgetEvents(tkinter.Misc):
         else:
             self.event_binding('<Double-Button-3>', callback, *args, **kwargs)
 
-    def on_left_mouse_press(self, callback, *args, **kwargs):
-        """
-        The left mouse button press event callback registration.
-
-        Parameters
-        ----------
-        callback : callable
-            The event callback function.
-        args
-            Optional args for the callback function.
-        kwargs
-            Optional keyword arguments for the callback function.
-
-        Returns
-        -------
-        None
-        """
-
-        self.event_binding('<ButtonPress-1>', callback, *args, **kwargs)
-
-    def on_right_mouse_press(self, callback, *args, **kwargs):
-        """
-        The right mouse press event callback registration.
-
-        Parameters
-        ----------
-        callback : callable
-            The event callback function.
-        args
-            Optional args for the callback function.
-        kwargs
-            Optional keyword arguments for the callback function.
-
-        Returns
-        -------
-        None
-        """
-        if platform.system() == "Darwin":
-            self.event_binding('<ButtonPress-2>', callback, *args, **kwargs)  # if using a mac mouse
-            self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)  # if using a different mouse
-        else:
-            self.event_binding('<ButtonPress-3>', callback, *args, **kwargs)
-
     def on_left_mouse_release(self, callback, *args, **kwargs):
         """
         The left mouse release event callback registration.
