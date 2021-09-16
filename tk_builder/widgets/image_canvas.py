@@ -932,7 +932,7 @@ class ImageCanvas(basic_widgets.Canvas):
             value = self.variables.get_tool_instance(value, self)
 
         if not isinstance(value, ImageCanvasTool):
-            logger.error('Got unhandled tool, set to VIEW.'.format(value))
+            logger.error('Got unhandled tool, setting to VIEW.'.format(value))
             value = self.variables.get_tool_instance('VIEW', self)
 
         if old_tool != value:
@@ -1471,8 +1471,22 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        print(f'mouse wheel - current tool is {self.current_tool}')
         self.current_tool.on_mouse_wheel(event)
+
+    def callback_handle_shift_mouse_wheel(self, event):
+        """
+        Mouse wheel callback.
+
+        Parameters
+        ----------
+        event
+
+        Returns
+        -------
+        None
+        """
+
+        self.current_tool.on_shift_mouse_wheel(event)
 
     def callback_handle_mouse_enter(self, event):
         """

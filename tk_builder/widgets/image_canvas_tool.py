@@ -9,6 +9,7 @@ __author__ = "Thomas McCullough"
 import logging
 from collections import OrderedDict
 import numpy
+from typing import Tuple, List
 
 from sarpy.compliance import string_types
 from sarpy.geometry.geometry_elements import LinearRing
@@ -403,6 +404,18 @@ class ImageCanvasTool(object):
         
         pass
 
+    def on_shift_mouse_wheel(self, event):
+        """
+        Handle the event pass through behavior.
+
+        Parameters
+        ----------
+        event
+            the tkinter event
+        """
+
+        pass
+
     def on_mouse_enter(self, event):
         """
         Handle the event pass through behavior.
@@ -600,19 +613,20 @@ class SelectTool(_RectTool):
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
+        self.vector_object = None
+        self._cursors = ["top_left_corner", "top_right_corner", "bottom_right_corner", "bottom_left_corner"]
 
     def initialize_tool(self):
         _RectTool.initialize_tool(self)
         self.mode = "normal"
         self.shape_id = self.image_canvas.variables.select_rect.uid
+        self.image_canvas.show_shape(self.shape_id)
+        self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
-        self.image_canvas.show_shape(self.shape_id)
 
     def finalize_tool(self):
-        self.image_canvas.modify_existing_shape_using_canvas_coords(
-            self.shape_id, (0, 0, 0, 0))
         self.image_canvas.hide_shape(self.shape_id)
 
     def _perform_shift(self, canvas_event, emit=True):
@@ -632,19 +646,20 @@ class SelectTool(_RectTool):
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         if self.mode == "normal":
             self.anchor = canvas_event
-            self.image_canvas.modify_existing_shape_using_canvas_coords(
-                self.shape_id, canvas_event + canvas_event)
             self.mode = "edit"
-        elif self.mode == "shift":
+            new_coords = canvas_event + canvas_event
+            self.image_canvas.modify_existing_shape_using_canvas_coords(
+                self.shape_id, new_coords)
+            return
+
+        if self.mode == "shift":
             self.anchor = canvas_event
-        elif self.mode == "edit":
+            return
+
+        if self.mode == "edit":
             return  # nothing to be done here
 
     def on_mouse_motion(self, event):
-        vector_object = self.image_canvas.get_vector_object(self.shape_id)
-        if vector_object is None:
-            return
-
         previous_mode = self.mode
 
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
@@ -654,33 +669,21 @@ class SelectTool(_RectTool):
         coords_diff = the_coords - the_point
         dists = numpy.sqrt(numpy.sum(coords_diff * coords_diff, axis=1))
 
-        if dists[0] < self.vertex_threshold:
-            # set the anchor as the bottom right coordinate
-            self.anchor = int(the_coords[2, 0]), int(the_coords[2, 1])
+        arg_min = numpy.argmin(dists)
+
+        if dists[arg_min] < self.vertex_threshold:
+            opposite_corner = ((arg_min + 2) % 4)
             new_mode = "edit"
-            cursor = "top_left_corner"
-        elif dists[1] < self.vertex_threshold:
-            # set the anchor as the bottom left coordinate
-            self.anchor = int(the_coords[3, 0]), int(the_coords[3, 1])
-            new_mode = "edit"
-            cursor = "top_right_corner"
-        elif dists[2] < self.vertex_threshold:
-            # set the anchor as the upper left coordinate
-            self.anchor = int(the_coords[0, 0]), int(the_coords[0, 1])
-            new_mode = "edit"
-            cursor = "bottom_right_corner"
-        elif dists[3] < self.vertex_threshold:
-            # set the anchor as the upper right coordinate
-            self.anchor = int(the_coords[1, 0]), int(the_coords[1, 1])
-            new_mode = "edit"
-            cursor = "bottom_left_corner"
-        elif the_coords[0, 0] < coords[0] < the_coords[1, 0] and \
-                the_coords[3, 0] < coords[1] < the_coords[3, 1]:
+            self.anchor = int(the_coords[opposite_corner, 0]), int(the_coords[opposite_corner, 1])
+            cursor = self._cursors[arg_min]
+        elif (the_coords[0, 0] < canvas_event[0] < the_coords[1, 0]) and \
+                (the_coords[0, 1] < canvas_event[1] < the_coords[3, 1]):
             new_mode = "shift"
             cursor = "fleur"
         else:
-            new_mode = "edit"
+            new_mode = "normal"
             cursor = "arrow"
+
         if previous_mode != new_mode:
             self.mode = new_mode
             self.image_canvas.config(cursor=cursor)
@@ -897,6 +900,7 @@ class EditShapeTool(ImageCanvasTool):
         self.insert_at_index = 0
         self.anchor = (0, 0)
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
+        self._rect_cursors = ["top_left_corner", "top_right_corner", "bottom_right_corner", "bottom_left_corner"]
 
     def initialize_tool(self):
         self.shape_id = self.image_canvas.current_shape_id
@@ -987,30 +991,24 @@ class EditShapeTool(ImageCanvasTool):
             coords_diff = the_coords - the_point
             dists = numpy.sum(coords_diff * coords_diff, axis=1)
 
-            if dists[0] < self.vertex_threshold:
-                self.image_canvas.config(cursor="top_left_corner")
-                self.anchor = int(the_coords[0, 0]), int(the_coords[0, 1])
-                self.mode = "normal"
-            elif dists[1] < self.vertex_threshold:
-                self.image_canvas.config(cursor="top_right_corner")
-                self.anchor = int(the_coords[1, 0]), int(the_coords[1, 1])
-                self.mode = "normal"
-            elif dists[2] < self.vertex_threshold:
-                self.image_canvas.config(cursor="bottom_right_corner")
-                self.anchor = int(the_coords[2, 0]), int(the_coords[2, 1])
-                self.mode = "normal"
-            elif dists[3] < self.vertex_threshold:
-                self.image_canvas.config(cursor="bottom_left_corner")
-                self.anchor = int(the_coords[3, 0]), int(the_coords[3, 1])
-                self.mode = "normal"
-            elif the_coords[0, 0] < canvas_event[0] < the_coords[1, 0] and \
-                    the_coords[0, 1] < canvas_event[1] < the_coords[3, 1]:
-                # inside the rectangle
-                self.image_canvas.config(cursor="fleur")
-                self.mode = "shift"
+            arg_min = numpy.argmin(dists)
+            previous_mode = self.mode
+            if dists[arg_min] < self.vertex_threshold:
+                new_mode = "normal"
+                self.anchor = int(the_coords[arg_min, 0]), int(the_coords[arg_min, 1])
+                cursor = self._rect_cursors[arg_min]
+            elif (the_coords[0, 0] < canvas_event[0] < the_coords[1, 0]) and \
+                    (the_coords[0, 1] < canvas_event[1] < the_coords[3, 1]):
+                new_mode = "shift"
+                cursor = "fleur"
             else:
-                self.image_canvas.config(cursor="arrow")
-                self.mode = "normal"
+                new_mode = "normal"
+                cursor = "arrow"
+
+            if previous_mode != new_mode:
+                self.mode = new_mode
+                self.image_canvas.config(cursor=cursor)
+
         elif self.vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
             the_dist = self.image_canvas.find_distance_from_shape(
                 self.vector_object.uid, canvas_event[0], canvas_event[1])

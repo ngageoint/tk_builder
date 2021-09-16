@@ -265,6 +265,29 @@ class WidgetEvents(tkinter.Misc):
         else:
             self.event_binding('<MouseWheel>', callback, *args, **kwargs)
 
+    def on_shift_mouse_wheel(self, callback, *args, **kwargs):
+        """
+        The shift mouse wheel event callback registration.
+
+        Parameters
+        ----------
+        callback : callable
+            The event callback function.
+        args
+            Optional args for the callback function.
+        kwargs
+            Optional keyword arguments for the callback function.
+
+        Returns
+        -------
+        None
+        """
+
+        if platform.system() == "Linux":
+            pass
+        else:
+            self.event_binding('<Shift-MouseWheel>', callback, *args, **kwargs)
+
     def on_mouse_enter(self, callback, *args, **kwargs):
         """
         The mouse entered the widget (or a child) event registration.
