@@ -15,7 +15,7 @@ from tk_builder.widgets import basic_widgets, widget_descriptors
 from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
     ShapeTypeConstants, get_tool_enum
-from tk_builder.image_reader import ImageReader
+from tk_builder.image_reader import CanvasImageReader
 from tk_builder import file_filters
 
 from sarpy.compliance import string_types, integer_types
@@ -603,7 +603,7 @@ class ImagePanel(WidgetPanel):
 
         Parameters
         ----------
-        image_reader : ImageReader
+        image_reader : CanvasImageReader
 
         Returns
         -------

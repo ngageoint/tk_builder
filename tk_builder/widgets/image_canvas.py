@@ -25,7 +25,7 @@ from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
     ShapeTypeConstants, get_tool_type, get_tool_name, get_tool_enum, \
     normalized_rectangle_coordinates
 
-from tk_builder.image_reader import ImageReader
+from tk_builder.image_reader import CanvasImageReader
 from tk_builder.utils.color_utils.color_cycler import ColorCycler
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
 from tk_builder.widgets import basic_widgets
@@ -103,8 +103,8 @@ class CanvasImage(object):
     """
 
     image_reader = TypedDescriptor(
-        'image_reader', ImageReader,
-        docstring='The image reader object.')  # type: ImageReader
+        'image_reader', CanvasImageReader,
+        docstring='The image reader object.')  # type: CanvasImageReader
     canvas_decimated_image = TypedDescriptor(
         'canvas_decimated_image', numpy.ndarray,
         docstring='The canvas decimated image data.')  # type: numpy.ndarray
@@ -131,7 +131,7 @@ class CanvasImage(object):
 
         Parameters
         ----------
-        image_reader : ImageReader
+        image_reader : CanvasImageReader
         canvas_nx : int
         canvas_ny : int
         """
@@ -1061,7 +1061,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Parameters
         ----------
-        image_reader : ImageReader
+        image_reader : CanvasImageReader
 
         Returns
         -------
@@ -1081,7 +1081,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         Returns
         -------
-        None|ImageReader
+        None|CanvasImageReader
         """
 
         return self.variables.canvas_image_object.image_reader

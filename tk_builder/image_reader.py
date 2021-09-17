@@ -9,13 +9,13 @@ import numpy
 from typing import Tuple, Union, Callable
 
 
-class ImageReader(object):
+class CanvasImageReader(object):
     """
     An abstract image reader class, intended to layout the basic elements for
     providing image data to Image Canvas Objects.
 
     Any subclasses must implement `__getitem__` to support 2 element slice parsing
-    (i.e. :code:`data = ImageReader[start_0:end_0:step_0, start1:end1:step1]`)
+    (i.e. :code:`data = CanvasImageReader[start_0:end_0:step_0, start1:end1:step1]`)
 
     It is assumed that `__getitem__` will return a numpy array of some real dtype of
     one of these shapes:
@@ -138,9 +138,9 @@ class ImageReader(object):
         pass
 
 
-class NumpyImageReader(ImageReader):
+class NumpyCanvasImageReader(CanvasImageReader):
     """
-    ImageReader for numpy array data. This requires a two or
+    CanvasImageReader for numpy array data. This requires a two or
     three dimensional array of one of the basic real dtypes. If three dimensional,
     the final dimension must have size 3 or 4.
     """

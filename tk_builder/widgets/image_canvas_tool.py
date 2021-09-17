@@ -24,7 +24,80 @@ _TOOL_ENUM_TO_NAME = OrderedDict()
 
 
 ############
-# helper methods
+# helper class and methods
+
+class ShapeTypeConstants(object):
+    POINT = 0
+    LINE = 1
+    ARROW = 2
+    RECT = 3
+    ELLIPSE = 4
+    POLYGON = 5
+    TEXT = 6
+
+    _names_to_values = OrderedDict([
+        ('POINT', POINT),
+        ('LINE', LINE),
+        ('ARROW', ARROW),
+        ('RECT', RECT),
+        ('ELLIPSE', ELLIPSE),
+        ('POLYGON', POLYGON),
+        ('TEXT', TEXT)])
+    _values_to_names = {value: key for key, value in _names_to_values.items()}
+
+    @classmethod
+    def validate(cls, value):
+        """
+        The shape enumeration value, if valid. Otherwise, None.
+
+        Parameters
+        ----------
+        value
+            The int value for validation, or the string value to evaluate.
+
+        Returns
+        -------
+        None|int
+        """
+
+        if value in cls._names_to_values:
+            return cls._names_to_values[value]
+        if value in cls._values_to_names:
+            return value
+        return None
+
+    @classmethod
+    def get_name(cls, value):
+        """
+        None|str: Gets the name for the corresponding value.
+        """
+
+        return cls._values_to_names.get(value, None)
+
+    @classmethod
+    def geometric_shapes(cls):
+        """
+        Returns the collection of geometric shape types.
+
+        Returns
+        -------
+        List[str]
+        """
+
+        return [cls.RECT, cls.LINE, cls.POLYGON, cls.ARROW, cls.ELLIPSE]
+
+    @classmethod
+    def point_shapes(cls):
+        """
+        Returns the collection of point type shapes.
+
+        Returns
+        -------
+        List[str]
+        """
+
+        return [cls.POINT, cls.TEXT]
+
 
 def normalized_rectangle_coordinates(coords):
     """
@@ -122,7 +195,6 @@ def _modify_coords(image_canvas, shape_id, coords, event_x_pos, event_y_pos, at_
             event_x = trim(event_x, canvas_lims[0], canvas_lims[2])
             event_y = trim(event_y, canvas_lims[1], canvas_lims[3])
         return event_x, event_y
-
 
     drag_lims = image_canvas.get_vector_object(shape_id).image_drag_limits
     event_x_pos, event_y_pos = trim_to_drag_limits(event_x_pos, event_y_pos)
@@ -249,6 +321,7 @@ class ImageCanvasTool(object):
         """
 
         return self._name
+
     @property
     def mode(self):
         """
@@ -309,16 +382,16 @@ class ImageCanvasTool(object):
         pass
 
     def on_left_mouse_double_click(self, event):
-            """
-            Handle the event pass through behavior.
+        """
+        Handle the event pass through behavior.
 
-            Parameters
-            ----------
-            event
-                the tkinter event
-            """
+        Parameters
+        ----------
+        event
+            the tkinter event
+        """
 
-            pass
+        pass
 
     def on_right_mouse_double_click(self, event):
         """
@@ -441,38 +514,54 @@ class ImageCanvasTool(object):
         pass
 
 
-############
-# rectangle based tools
+###########
+# concrete implementations
 
-class _RectTool(ImageCanvasTool):
+class _ZoomTool(ImageCanvasTool):
     """Helper class not meant to instantiated except by extension."""
-    _name = "_RectTool"
+    _name = "_ZoomTool"
 
     def __init__(self, image_canvas):
         ImageCanvasTool.__init__(self, image_canvas)
+        self.shape_id = self.image_canvas.variables.zoom_rect.uid
+        self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
         self.anchor = (0, 0)
         self.rect_coords = (0, 0, 0, 0)
-        self.shape_id = -1
-        self.size_threshold = 1
+        self.mouse_moved = False
 
     def initialize_tool(self):
+        self.shape_id = self.image_canvas.variables.zoom_rect.uid
+        self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
         self.anchor = (0, 0)
         self.rect_coords = (0, 0, 0, 0)
+        self.mouse_moved = False
+
+    def finalize_tool(self):
+        self.image_canvas.hide_shape(self.shape_id)
+        self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, (0, 0, 0, 0))
 
     def on_left_mouse_click(self, event):
+        self.mouse_moved = False
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         self.image_canvas.modify_existing_shape_using_canvas_coords(
             self.shape_id, canvas_event + canvas_event)
         self.anchor = canvas_event
+        self.image_canvas.show_shape(self.shape_id)
 
     def on_left_mouse_motion(self, event):
+        self.mouse_moved = True
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         new_coords = self.anchor + canvas_event
         self.image_canvas.modify_existing_shape_using_canvas_coords(
             self.shape_id, new_coords, update_pixel_coords=True)
 
     def on_left_mouse_release(self, event):
-        self.rect_coords = self.image_canvas.coords(self.shape_id)
+        if self.mouse_moved:
+            self.rect_coords = self.image_canvas.coords(self.shape_id)
+            self.image_canvas.hide_shape(self.shape_id)
+            self.image_canvas.modify_existing_shape_using_canvas_coords(
+                self.shape_id, (0, 0, 0, 0))
+        # NB: mouse moved state change handled in extension
 
     def _check_size_threshold(self):
         x_diff = abs(self.rect_coords[0] - self.rect_coords[2])
@@ -480,43 +569,14 @@ class _RectTool(ImageCanvasTool):
         return (x_diff >= self.size_threshold) and (y_diff >= self.size_threshold)
 
 
-class _ZoomTool(_RectTool):
-    """Helper class not meant to instantiated except by extension."""
-    _name = "_ZoomTool"
-
-    def __init__(self, image_canvas):
-        _RectTool.__init__(self, image_canvas)
-        self.shape_id = self.image_canvas.variables.zoom_rect.uid
-        self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
-
-    def initialize_tool(self):
-        self.shape_id = self.image_canvas.variables.zoom_rect.uid
-        self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
-        self.anchor = (0, 0)
-        self.rect_coords = (0, 0, 0, 0)
-
-    def finalize_tool(self):
-        self.image_canvas.hide_shape(self.shape_id)
-        self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, (0, 0, 0, 0))
-
-    def on_left_mouse_click(self, event):
-        _RectTool.on_left_mouse_click(self, event)
-        self.image_canvas.show_shape(self.shape_id)
-
-    def on_left_mouse_release(self, event):
-        _RectTool.on_left_mouse_release(self, event)
-        self.image_canvas.hide_shape(self.shape_id)
-        self.image_canvas.modify_existing_shape_using_canvas_coords(
-            self.shape_id, (0, 0, 0, 0))
-
-
 class ZoomInTool(_ZoomTool):
     _name = 'ZOOM_IN'
 
     def on_left_mouse_release(self, event):
         _ZoomTool.on_left_mouse_release(self, event)
-        if self._check_size_threshold():
+        if self.mouse_moved and self._check_size_threshold():
             self.image_canvas.zoom_to_canvas_selection(self.rect_coords)
+        self.mouse_moved = False
 
 
 class ZoomOutTool(_ZoomTool):
@@ -524,13 +584,14 @@ class ZoomOutTool(_ZoomTool):
 
     def on_left_mouse_release(self, event):
         _ZoomTool.on_left_mouse_release(self, event)
-        if self._check_size_threshold():
+        if self.mouse_moved and self._check_size_threshold():
             x1 = -self.rect_coords[0]
             x2 = self.image_canvas.variables.state.canvas_width + self.rect_coords[2]
             y1 = -self.rect_coords[1]
             y2 = self.image_canvas.variables.state.canvas_height + self.rect_coords[3]
             zoom_rect = (x1, y1, x2, y2)
             self.image_canvas.zoom_to_canvas_selection(zoom_rect)
+        self.mouse_moved = False
 
 
 class PanTool(ImageCanvasTool):
@@ -604,20 +665,21 @@ class PanTool(ImageCanvasTool):
         self.pan(event, check_distance=False)
 
 
-class SelectTool(_RectTool):
+class SelectTool(ImageCanvasTool):
     _name = 'SELECT'
     _mode_values = {"normal", "edit", "shift"}
 
     def __init__(self, image_canvas):
-        _RectTool.__init__(self, image_canvas)
+        self._cursors = ["top_left_corner", "top_right_corner", "bottom_right_corner", "bottom_left_corner"]
+        ImageCanvasTool.__init__(self, image_canvas)
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
+        self.shape_id = self.image_canvas.variables.select_rect.uid
         self.vector_object = None
-        self._cursors = ["top_left_corner", "top_right_corner", "bottom_right_corner", "bottom_left_corner"]
+        self.mouse_moved = False
 
     def initialize_tool(self):
-        _RectTool.initialize_tool(self)
         self.mode = "normal"
         self.shape_id = self.image_canvas.variables.select_rect.uid
         self.image_canvas.show_shape(self.shape_id)
@@ -625,6 +687,7 @@ class SelectTool(_RectTool):
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
+        self.mouse_moved = False
 
     def finalize_tool(self):
         self.image_canvas.hide_shape(self.shape_id)
@@ -643,6 +706,7 @@ class SelectTool(_RectTool):
             self.image_canvas.emit_select_changed()
 
     def on_left_mouse_click(self, event):
+        self.mouse_moved = False
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         if self.mode == "normal":
             self.anchor = canvas_event
@@ -650,14 +714,31 @@ class SelectTool(_RectTool):
             new_coords = canvas_event + canvas_event
             self.image_canvas.modify_existing_shape_using_canvas_coords(
                 self.shape_id, new_coords)
-            return
-
-        if self.mode == "shift":
+            self.image_canvas.emit_select_changed()
+        elif self.mode == "shift":
             self.anchor = canvas_event
-            return
+        elif self.mode == "edit":
+            pass
 
-        if self.mode == "edit":
-            return  # nothing to be done here
+    def on_left_mouse_motion(self, event):
+        self.mouse_moved = True
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        if self.mode == "shift":
+            self._perform_shift(canvas_event, emit=True)
+        elif self.mode == "edit":
+            self._perform_edit(canvas_event, emit=True)
+
+    def on_left_mouse_release(self, event):
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        if self.mode == "shift":
+            if self.mouse_moved:
+                self._perform_shift(canvas_event, emit=False)
+                self.image_canvas.emit_select_finalized()
+        elif self.mode == "edit":
+            if self.mouse_moved:
+                self._perform_edit(canvas_event, emit=False)
+                self.image_canvas.emit_select_finalized()
+        self.mouse_moved = False
 
     def on_mouse_motion(self, event):
         previous_mode = self.mode
@@ -688,27 +769,10 @@ class SelectTool(_RectTool):
             self.mode = new_mode
             self.image_canvas.config(cursor=cursor)
 
-    def on_left_mouse_motion(self, event):
-        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        if self.mode == "shift":
-            self._perform_shift(canvas_event, emit=True)
-        elif self.mode == "edit":
-            self._perform_edit(canvas_event, emit=True)
-
-    def on_left_mouse_release(self, event):
-        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        if self.mode == "shift":
-            self._perform_shift(canvas_event, emit=False)
-        elif self.mode == "edit":
-            self._perform_edit(canvas_event, emit=False)
-        self.image_canvas.emit_select_finalized()
-
     def on_mouse_wheel(self, event):
         if self.mode in ['normal', ]:
             self.image_canvas.zoom_on_mouse(event)
 
-
-##########
 
 class ViewTool(ImageCanvasTool):
     _name = 'VIEW'
@@ -744,16 +808,19 @@ class ShiftShapeTool(ImageCanvasTool):
         ImageCanvasTool.__init__(self, image_canvas)
         self.shape_id = -1
         self.anchor = (0, 0)
+        self.mouse_moved = False
 
     def initialize_tool(self):
         self.shape_id = self.image_canvas.current_shape_id
         self.anchor = (0, 0)
         self.mode = "normal"
+        self.mouse_moved = False
 
     def finalize_tool(self):
         pass
 
     def on_left_mouse_click(self, event):
+        self.mouse_moved = False
         if self.shape_id is None:
             self.image_canvas.select_closest_shape(event, set_as_current=True)
             self.initialize_tool()
@@ -761,95 +828,25 @@ class ShiftShapeTool(ImageCanvasTool):
             self.anchor = _get_canvas_event_coords(self.image_canvas, event)
             self.mode = "shift"
 
-    def on_left_mouse_motion(self, event, emit=True):
+    def on_left_mouse_motion(self, event):
+        self.mouse_moved = True
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=emit)
+        _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=True)
         self.anchor = canvas_event
 
     def on_left_mouse_release(self, event):
-        self.on_left_mouse_motion(event, emit=False)
+        if self.mode == "normal" or not self.mouse_moved:
+            return
+
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=False)
         self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
         self.mode = "normal"
+        self.mouse_moved = False
 
     def on_mouse_wheel(self, event):
         if self.mode in ['normal', ]:
             self.image_canvas.zoom_on_mouse(event)
-
-
-##########
-# Shape drawing
-
-class ShapeTypeConstants(object):
-    POINT = 0
-    LINE = 1
-    ARROW = 2
-    RECT = 3
-    ELLIPSE = 4
-    POLYGON = 5
-    TEXT = 6
-
-    _names_to_values = OrderedDict([
-        ('POINT', POINT),
-        ('LINE', LINE),
-        ('ARROW', ARROW),
-        ('RECT', RECT),
-        ('ELLIPSE', ELLIPSE),
-        ('POLYGON', POLYGON),
-        ('TEXT', TEXT)])
-    _values_to_names = {value:key for key, value in _names_to_values.items()}
-
-    @classmethod
-    def validate(cls, value):
-        """
-        The shape enumeration value, if valid. Otherwise, None.
-
-        Parameters
-        ----------
-        value
-            The int value for validation, or the string value to evaluate.
-
-        Returns
-        -------
-        None|int
-        """
-
-        if value in cls._names_to_values:
-            return cls._names_to_values[value]
-        if value in cls._values_to_names:
-            return value
-        return None
-
-    @classmethod
-    def get_name(cls, value):
-        """
-        None|str: Gets the name for the corresponding value.
-        """
-
-        return cls._values_to_names.get(value, None)
-
-    @classmethod
-    def geometric_shapes(cls):
-        """
-        Returns the collection of geometric shape types.
-
-        Returns
-        -------
-        List[str]
-        """
-
-        return [cls.RECT, cls.LINE, cls.POLYGON, cls.ARROW, cls.ELLIPSE]
-
-    @classmethod
-    def point_shapes(cls):
-        """
-        Returns the collection of point type shapes.
-
-        Returns
-        -------
-        List[str]
-        """
-
-        return [cls.POINT, cls.TEXT]
 
 
 class NewShapeTool(ViewTool):
@@ -899,6 +896,7 @@ class EditShapeTool(ImageCanvasTool):
         self.vector_object = None
         self.insert_at_index = 0
         self.anchor = (0, 0)
+        self.mouse_moved = False
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self._rect_cursors = ["top_left_corner", "top_right_corner", "bottom_right_corner", "bottom_left_corner"]
 
@@ -907,6 +905,7 @@ class EditShapeTool(ImageCanvasTool):
         self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
         self.insert_at_index = 0
         self.anchor = (0, 0)
+        self.mouse_moved = False
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.mode = "normal"
 
@@ -921,7 +920,9 @@ class EditShapeTool(ImageCanvasTool):
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         old_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
         new_coords, self.insert_at_index = _modify_coords(
-            self.image_canvas, self.shape_id, old_coords, canvas_event[0], canvas_event[1], self.insert_at_index, insert=insert)
+            self.image_canvas, self.shape_id, old_coords,
+            canvas_event[0], canvas_event[1],
+            self.insert_at_index, insert=insert)
         self.image_canvas.modify_existing_shape_using_canvas_coords(
             self.shape_id, new_coords, update_pixel_coords=True)
 
@@ -933,11 +934,14 @@ class EditShapeTool(ImageCanvasTool):
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         old_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
         new_coords, _ = _modify_coords(
-            self.image_canvas, self.shape_id, old_coords, canvas_event[0], canvas_event[1], self.insert_at_index, insert=False)
+            self.image_canvas, self.shape_id, old_coords,
+            canvas_event[0], canvas_event[1],
+            self.insert_at_index, insert=False)
         self.image_canvas.modify_existing_shape_using_canvas_coords(
             self.shape_id, new_coords, update_pixel_coords=True)
 
     def on_left_mouse_click(self, event):
+        self.mouse_moved = False
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         if self.shape_id is None:
             closest_shape_id = self.image_canvas.select_closest_shape(event, set_as_current=True)
@@ -976,6 +980,38 @@ class EditShapeTool(ImageCanvasTool):
                 self.shape_id, canvas_event + canvas_event)
             self.anchor = canvas_event
             self.insert_at_index = 1
+
+    def on_left_mouse_motion(self, event):
+        self.mouse_moved = True
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        if self.mode == "normal":
+            previous_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
+            new_coords, _ = _modify_coords(
+                self.image_canvas, self.shape_id, previous_coords,
+                canvas_event[0], canvas_event[1],
+                self.insert_at_index, insert=False)
+            self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords)
+        elif self.mode == "shift":
+            _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=True)
+            self.anchor = canvas_event
+
+    def on_left_mouse_release(self, event):
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        if self.mode == "normal":
+            if self.mouse_moved:
+                previous_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
+                new_coords, _ = _modify_coords(
+                    self.image_canvas, self.shape_id, previous_coords,
+                    canvas_event[0], canvas_event[1],
+                    self.insert_at_index, insert=False)
+                self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords, emit=False)
+                self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
+        elif self.mode == "shift":
+            if self.mouse_moved:
+                _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=False)
+                self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
+                self.mode = "normal"
+        self.mouse_moved = False
 
     def on_mouse_motion(self, event):
         if self.shape_id is None:
@@ -1068,31 +1104,6 @@ class EditShapeTool(ImageCanvasTool):
                 self.image_canvas.config(cursor='arrow')
                 self.mode = "normal"
 
-    def on_left_mouse_motion(self, event):
-        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        if self.mode == "normal":
-            previous_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
-            new_coords, _ = _modify_coords(
-                self.image_canvas, self.shape_id, previous_coords, canvas_event[0], canvas_event[1],
-                self.insert_at_index, insert=False)
-            self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords)
-        elif self.mode == "shift":
-            _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=True)
-            self.anchor = canvas_event
-
-    def on_left_mouse_release(self, event):
-        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        if self.mode == "normal":
-            previous_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
-            new_coords, _ = _modify_coords(
-                self.image_canvas, self.shape_id, previous_coords, canvas_event[0], canvas_event[1], self.insert_at_index, insert=False)
-            self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords, emit=False)
-            self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
-        elif self.mode == "shift":
-            _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=False)
-            self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
-            self.mode = "normal"
-
     def on_right_mouse_click(self, event):
         if self.shape_id is None:
             return
@@ -1167,8 +1178,8 @@ def _register_defaults():
     if _DEFAULTS_REGISTERED:
         return
     for tool in [
-        ViewTool, ZoomInTool, ZoomOutTool, PanTool, SelectTool,
-        ShapeSelectTool, ShiftShapeTool, NewShapeTool, EditShapeTool]:
+            ViewTool, ZoomInTool, ZoomOutTool, PanTool, SelectTool,
+            ShapeSelectTool, ShiftShapeTool, NewShapeTool, EditShapeTool]:
         register_tool(tool, overwrite=False)
     _DEFAULTS_REGISTERED = True
 

@@ -5,12 +5,11 @@ import numpy
 
 from tk_builder.panel_builder import WidgetPanel
 from tk_builder.panels.image_panel import ImagePanel
-from tk_builder.image_reader import NumpyImageReader
+from tk_builder.image_reader import NumpyCanvasImageReader
 from tk_builder.widgets import widget_descriptors
 from tk_builder.widgets.image_canvas import ToolConstants, ShapeTypeConstants
 from tk_builder.widgets.basic_widgets import Button
 
-# TODO: review this example
 
 class Buttons(WidgetPanel):
     _widget_list = (
@@ -51,7 +50,7 @@ class CanvasResize(WidgetPanel):
 
         image_data = numpy.linspace(0, 255, image_npix_x*image_npix_y)
         image_data = numpy.reshape(image_data, (image_npix_y, image_npix_x))
-        image_reader = NumpyImageReader(image_data)
+        image_reader = NumpyCanvasImageReader(image_data)
         self.image_panel.set_image_reader(image_reader)
 
         self.drag_xlim_1 = image_npix_x * 0.1
