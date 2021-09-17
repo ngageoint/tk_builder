@@ -1799,7 +1799,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         ps = self.postscript(colormode='color')
         with open(output_fname, 'wb') as fi:
-            fi.write(ps)
+            fi.write(ps.encode('utf-8'))
 
     def find_distance_from_shape(self, shape_id, canvas_x, canvas_y):
         """
@@ -1983,7 +1983,7 @@ class ImageCanvas(basic_widgets.Canvas):
                 # noinspection PyBroadException
                 try:
                     self.delete_shape(shape_id)
-                except:
+                except Exception:
                     continue
         self.redraw_all_shapes()
         # reset the initial coordinates for zoom and select rectangles.
@@ -2031,7 +2031,7 @@ class ImageCanvas(basic_widgets.Canvas):
         # noinspection PyBroadException
         try:
             self.itemconfigure(shape_id, state="hidden")
-        except:
+        except Exception:
             pass
 
     def show_shape(self, shape_id):
@@ -2168,7 +2168,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self.coords(shape_id, canvas_drawing_coords)
             if update_pixel_coords:
                 self._set_shape_pixel_coords_from_canvas_coords(shape_id, new_coords, emit=emit)
-        except:
+        except Exception:
             pass
 
     def modify_existing_shape_using_image_coords(self, shape_id, image_coords, emit=True):
@@ -2787,18 +2787,6 @@ class ImageCanvas(basic_widgets.Canvas):
         else:
             self.show_shape(shape_id)
             self.set_current_tool_to_edit_shape(shape_id)
-
-    def set_select_initial_state(self, anchor):
-        """
-        Set the initial state for select tool for the given anchor point.
-
-        Parameters
-        ----------
-        anchor : tuple
-        """
-
-        self.current_tool = 'SELECT'
-        self.current_tool.anchor = anchor
 
     # custom event creation methods
     def emit_coordinate_changed(self, event):
