@@ -149,14 +149,14 @@ class _BaseWidgetPanel(object):
                     # noinspection PyBroadException
                     try:
                         getattr(self, widget).config(height=row_heights)
-                    except:
+                    except Exception:
                         pass  # some widgets don't have a height
                 else:
                     row_height = row_heights[row_num]
                     # noinspection PyBroadException
                     try:
                         getattr(self, widget).config(height=row_height)
-                    except:
+                    except Exception:
                         pass
 
     def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
@@ -238,7 +238,7 @@ class _BaseWidgetPanel(object):
             # noinspection PyBroadException
             try:
                 widget.config(state="disabled")
-            except:
+            except Exception:
                 if isinstance(widget, ttk.Widget):
                     widget.state(['disabled'])
 
@@ -251,7 +251,7 @@ class _BaseWidgetPanel(object):
             # noinspection PyBroadException
             try:
                 widget.config(state="normal")
-            except:
+            except Exception:
                 if isinstance(widget, ttk.Widget):
                     widget.state(['!disabled'])
 
@@ -307,7 +307,7 @@ class RadioButtonPanel(WidgetPanel):
         self._setup_radiobuttons()
 
     def init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list):
-        super().init_w_basic_widget_list(n_rows, n_widgets_per_row_list)
+        WidgetPanel.init_w_basic_widget_list(self, n_rows, n_widgets_per_row_list)
         self._setup_radiobuttons()
 
     def init_w_box_layout(self, n_columns, column_widths=None,  row_heights=None):

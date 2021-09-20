@@ -29,8 +29,8 @@ setup(name=parameters['__title__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
       install_requires=[
-          'numpy', 'scipy', 'matplotlib', 'pillow', 'scipy', 'ghostscript',
-          'sarpy>=1.1.49', 'typing;python_version<"3.4"', 'future;python_version<"3.4"'],
+          'numpy', 'scipy', 'matplotlib', 'Pillow',
+          'sarpy>=1.2.15', 'typing;python_version<"3.4"', 'future;python_version<"3.4"'],
       zip_safe=True,
       test_suite="tests",
       tests_require=['unittest2;python_version<"3.4"', ],
