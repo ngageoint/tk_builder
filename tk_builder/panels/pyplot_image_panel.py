@@ -121,4 +121,4 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
 
     def destroy(self):
         pyplot.close(self.fig)
-        super(PyplotImagePanel, self).destroy()
+        basic_widgets.LabelFrame.destroy(self)

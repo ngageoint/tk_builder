@@ -15,6 +15,7 @@ import tkinter.colorchooser as colorchooser
 from tkinter.messagebox import showinfo
 from typing import Union, Tuple, List, Dict
 from collections import OrderedDict
+import copy
 
 import numpy
 
@@ -1626,13 +1627,13 @@ class ImageCanvas(basic_widgets.Canvas):
         zoom_height = image_rect[2] - image_rect[0]
         zoom_width = image_rect[3] - image_rect[1]
         if zoom_height < 0:
-            temp_image_rect = image_rect.copy()
+            temp_image_rect = copy.deepcopy(image_rect)
             temp_image_rect[0] = image_rect[2]
             temp_image_rect[2] = image_rect[0]
             zoom_height *= -1
             image_rect = temp_image_rect
         if zoom_width < 0:
-            temp_image_rect = image_rect.copy()
+            temp_image_rect = copy.deepcopy(image_rect)
             temp_image_rect[1] = image_rect[3]
             temp_image_rect[3] = image_rect[1]
             zoom_width *= -1
@@ -1974,7 +1975,7 @@ class ImageCanvas(basic_widgets.Canvas):
         if self.variables.canvas_image_object is None:
             return  # nothing to be done
 
-        shape_ids = self.variables.shape_ids.copy()
+        shape_ids = copy.deepcopy(self.variables.shape_ids)
         tool_shapes = self.get_tool_shape_ids()
         for shape_id in shape_ids:
             if shape_id in tool_shapes:
@@ -2298,7 +2299,7 @@ class ImageCanvas(basic_widgets.Canvas):
             self._increment_color()
         return shape_id
 
-    def create_new_text(self, *args, make_current=True, increment_color=True, is_tool=False, color=None, **kwargs):
+    def create_new_text(self, args, make_current=True, increment_color=True, is_tool=False, color=None, **kwargs):
         """
         Create text with coordinates x1,y1.
 
@@ -2323,7 +2324,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         shape_id = self._create('text', args, kwargs)
         self.variables.shape_ids.append(shape_id)
-        coords = args[0]
+        coords = args
         image_coords = self.canvas_coords_to_image_coords(coords)
         vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords, color=color)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
