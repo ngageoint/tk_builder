@@ -1,5 +1,6 @@
 # This details the important differences introduced in tk_builder 1.0
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .1 - Minor bug fixes and dropping stated Python 2.7 support
 * .0 - Architecture changes to make tool handling more stable, clear, and extensible
        ImageReader renamed to CanvasImageReader for greater clarity and confusion avoidance
