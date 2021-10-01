@@ -34,9 +34,24 @@ from tk_builder.widgets import basic_widgets
 from sarpy.compliance import string_types, integer_types
 from sarpy.io.general.base import BaseReader
 from sarpy.geometry.geometry_elements import GeometryObject, LinearRing, LineString, Point
-import sarpy.visualization.remap as remap
+from sarpy.visualization.remap import get_registered_remap, get_remap_list, RemapFunction
 
 logger = logging.getLogger(__name__)
+
+
+#######
+# helper methods
+
+def _get_default_remap():
+    """
+    Gets the default remap function.
+
+    Returns
+    -------
+    RemapFunction
+    """
+
+    return get_remap_list()[0][1]
 
 
 #######
@@ -729,7 +744,7 @@ class AppVariables(object):
 
         self._shape_ids = []
         self._vector_objects = OrderedDict()
-        self._remap_function = remap.density
+        self._remap_function = get_remap_list()[0][1]
         self._tools = {}
         self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
 
@@ -778,11 +793,12 @@ class AppVariables(object):
     def set_remap_type(self, remap_type):
         if callable(remap_type):
             self._remap_function = remap_type
-        elif hasattr(remap, remap_type):
-            self._remap_function = getattr(remap, remap_type)
+        elif isinstance(remap_type, str):
+            self._remap_function = get_registered_remap(remap_type)
         else:
-            logger.error('Got unexpected value for remap {}. Using "density".'.format(remap_type))
-            self._remap_function = remap.density
+            default = _get_default_remap()
+            logger.error('Got unexpected value for remap {}. Using ``.'.format(default.name))
+            self._remap_function = default
 
     def add_tool_instance(self, tool, override=False):
         """
