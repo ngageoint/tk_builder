@@ -19,7 +19,7 @@ from tk_builder.image_reader import CanvasImageReader
 from tk_builder import file_filters
 
 from sarpy.compliance import string_types, integer_types
-from sarpy.visualization import remap
+from sarpy.visualization.remap import get_remap_list
 
 
 class Toolbar(WidgetPanelNoLabel):
@@ -101,7 +101,7 @@ class Toolbar(WidgetPanelNoLabel):
         'remap_label', default_text='remap:',
         docstring='The remap label.')  # type: basic_widgets.Label
     remap_combo = widget_descriptors.ComboboxDescriptor(
-        'remap_combo', default_text='density',
+        'remap_combo', default_text='',
         docstring='The remap value')  # type: basic_widgets.Combobox
     select_index_label = widget_descriptors.LabelDescriptor(
         'select_index_label', default_text='image\nindex:',
@@ -352,7 +352,7 @@ class ImagePanel(WidgetPanel):
             # get the old value
             old_value = self.toolbar.remap_combo.get()
             # populate the list of values
-            remap_values = [entry[0] for entry in remap.get_remap_list()]
+            remap_values = [entry[0] for entry in get_remap_list()]
             self.toolbar.remap_combo.update_combobox_values(remap_values)
             if old_value in remap_values:
                 self.toolbar.remap_combo.set(old_value)
@@ -529,7 +529,7 @@ class ImagePanel(WidgetPanel):
         event
         """
 
-        remap_dict = {entry[0]: entry[1] for entry in remap.get_remap_list()}
+        remap_dict = {entry[0]: entry[1] for entry in get_remap_list()}
         selection = self.toolbar.remap_combo.get()
         remap_type = remap_dict[selection]
         self.canvas.set_remap(remap_type)
