@@ -78,6 +78,7 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
         if image_data.ndim != 3 and 'cmap' not in kwargs:
             kwargs['cmap'] = self.cmap_name
 
+        self.ax.cla()
         self.ax.imshow(image_data, **kwargs)
         self.canvas.draw()
 
@@ -99,7 +100,8 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
 
         if 'cmap' not in kwargs:
             kwargs['cmap'] = self.cmap_name
-
+        self.ax.cla()
+        self.ax.set_aspect('auto')  # this is for safety, because it gets implicitly set to equal with imshow
         self.ax.pcolormesh(x_array, y_array, image_data, **kwargs)
         self.canvas.draw()
 

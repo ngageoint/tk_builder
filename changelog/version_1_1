@@ -1,6 +1,7 @@
 # This details the important differences introduced in tk_builder 1.1
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .4 - Fixing bug in pyplot image panel for purging old data
 * .3 - Update pyplot image panel to also accommodate pcolormesh usage
 * .2 - Incorporate changes to remap functions in sarpy 1.2.24
 * .1 - Minor bug fixes and dropping stated Python 2.7 support
