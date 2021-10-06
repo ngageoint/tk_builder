@@ -32,10 +32,14 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
         basic_widgets.LabelFrame.__init__(self, parent)
         self.config(borderwidth=5)
         self.cmap_name = cmap_name
+        self.x_label = None
+        self.y_label = None
+        self.title = None
         self.fig, self.ax = pyplot.subplots(dpi=100, nrows=1, ncols=1)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(expand=tkinter.YES, fill=tkinter.BOTH)
         self.make_blank()
+        self.set_title('detailed view')
         self.set_ylabel('row')
         self.set_xlabel('column')
         self.ax.grid(False)
@@ -63,6 +67,17 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
                 'cmap_name {} is not in the pyplot list of registered colormaps. '
                 'Using the default.'.format(value))
 
+    def clear(self):
+        """
+        Clear the axes contents.
+        """
+
+        self.ax.cla()
+        self.ax.set_title(self.title)
+        self.ax.set_xlabel(self.x_label)
+        self.ax.set_ylabel(self.y_label)
+        self.ax.set_aspect('auto')  # this is for safety, because it gets implicitly set to equal with imshow
+
     def update_image(self, image_data, **kwargs):
         """
         Updates the displayed image.
@@ -77,8 +92,7 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
 
         if image_data.ndim != 3 and 'cmap' not in kwargs:
             kwargs['cmap'] = self.cmap_name
-
-        self.ax.cla()
+        self.clear()
         self.ax.imshow(image_data, **kwargs)
         self.canvas.draw()
 
@@ -100,8 +114,7 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
 
         if 'cmap' not in kwargs:
             kwargs['cmap'] = self.cmap_name
-        self.ax.cla()
-        self.ax.set_aspect('auto')  # this is for safety, because it gets implicitly set to equal with imshow
+        self.clear()
         self.ax.pcolormesh(x_array, y_array, image_data, **kwargs)
         self.canvas.draw()
 
@@ -113,7 +126,7 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
         ----------
         the_label : str
         """
-
+        self.x_label = the_label
         self.ax.set_xlabel(the_label)
 
     def set_ylabel(self, the_label):
@@ -125,6 +138,7 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
         the_label : str
         """
 
+        self.y_label = the_label
         self.ax.set_ylabel(the_label)
 
     def set_title(self, the_title):
@@ -136,6 +150,7 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
         the_title : str
         """
 
+        self.title = the_title
         self.ax.set_title(the_title)
 
     def destroy(self):
