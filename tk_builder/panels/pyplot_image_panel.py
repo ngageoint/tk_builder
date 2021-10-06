@@ -65,25 +65,42 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
 
     def update_image(self, image_data, **kwargs):
         """
-        Updates the displayed image.  Image data should be an numpy array of dimensions:
-        [ny, nx] for a grayscale image or [ny, nx, 3] for a 3 color RGB image.
+        Updates the displayed image.
 
         Parameters
         ----------
         image_data: numpy.ndarray
+            An array of dimensions (ny, nx) or (ny, nx, 3)
         kwargs
-            Optional key word arguments for `imshow`
-
-        Returns
-        -------
-        str
+            Optional key word arguments for :func:`imshow`
         """
 
-        self.image_data = image_data
         if image_data.ndim != 3 and 'cmap' not in kwargs:
             kwargs['cmap'] = self.cmap_name
 
-        self.ax.imshow(self.image_data, **kwargs)
+        self.ax.imshow(image_data, **kwargs)
+        self.canvas.draw()
+
+    def update_pcolormesh(self, x_array, y_array, image_data, **kwargs):
+        """
+        Updates the display using pcolormesh.
+
+        Parameters
+        ----------
+        x_array : numpy.ndarray
+            An array of dimensions (nx, )
+        y_array : numpy.ndarray
+            An array of dimensions (ny, )
+        image_data : numpy.ndarray
+            An array of dimensions (ny, nx)
+        kwargs
+            Optional key word arguments for :func:`pcolormesh`
+        """
+
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = self.cmap_name
+
+        self.ax.pcolormesh(x_array, y_array, image_data, **kwargs)
         self.canvas.draw()
 
     def set_xlabel(self, the_label):
