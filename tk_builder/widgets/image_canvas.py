@@ -937,8 +937,17 @@ class ImageCanvas(basic_widgets.Canvas):
 
         return self._current_tool
 
-    @current_tool.setter
-    def current_tool(self, value):
+    def set_current_tool(self, value, **kwargs):
+        """
+        Sets the current tool.
+
+        Parameters
+        ----------
+        value : int|str|ImageCanvasTool
+        kwargs
+            keyword arguments for the tool :func:`initialize_tool`
+        """
+
         old_tool = self._current_tool
 
         if isinstance(value, ImageCanvasTool):
@@ -952,12 +961,17 @@ class ImageCanvas(basic_widgets.Canvas):
             logger.error('Got unhandled tool, setting to VIEW.'.format(value))
             value = self.variables.get_tool_instance('VIEW', self)
 
-        if old_tool != value:
-            if old_tool is not None:
-                old_tool.finalize_tool()
-            self._current_tool = value
-            value.initialize_tool()
+        tool_change = (old_tool != value)
+        if tool_change and old_tool is not None:
+            old_tool.finalize_tool()
+        self._current_tool = value
+        value.initialize_tool(**kwargs)
+        if tool_change:
             self.emit_current_tool_changed()
+
+    @current_tool.setter
+    def current_tool(self, value):
+        self.set_current_tool(value)
 
     @property
     def new_shape_type(self):
