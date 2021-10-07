@@ -152,7 +152,8 @@ class Combobox(ttk.Combobox, WidgetEvents):
 
     def update_combobox_values(self, val_list):
         self['values'] = val_list
-        self.current(0)
+        if len(val_list) > 0:
+            self.current(0)
 
 
 class Notebook(ttk.Notebook, WidgetEvents):
