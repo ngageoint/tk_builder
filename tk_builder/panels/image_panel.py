@@ -136,7 +136,18 @@ class ImagePanel(Frame):
     of the presently displayed image to an image file.
     """
 
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, image_reader=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        master
+            The parent widget
+        image_reader : None|CanvasImageReader
+        kwargs
+            keyword arguments passed through to Frame.
+        """
+
         self.root = master
         Frame.__init__(self, master)
         self._the_tool = tkinter.IntVar(self, value=get_tool_enum('VIEW'))
@@ -162,6 +173,8 @@ class ImagePanel(Frame):
         self.canvas.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.BOTH)
 
         self.set_max_canvas_size(1920, 1080)
+        if image_reader is not None:
+            self.set_image_reader(image_reader)
 
     def _set_toolbar_callbacks(self):
         # set the toolbar tool callbacks
@@ -643,10 +656,6 @@ class ImagePanel(Frame):
         Parameters
         ----------
         image_reader : CanvasImageReader
-
-        Returns
-        -------
-        None
         """
 
         self._populate_remap_combo(image_reader)
