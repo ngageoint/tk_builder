@@ -73,10 +73,11 @@ class PyplotImagePanel(basic_widgets.LabelFrame):
         """
 
         self.ax.cla()
+        self.ax.grid(False)
         self.ax.set_title(self.title)
         self.ax.set_xlabel(self.x_label)
         self.ax.set_ylabel(self.y_label)
-        self.ax.set_aspect('auto')  # this is for safety, because it gets implicitly set to equal with imshow
+        self.ax.set_aspect('auto')  # this is for safety, because it gets implicitly set with imshow
 
     def update_image(self, image_data, **kwargs):
         """
