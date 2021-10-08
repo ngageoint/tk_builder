@@ -336,17 +336,20 @@ class ImagePanel(WidgetPanel):
             self.toolbar.select_index_combo.current(current_value)
             self.toolbar.select_index_combo.config(state='readonly')
 
-    def _populate_remap_combo(self):
+    def _populate_remap_combo(self, image_reader):
         """
         Populate the remap combobox state. This should be called when a new reader is
         selected.
+
+        Parameters
+        ----------
+        image_reader : CanvasImageReader
         """
 
-        if self.canvas.variables.canvas_image_object is None or \
-                self.canvas.variables.canvas_image_object.image_reader is None:
+        if image_reader is None:
             remapable = False
         else:
-            remapable = self.canvas.variables.canvas_image_object.image_reader.remapable
+            remapable = image_reader.remapable
 
         if remapable:
             # get the old value
@@ -642,10 +645,10 @@ class ImagePanel(WidgetPanel):
         None
         """
 
+        self._populate_remap_combo(image_reader)
         self.canvas.set_image_reader(image_reader)
         self._update_image_save_directory(image_reader.file_name)
         self._populate_select_index_combo()
-        self._populate_remap_combo()
 
     def do_nothing(self, event):
         """
