@@ -21,7 +21,7 @@ import numpy
 
 from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
     IntegerTupleDescriptor, StringDescriptor, TypedDescriptor, FloatDescriptor
-
+from tk_builder.widgets.basic_widgets import Canvas
 from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
     ShapeTypeConstants, get_tool_type, get_tool_name, get_tool_enum, \
     normalized_rectangle_coordinates
@@ -29,7 +29,6 @@ from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder.utils.color_utils.color_cycler import ColorCycler
 from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
-from tk_builder.widgets import basic_widgets
 
 from sarpy.compliance import string_types, integer_types
 from sarpy.io.general.base import BaseReader
@@ -867,7 +866,7 @@ class AppVariables(object):
 ######
 # image canvas widget
 
-class ImageCanvas(basic_widgets.Canvas):
+class ImageCanvas(Canvas):
     def __init__(self, master):
         """
 
@@ -887,7 +886,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self._new_shape_type = ShapeTypeConstants.POLYGON
         self._current_shape_id = None
 
-        basic_widgets.Canvas.__init__(self, master, highlightthickness=0)
+        Canvas.__init__(self, master, highlightthickness=0)
         self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
 
         self.variables = AppVariables()
@@ -2238,7 +2237,7 @@ class ImageCanvas(basic_widgets.Canvas):
 
         vector_object = self.get_vector_object(shape_id)
         vector_object.color = color
-        if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON]:
+        if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE, ShapeTypeConstants.POLYGON]:
             self.itemconfigure(shape_id, outline=color)
         else:
             self.itemconfigure(shape_id, fill=color)
@@ -2689,6 +2688,9 @@ class ImageCanvas(basic_widgets.Canvas):
         return self.variables.canvas_image_object.full_image_yx_to_canvas_coords(image_coords)
 
     # set tool methods
+    def set_current_tool_to_shift_shape(self, shape_ids=None):
+        pass
+
     def set_current_tool_to_draw_point(self, point_id=None):
         """
         Sets the current tool to draw point.
@@ -2824,6 +2826,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
         Emits the <<CoordinateChanged>> event. This passes through the x and y
         canvas coordinates.
+
         Parameters
         ----------
         event
