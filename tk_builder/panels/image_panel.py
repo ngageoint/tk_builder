@@ -149,7 +149,7 @@ class ImagePanel(Frame):
         """
 
         self.root = master
-        Frame.__init__(self, master)
+        Frame.__init__(self, master, **kwargs)
         self._the_tool = tkinter.IntVar(self, value=get_tool_enum('VIEW'))
         self._the_shape = tkinter.IntVar(self, value=ShapeTypeConstants.POLYGON)
         self._image_save_directory = os.path.expanduser('~')
