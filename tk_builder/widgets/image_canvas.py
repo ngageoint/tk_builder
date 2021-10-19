@@ -529,6 +529,7 @@ class VectorObject(object):
         image_drag_limits : None|Tuple|List
         outline
         fill
+        color
         """
 
         self._uid = uid
@@ -544,9 +545,9 @@ class VectorObject(object):
         if color is not None:
             self.color = color
         else:
-            if v_type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE, ShapeTypeConstants.POINT]:
+            if v_type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE]:
                 self.color = outline
-            elif v_type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
+            elif v_type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW, ShapeTypeConstants.POINT]:
                 self.color = fill
             # TODO: text?
 
@@ -678,16 +679,16 @@ class CanvasState(object):
         'min_width', default_value=100,
         docstring='The minimum canvas width, in pixels.')  # type: int
     rect_border_width = IntegerDescriptor(
-        'rect_border_width', default_value=2,
+        'rect_border_width', default_value=5,
         docstring='The (margin) rectangular border width, in pixels.')  # type: int
     line_width = IntegerDescriptor(
-        'line_width', default_value=3,
+        'line_width', default_value=5,
         docstring='The line width, in pixels.')  # type: int
     point_size = IntegerDescriptor(
         'point_size', default_value=5,
         docstring='The point size, in pixels.')  # type: int
     poly_border_width = IntegerDescriptor(
-        'poly_border_width', default_value=3,
+        'poly_border_width', default_value=5,
         docstring='The polygon border width, in pixels.')  # type: int
     foreground_color = StringDescriptor(
         'foreground_color', default_value='red',
@@ -1026,7 +1027,6 @@ class ImageCanvas(Canvas):
             old_id = old_vector_obj.uid
             old_type = old_vector_obj.type
 
-
         if (old_id is None and shape_id is None) or (old_id == shape_id):
             return  # nothing to be done
 
@@ -1141,7 +1141,7 @@ class ImageCanvas(Canvas):
 
         current_value = self.variables.canvas_image_object.image_reader.index
         if the_value == current_value:
-            return # nothing to be done
+            return  # nothing to be done
 
         try:
             self.variables.canvas_image_object.image_reader.index = the_value
@@ -1200,7 +1200,9 @@ class ImageCanvas(Canvas):
 
         # the basics about the canvas object
         the_origin = self.variables.canvas_image_object.canvas_full_image_upper_left_yx
-        the_decimation = self.variables.canvas_image_object.decimation_factor/self.variables.canvas_image_object.display_rescaling_factor
+        the_decimation = self.variables.canvas_image_object.decimation_factor / \
+            self.variables.canvas_image_object.display_rescaling_factor
+
         # the canvas size
         the_height = self.variables.canvas_image_object.canvas_ny
         the_width = self.variables.canvas_image_object.canvas_nx
@@ -1612,7 +1614,9 @@ class ImageCanvas(Canvas):
             tmp_image_coords[3] = image_coords[1]
         if decimation is None:
             decimation = self.variables.canvas_image_object.get_decimation_factor_from_full_image_rect(tmp_image_coords)
-        tmp_image_coords = (int(tmp_image_coords[0]), int(tmp_image_coords[1]), int(tmp_image_coords[2]), int(tmp_image_coords[3]))
+        tmp_image_coords = (
+            int(tmp_image_coords[0]), int(tmp_image_coords[1]),
+            int(tmp_image_coords[2]), int(tmp_image_coords[3]))
         image_data_in_rect = self.variables.canvas_image_object.get_decimated_image_data_in_full_image_rect(
             tmp_image_coords, decimation)
         return image_data_in_rect
@@ -1685,11 +1689,15 @@ class ImageCanvas(Canvas):
         if zoom_ratio >= window_ratio:
             # the zoom rectangle is taller than the window rectangle.
             # Keep the height, and extend the width
-            image_rect = [image_rect[0], image_rect[1], image_rect[2], image_rect[1] + zoom_width*zoom_ratio/window_ratio]
+            image_rect = [
+                image_rect[0], image_rect[1],
+                image_rect[2], image_rect[1] + zoom_width*zoom_ratio/window_ratio]
         else:
             # the zoom rectangle is longer than the window rectangle
             # Keep the width, and expand the height
-            image_rect = [image_rect[0], image_rect[1], image_rect[0] + zoom_height*window_ratio/zoom_ratio, image_rect[3]]
+            image_rect = [
+                image_rect[0], image_rect[1],
+                image_rect[0] + zoom_height*window_ratio/zoom_ratio, image_rect[3]]
 
         # ensure that sensible limits apply
         if image_rect[0] < 0:
@@ -1701,7 +1709,8 @@ class ImageCanvas(Canvas):
         if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
             image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
 
-        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect, decimation=decimation)
+        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(
+            image_rect, decimation=decimation)
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.emit_image_extent_changed()
@@ -1766,14 +1775,14 @@ class ImageCanvas(Canvas):
             # zooming in
             if pixel_row <= self.variables.config.zoom_pixel_threshold or \
                     pixel_col <= self.variables.config.zoom_pixel_threshold:
-                return # no need to zoom in any further
+                return  # no need to zoom in any further
 
             fraction = 1/ratio
         elif event.num == 4 or event.delta > 0:
             # zooming out
             if pixel_row >= self.variables.canvas_image_object.image_reader.full_image_ny or \
                     pixel_col >= self.variables.canvas_image_object.image_reader.full_image_nx:
-                return   # no need to zoom out any further
+                return  # no need to zoom out any further
 
             fraction = ratio
         else:
@@ -2277,7 +2286,7 @@ class ImageCanvas(Canvas):
 
         the_vector = self.get_vector_object(shape_id)
         if the_vector is None:
-            return # nothing to be done
+            return  # nothing to be done
 
         the_type = the_vector.type
         self.variables.shape_ids.remove(shape_id)
@@ -2310,7 +2319,11 @@ class ImageCanvas(Canvas):
         int
         """
 
-        if 'fill' not in options:
+        if color is not None:
+            options['fill'] = color
+        elif 'fill' in options:
+            color = options['fill']
+        else:
             options['fill'] = self.variables.state.foreground_color
 
         x1, y1 = (coords[0] - self.variables.state.point_size), (coords[1] - self.variables.state.point_size)
@@ -2353,7 +2366,8 @@ class ImageCanvas(Canvas):
         self.variables.shape_ids.append(shape_id)
         coords = args
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords, color=color)
+        vector_obj = VectorObject(
+            shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords, color=color)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.current_shape_id = shape_id
@@ -2384,13 +2398,19 @@ class ImageCanvas(Canvas):
         int
         """
 
-        if 'outline' not in options:
+        if color is not None:
+            options['outline'] = color
+        elif 'outline' in options:
+            color = options['outline']
+        else:
             options['outline'] = self.variables.state.foreground_color
+
         if 'width' not in options:
             options['width'] = self.variables.state.rect_border_width
         shape_id = self.create_rectangle(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, color=color, **options)
+        vector_obj = VectorObject(
+            shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.current_shape_id = shape_id
@@ -2421,13 +2441,19 @@ class ImageCanvas(Canvas):
         int
         """
 
-        if 'outline' not in options:
+        if color is not None:
+            options['outline'] = color
+        elif 'outline' in options:
+            color = options['outline']
+        else:
             options['outline'] = self.variables.state.foreground_color
+
         if 'width' not in options:
             options['width'] = self.variables.state.rect_border_width
         shape_id = self.create_oval(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, color=color, **options)
+        vector_obj = VectorObject(
+            shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.current_shape_id = shape_id
@@ -2458,14 +2484,20 @@ class ImageCanvas(Canvas):
         int
         """
 
-        if 'fill' not in options:
+        if color is not None:
+            options['fill'] = color
+        elif 'fill' in options:
+            color = options['fill']
+        else:
             options['fill'] = self.variables.state.foreground_color
+
         if 'width' not in options:
             options['width'] = self.variables.state.line_width
 
         shape_id = self.create_line(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, color=color, **options)
+        vector_obj = VectorObject(
+            shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.current_shape_id = shape_id
@@ -2496,8 +2528,13 @@ class ImageCanvas(Canvas):
         int
         """
 
-        if 'fill' not in options:
+        if color is not None:
             options['fill'] = self.variables.state.foreground_color
+        elif 'fill' in options:
+            color = options['fill']
+        else:
+            options['fill'] = self.variables.state.foreground_color
+
         if 'width' not in options:
             options['width'] = self.variables.state.line_width
         if 'arrow' not in options:
@@ -2505,7 +2542,8 @@ class ImageCanvas(Canvas):
 
         shape_id = self.create_line(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, color=color, **options)
+        vector_obj = VectorObject(
+            shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.current_shape_id = shape_id
@@ -2536,8 +2574,13 @@ class ImageCanvas(Canvas):
         int
         """
 
-        if 'outline' not in options:
+        if color is not None:
+            options['outline'] = color
+        elif 'outline' in options:
+            color = options['outline']
+        else:
             options['outline'] = self.variables.state.foreground_color
+
         if 'width' not in options:
             options['width'] = self.variables.state.poly_border_width
         if 'fill' not in options:
@@ -2545,7 +2588,8 @@ class ImageCanvas(Canvas):
 
         shape_id = self.create_polygon(*coords, **options)
         image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, color=color, **options)
+        vector_obj = VectorObject(
+            shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, color=color, **options)
         self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
         if make_current:
             self.current_shape_id = shape_id
