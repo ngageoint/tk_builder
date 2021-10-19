@@ -389,6 +389,15 @@ class ImageCanvasTool(object):
         pass
 
     def set_current_shape(self, old_shape_id, new_shape_id):
+        """
+        Update any state based on the current canvas id changing.
+
+        Parameters
+        ----------
+        old_shape_id : None|int
+        new_shape_id : None|int
+        """
+
         _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
 
     def on_left_mouse_click(self, event):
