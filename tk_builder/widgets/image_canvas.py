@@ -682,14 +682,14 @@ class CanvasState(object):
         'rect_border_width', default_value=5,
         docstring='The (margin) rectangular border width, in pixels.')  # type: int
     line_width = IntegerDescriptor(
-        'line_width', default_value=5,
+        'line_width', default_value=3,
         docstring='The line width, in pixels.')  # type: int
+    highlight_line_width = IntegerDescriptor(
+        'highlight_line_width', default_value=6,
+        docstring='The highlighted line width, in pixels.')  # type: int
     point_size = IntegerDescriptor(
-        'point_size', default_value=5,
+        'point_size', default_value=7,
         docstring='The point size, in pixels.')  # type: int
-    poly_border_width = IntegerDescriptor(
-        'poly_border_width', default_value=5,
-        docstring='The polygon border width, in pixels.')  # type: int
     foreground_color = StringDescriptor(
         'foreground_color', default_value='red',
         docstring='The foreground color (named or hexidecimal string).')  # type: str
@@ -2101,22 +2101,30 @@ class ImageCanvas(Canvas):
         None
         """
 
+        if shape_id in self.get_tool_shape_ids():
+            return
+
         vector_object = self.get_vector_object(shape_id)
         if vector_object is None:
             return
         shape_type = vector_object.type
-        if shape_type in ShapeTypeConstants.geometric_shapes() and \
-                shape_id not in self.get_tool_shape_ids():
-            self.itemconfigure(shape_id, dash=(5, 5))
+        if shape_type == ShapeTypeConstants.POINT:
+            self.itemconfigure(shape_id, width=3, outline='black')
+        elif shape_type in ShapeTypeConstants.geometric_shapes():
+            self.itemconfigure(shape_id, width=self.variables.state.highlight_line_width, dash=(3, 3))
 
     def lowlight_existing_shape(self, shape_id):
+        if shape_id in self.get_tool_shape_ids():
+            return
+
         vector_object = self.get_vector_object(shape_id)
         if vector_object is None:
             return
         shape_type = vector_object.type
-        if shape_type in ShapeTypeConstants.geometric_shapes() and \
-                shape_id not in self.get_tool_shape_ids():
-            self.itemconfigure(shape_id, dash=())
+        if shape_type == ShapeTypeConstants.POINT:
+            self.itemconfigure(shape_id, width=0, outline=None)
+        elif shape_type in ShapeTypeConstants.geometric_shapes():
+            self.itemconfigure(shape_id, width=self.variables.state.line_width, dash=())
 
     def _set_shape_pixel_coords_from_canvas_coords(self, shape_id, coords, emit=True):
         """
@@ -2582,7 +2590,7 @@ class ImageCanvas(Canvas):
             options['outline'] = self.variables.state.foreground_color
 
         if 'width' not in options:
-            options['width'] = self.variables.state.poly_border_width
+            options['width'] = self.variables.state.line_width
         if 'fill' not in options:
             options['fill'] = ''
 
