@@ -291,6 +291,32 @@ def _perform_shape_shift(image_canvas, shape_id, canvas_event, anchor, emit=True
     image_canvas.modify_existing_shape_using_canvas_coords(shape_id, new_coords, emit=emit)
 
 
+def _default_shape_select(image_canvas, old_shape_id, new_shape_id):
+    """
+    Default behavior for tools in setting new shape id(s).
+
+    Parameters
+    ----------
+    image_canvas : tk_builder.widgets.image_canvas.ImageCanvas
+    old_shape_id : None|int|Sequence[int]
+    new_shape_id : None|int|Sequence[int]
+    """
+
+    if isinstance(old_shape_id, int):
+        image_canvas.lowlight_existing_shape(old_shape_id)
+    elif isinstance(old_shape_id, (tuple, list)):
+        for old_shape in old_shape_id:
+            image_canvas.lowlight_existing_shape(old_shape)
+
+    if isinstance(new_shape_id, int):
+        image_canvas.highlight_existing_shape(new_shape_id)
+        image_canvas.show_shape(new_shape_id)
+    elif isinstance(new_shape_id, (tuple, list)):
+        for new_shape in new_shape_id:
+            image_canvas.highlight_existing_shape(new_shape)
+            image_canvas.show_shape(new_shape)
+
+
 ############
 # abstract object
 
@@ -361,6 +387,9 @@ class ImageCanvasTool(object):
         """
 
         pass
+
+    def set_current_shape(self, old_shape_id, new_shape_id):
+        _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
 
     def on_left_mouse_click(self, event):
         """
@@ -840,10 +869,29 @@ class ShiftShapeTool(ImageCanvasTool):
         self.anchor = (0, 0)
         self.mode = "normal"
         self.mouse_moved = False
+        _default_shape_select(self.image_canvas, self.image_canvas.current_shape_id, self.shape_ids)
 
     def finalize_tool(self):
+        _default_shape_select(self.image_canvas, self.shape_ids, self.image_canvas.current_shape_id)
         self.shape_ids = []
-        pass
+
+    def set_current_shape(self, old_shape_id, new_shape_id):
+        if new_shape_id is None:
+            self.finalize_tool()
+            _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
+            return
+        if new_shape_id not in self.shape_ids:
+            self.finalize_tool()
+            _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
+            self.initialize_tool([new_shape_id, ])
+            return
+
+        # we know that new_shape_id in the shape_ids collection
+        if old_shape_id is None or old_shape_id in self.shape_ids:
+            return  # nothing important has changed
+        else:
+            _default_shape_select(self.image_canvas, old_shape_id, None)
+            return
 
     def on_left_mouse_click(self, event):
         self.mouse_moved = False
@@ -954,6 +1002,14 @@ class EditShapeTool(ImageCanvasTool):
     def finalize_tool(self):
         pass
 
+    def set_current_shape(self, old_shape_id, new_shape_id):
+        _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
+        if self.shape_id == new_shape_id:
+            return
+
+        self.finalize_tool()
+        self.initialize_tool(new_shape_id)
+
     def _update_text_or_point(self, event):
         self.image_canvas.modify_existing_shape_using_canvas_coords(
             self.shape_id, _get_canvas_event_coords(self.image_canvas, event), update_pixel_coords=True)
@@ -988,12 +1044,12 @@ class EditShapeTool(ImageCanvasTool):
         if self.shape_id is None:
             closest_shape_id = self.image_canvas.select_closest_shape(event, set_as_current=True)
             if closest_shape_id is not None:
-                self.image_canvas.current_shape_id = closest_shape_id
                 self.vector_object = self.image_canvas.get_vector_object(closest_shape_id)
                 coord_index, the_distance, coord_x, coord_y = self.image_canvas.find_closest_shape_coord(
                     closest_shape_id, canvas_event[0], canvas_event[1])
                 self.insert_at_index = coord_index
                 self.anchor = (coord_x, coord_y)
+                self.image_canvas.current_shape_id = closest_shape_id
             self.mode = "normal"
             return
         if self.vector_object is None:

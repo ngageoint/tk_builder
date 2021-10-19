@@ -1030,11 +1030,9 @@ class ImageCanvas(Canvas):
         if (old_id is None and shape_id is None) or (old_id == shape_id):
             return  # nothing to be done
 
-        self.lowlight_existing_shape(old_id)
         self._current_shape_id = shape_id
-        self.highlight_existing_shape(shape_id)
+        self.current_tool.set_current_shape(old_id, shape_id)
         self.emit_shape_deselect(old_id, old_type)
-        self.show_shape(shape_id)
         if shape_id is not None:
             self.emit_shape_select(shape_id, new_vector_obj.type)
 
