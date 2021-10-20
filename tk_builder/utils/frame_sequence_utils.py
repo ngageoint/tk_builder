@@ -1,5 +1,5 @@
 import PIL.Image
-from typing import List
+from typing import Sequence
 
 import numpy
 
@@ -13,7 +13,7 @@ def save_numpy_frame_sequence_to_animated_gif(frame_sequence, fname, fps=15, loo
 
     Parameters
     ----------
-    frame_sequence : List[numpy.ndarray]
+    frame_sequence : Sequence[numpy.ndarray]
         The sequence of numpy arrays.
     fname : str
         The path for the output file.
@@ -21,10 +21,6 @@ def save_numpy_frame_sequence_to_animated_gif(frame_sequence, fname, fps=15, loo
         The frames per second of the gif.
     loop_animation : bool
         Should the animation be looped?
-
-    Returns
-    -------
-    None
     """
 
     duration = (1 / fps) * 1000

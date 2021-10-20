@@ -27,8 +27,7 @@ from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
     normalized_rectangle_coordinates
 
 from tk_builder.image_reader import CanvasImageReader
-from tk_builder.utils.color_utils.color_cycler import ColorCycler
-from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
+from tk_builder.utils.color_utils import ColorCycler
 
 from sarpy.compliance import string_types, integer_types
 from sarpy.io.general.base import BaseReader
@@ -679,13 +678,13 @@ class CanvasState(object):
         'min_width', default_value=100,
         docstring='The minimum canvas width, in pixels.')  # type: int
     rect_border_width = IntegerDescriptor(
-        'rect_border_width', default_value=5,
+        'rect_border_width', default_value=3,
         docstring='The (margin) rectangular border width, in pixels.')  # type: int
     line_width = IntegerDescriptor(
         'line_width', default_value=3,
         docstring='The line width, in pixels.')  # type: int
     highlight_line_width = IntegerDescriptor(
-        'highlight_line_width', default_value=6,
+        'highlight_line_width', default_value=5,
         docstring='The highlighted line width, in pixels.')  # type: int
     point_size = IntegerDescriptor(
         'point_size', default_value=7,
@@ -746,7 +745,6 @@ class AppVariables(object):
         self._vector_objects = OrderedDict()
         self._remap_function = get_remap_list()[0][1]
         self._tools = {}
-        self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
 
     @property
     def shape_ids(self):
@@ -2109,7 +2107,7 @@ class ImageCanvas(Canvas):
             return
         shape_type = vector_object.type
         if shape_type == ShapeTypeConstants.POINT:
-            self.itemconfigure(shape_id, width=3, outline='black')
+            self.itemconfigure(shape_id, width=3, outline='white')
         elif shape_type in ShapeTypeConstants.geometric_shapes():
             self.itemconfigure(shape_id, width=self.variables.state.highlight_line_width, dash=(3, 3))
 
