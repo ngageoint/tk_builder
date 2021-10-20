@@ -39,6 +39,20 @@ class TreeviewWithScrolling(Treeview):
         self.yscroll['command'] = self.yview
         self.xscroll['command'] = self.xview
 
+    def set_selection_with_expansion(self, item_id):
+        def expand_parent(iid):
+            parent = self.parent(iid)
+            if parent == '':
+                return
+            else:
+                self.item(parent, open=True)
+                expand_parent(parent)
+        if item_id is None or item_id == '':
+            return
+        expand_parent(item_id)
+        self.selection_set(item_id)
+        self.focus(item_id)
+
     def __str__(self):
         return str(self.frame)
 

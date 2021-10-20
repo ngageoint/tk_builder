@@ -6,8 +6,6 @@ Wrapping tkinter widgets to ensure simply and consistent event definitions and b
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
-from typing import Callable
-
 import tkinter
 from tkinter import ttk
 
