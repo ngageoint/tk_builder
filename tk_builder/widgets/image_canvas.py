@@ -1142,6 +1142,7 @@ class ImageCanvas(Canvas):
             return  # nothing to be done
 
         try:
+            self.emit_image_index_prechange()  # indicate that we are about to change the index
             self.variables.canvas_image_object.image_reader.index = the_value
             self._reinitialize_reader()
             self.emit_image_index_changed()
@@ -2295,6 +2296,7 @@ class ImageCanvas(Canvas):
             return  # nothing to be done
 
         the_type = the_vector.type
+        self.emit_shape_predelete(shape_id, the_type)
         self.variables.shape_ids.remove(shape_id)
         del self.variables.vector_objects[shape_id]
         self.delete(shape_id)
@@ -2896,6 +2898,21 @@ class ImageCanvas(Canvas):
             return
         self.event_generate('<<ShapeCreate>>', x=shape_id, y=shape_type)
 
+    def emit_shape_predelete(self, shape_id, shape_type):
+        """
+        Emit the <<ShapePreDelete>> event. This will be emitted just before the
+        shape is deleted.
+
+        Parameters
+        ----------
+        shape_id : int
+        shape_type : int
+        """
+
+        if shape_id is None:
+            return
+        self.event_generate('<<ShapePreDelete>>', x=shape_id, y=shape_type)
+
     def emit_shape_delete(self, shape_id, shape_type):
         """
         Emit the <<ShapeDelete>> event. This will be emitted after the shape has been
@@ -3009,6 +3026,15 @@ class ImageCanvas(Canvas):
         """
 
         self.event_generate('<<RemapChanged>>')
+
+    def emit_image_index_prechange(self):
+        """
+        Emits the <<ImageIndexPreChanged>> event, indicating that the index value
+        is about to change. Note that the current image index can be determined
+        from the `get_image_index()` method.
+        """
+
+        self.event_generate('<<ImageIndexPreChange>>')
 
     def emit_image_index_changed(self):
         """
