@@ -715,6 +715,23 @@ class VectorObject(object):
         return self._highlight_args
 
 
+    def replicate(self):
+        """
+        Replicate the vector object, leaving the name and id unassigned.
+
+        Returns
+        -------
+        VectorObject
+        """
+
+        the_type = self.__class__
+        return the_type(
+            self._type, is_tool=self.is_tool, image_coords=self.image_coords,
+            image_drag_limits=self.image_drag_limits, color=self.color,
+            text=self.text, point_size=self.point_size,
+            regular_args=self.regular_args.copy(), highlight_args=self.highlight_args.copy())
+
+
 ########
 # component variables containers
 
