@@ -566,14 +566,27 @@ class _ZoomTool(ImageCanvasTool):
 
     def __init__(self, image_canvas):
         ImageCanvasTool.__init__(self, image_canvas)
-        self.shape_id = self.image_canvas.variables.zoom_rect.uid
+        self.shape_id = -1
         self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
         self.anchor = (0, 0)
         self.rect_coords = (0, 0, 0, 0)
         self.mouse_moved = False
 
     def initialize_tool(self, **kwargs):
-        self.shape_id = self.image_canvas.variables.zoom_rect.uid
+        def make_zoom_rect():
+            from .image_canvas import VectorObject
+            opts = {'width': 4, 'fill': 'none'}
+            vector = VectorObject(
+                ShapeTypeConstants.RECT, name='ZOOM', is_tool=True, color='blue',
+                regular_args=opts, highlight_args=opts)
+            self.shape_id = self.image_canvas.create_shape_from_vector_object(
+                vector, (0, 0, 0, 0), make_current=False)
+
+        try:
+            self.shape_id = self.image_canvas.variables.get_tool_shape_id_by_name('ZOOM')
+        except KeyError:
+            make_zoom_rect()
+
         self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
         self.anchor = (0, 0)
         self.rect_coords = (0, 0, 0, 0)
@@ -718,13 +731,26 @@ class SelectTool(ImageCanvasTool):
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
-        self.shape_id = self.image_canvas.variables.select_rect.uid
+        self.shape_id = -1
         self.vector_object = None
         self.mouse_moved = False
 
     def initialize_tool(self, **kwargs):
+        def make_select_rect():
+            from .image_canvas import VectorObject
+            opts = {'width': 3, 'fill': 'none'}
+            vector = VectorObject(
+                ShapeTypeConstants.RECT, name='SELECT', is_tool=True, color='red',
+                regular_args=opts, highlight_args=opts)
+            self.shape_id = self.image_canvas.create_shape_from_vector_object(
+                vector, (0, 0, 0, 0), make_current=False)
+
+        try:
+            self.shape_id = self.image_canvas.variables.get_tool_shape_id_by_name('SELECT')
+        except KeyError:
+            make_select_rect()
+
         self.mode = "normal"
-        self.shape_id = self.image_canvas.variables.select_rect.uid
         self.image_canvas.show_shape(self.shape_id)
         self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
