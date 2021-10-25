@@ -2599,7 +2599,7 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {'width': 0, 'outline': 'none'}
+            regular_options = {'width': 0, 'outline': None}
         if highlight_options is None:
             highlight_options = {'width': 2, 'outline': 'white'}
 
@@ -2638,9 +2638,11 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {'width': self.variables.state.line_width}
+            regular_options = {'width': self.variables.state.line_width, 'dash': ()}
         if highlight_options is None:
             highlight_options = {'width': self.variables.state.highlight_line_width, 'dash': (3, 3)}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
 
         vector_obj = VectorObject(
             ShapeTypeConstants.LINE, is_tool=is_tool, color=use_color,
@@ -2677,9 +2679,11 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {'width': self.variables.state.line_width}
+            regular_options = {'width': self.variables.state.line_width, 'dash': ()}
         if highlight_options is None:
             highlight_options = {'width': self.variables.state.highlight_line_width, 'dash': (3, 3)}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
 
         vector_obj = VectorObject(
             ShapeTypeConstants.ARROW, is_tool=is_tool, color=use_color,
@@ -2717,13 +2721,12 @@ class ImageCanvas(Canvas):
 
         if regular_options is None:
             regular_options = {
-                'width': self.variables.state.line_width,
-                'fill': 'none'}
+                'width': self.variables.state.line_width, 'dash': (), 'fill': None}
         if highlight_options is None:
             highlight_options = {
-                'width': self.variables.state.highlight_line_width,
-                'fill': 'none',
-                'dash': (3, 3)}
+                'width': self.variables.state.highlight_line_width, 'fill': None, 'dash': (3, 3)}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
 
         vector_obj = VectorObject(
             ShapeTypeConstants.RECT, is_tool=is_tool, color=use_color,
@@ -2761,13 +2764,12 @@ class ImageCanvas(Canvas):
 
         if regular_options is None:
             regular_options = {
-                'width': self.variables.state.line_width,
-                'fill': 'none'}
+                'width': self.variables.state.line_width, 'dash': (), 'fill': None}
         if highlight_options is None:
             highlight_options = {
-                'width': self.variables.state.highlight_line_width,
-                'fill': 'none',
-                'dash': (3, 3)}
+                'width': self.variables.state.highlight_line_width, 'dash': (3, 3), 'fill': None}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
 
         vector_obj = VectorObject(
             ShapeTypeConstants.ELLIPSE, is_tool=is_tool, color=use_color,
@@ -2805,13 +2807,12 @@ class ImageCanvas(Canvas):
 
         if regular_options is None:
             regular_options = {
-                'width': self.variables.state.line_width,
-                'fill': 'none'}
+                'width': self.variables.state.line_width, 'dash': (), 'fill': ''}
         if highlight_options is None:
             highlight_options = {
-                'width': self.variables.state.highlight_line_width,
-                'fill': 'none',
-                'dash': (3, 3)}
+                'width': self.variables.state.highlight_line_width, 'dash': (3, 3), 'fill': ''}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
 
         vector_obj = VectorObject(
             ShapeTypeConstants.POLYGON, is_tool=is_tool, color=use_color,
