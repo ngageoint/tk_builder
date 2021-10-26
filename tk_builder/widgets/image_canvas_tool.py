@@ -575,7 +575,7 @@ class _ZoomTool(ImageCanvasTool):
     def initialize_tool(self, **kwargs):
         def make_zoom_rect():
             from .image_canvas import VectorObject
-            opts = {'width': 4, 'fill': 'none'}
+            opts = {'width': 4, 'fill': None, 'dash': ()}
             vector = VectorObject(
                 ShapeTypeConstants.RECT, name='ZOOM', is_tool=True, color='blue',
                 regular_args=opts, highlight_args=opts)
@@ -738,7 +738,7 @@ class SelectTool(ImageCanvasTool):
     def initialize_tool(self, **kwargs):
         def make_select_rect():
             from .image_canvas import VectorObject
-            opts = {'width': 3, 'fill': 'none'}
+            opts = {'width': 3, 'fill': ''}
             vector = VectorObject(
                 ShapeTypeConstants.RECT, name='SELECT', is_tool=True, color='red',
                 regular_args=opts, highlight_args=opts)

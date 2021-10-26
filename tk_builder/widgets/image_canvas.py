@@ -650,7 +650,7 @@ class VectorObject(object):
         str: A name for the vector object. Must be unique for objects associated with tools.
         """
 
-        return self._type
+        return self._name
 
     @property
     def is_tool(self):
@@ -901,7 +901,9 @@ class AppVariables(object):
         self._vector_objects[vector_object.uid] = vector_object
         if vector_object.is_tool:
             if vector_object.name in self._tool_shape_ids_by_name:
-                raise ValueError('tool name must be unique, the name `{}` is already registered')
+                raise ValueError(
+                    'tool name must be unique, the name `{}` is already registered'.format(
+                        vector_object.name))
             self._tool_shape_ids_by_name[vector_object.name] = vector_object.uid
             self._tool_shape_ids.append(vector_object.uid)
         else:
@@ -985,7 +987,7 @@ class AppVariables(object):
             self._remap_function = get_registered_remap(remap_type)
         else:
             default = _get_default_remap()
-            logger.error('Got unexpected value for remap {}. Using ``.'.format(default.name))
+            logger.error('Got unexpected value for remap. Using `{}`.'.format(default.name))
             self._remap_function = default
 
     def add_tool_instance(self, tool, override=False):
@@ -2512,7 +2514,8 @@ class ImageCanvas(Canvas):
         elif vector_object.type == ShapeTypeConstants.TEXT:
             shape_id = self.create_text(*coords, text=vector_object.text, **vector_object.regular_args)
         else:
-            raise ValueError('Got unhandled vector object type `{}`'.format(ShapeTypeConstants.get_name(vector_object.type)))
+            raise ValueError(
+                'Got unhandled vector object type `{}`'.format(ShapeTypeConstants.get_name(vector_object.type)))
 
         if vector_object.image_drag_limits is None:
             full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
@@ -2870,7 +2873,9 @@ class ImageCanvas(Canvas):
         elif vector_object.type == ShapeTypeConstants.POLYGON:
             return LinearRing(coordinates=coords_array)
         else:
-            raise ValueError('Unhandled geometry type {} for conversion from tkinter to sarpy geometry type')
+            raise ValueError(
+                'Unhandled geometry type {} for conversion from tkinter to sarpy geometry type'.format(
+                    ShapeTypeConstants.get_name(vector_object.type)))
 
     # shape coordinate methods
     def canvas_coords_to_image_coords(self, canvas_coords):
