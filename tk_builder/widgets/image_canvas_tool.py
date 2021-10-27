@@ -291,6 +291,32 @@ def _perform_shape_shift(image_canvas, shape_id, canvas_event, anchor, emit=True
     image_canvas.modify_existing_shape_using_canvas_coords(shape_id, new_coords, emit=emit)
 
 
+def _default_shape_select(image_canvas, old_shape_id, new_shape_id):
+    """
+    Default behavior for tools in setting new shape id(s).
+
+    Parameters
+    ----------
+    image_canvas : tk_builder.widgets.image_canvas.ImageCanvas
+    old_shape_id : None|int|Sequence[int]
+    new_shape_id : None|int|Sequence[int]
+    """
+
+    if isinstance(old_shape_id, int):
+        image_canvas.lowlight_existing_shape(old_shape_id)
+    elif isinstance(old_shape_id, (tuple, list)):
+        for old_shape in old_shape_id:
+            image_canvas.lowlight_existing_shape(old_shape)
+
+    if isinstance(new_shape_id, int):
+        image_canvas.highlight_existing_shape(new_shape_id)
+        image_canvas.show_shape(new_shape_id)
+    elif isinstance(new_shape_id, (tuple, list)):
+        for new_shape in new_shape_id:
+            image_canvas.highlight_existing_shape(new_shape)
+            image_canvas.show_shape(new_shape)
+
+
 ############
 # abstract object
 
@@ -343,9 +369,14 @@ class ImageCanvasTool(object):
             raise ValueError('Got disallowed value `{}`'.format(value))
         self._mode = value
 
-    def initialize_tool(self):
+    def initialize_tool(self, **kwargs):
         """
         This should be executed as an step step for this tool (as the tool gets set).
+
+        Parameters
+        ----------
+        kwargs
+            keyword arguments for initialization options
         """
 
         pass
@@ -356,6 +387,18 @@ class ImageCanvasTool(object):
         """
 
         pass
+
+    def set_current_shape(self, old_shape_id, new_shape_id):
+        """
+        Update any state based on the current canvas id changing.
+
+        Parameters
+        ----------
+        old_shape_id : None|int
+        new_shape_id : None|int
+        """
+
+        _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
 
     def on_left_mouse_click(self, event):
         """
@@ -523,14 +566,27 @@ class _ZoomTool(ImageCanvasTool):
 
     def __init__(self, image_canvas):
         ImageCanvasTool.__init__(self, image_canvas)
-        self.shape_id = self.image_canvas.variables.zoom_rect.uid
+        self.shape_id = -1
         self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
         self.anchor = (0, 0)
         self.rect_coords = (0, 0, 0, 0)
         self.mouse_moved = False
 
-    def initialize_tool(self):
-        self.shape_id = self.image_canvas.variables.zoom_rect.uid
+    def initialize_tool(self, **kwargs):
+        def make_zoom_rect():
+            from .image_canvas import VectorObject
+            opts = {'width': 4, 'fill': None, 'dash': ()}
+            vector = VectorObject(
+                ShapeTypeConstants.RECT, name='ZOOM', is_tool=True, color='blue',
+                regular_args=opts, highlight_args=opts)
+            self.shape_id = self.image_canvas.create_shape_from_vector_object(
+                vector, (0, 0, 0, 0), make_current=False)
+
+        try:
+            self.shape_id = self.image_canvas.variables.get_tool_shape_id_by_name('ZOOM')
+        except KeyError:
+            make_zoom_rect()
+
         self.size_threshold = self.image_canvas.variables.config.zoom_box_size_threshold
         self.anchor = (0, 0)
         self.rect_coords = (0, 0, 0, 0)
@@ -605,7 +661,7 @@ class PanTool(ImageCanvasTool):
         self.anchor = (0, 0)
         self.threshold = self.image_canvas.variables.config.pan_pixel_threshold
 
-    def initialize_tool(self):
+    def initialize_tool(self, **kwargs):
         self.anchor = (0, 0)
         self.threshold = self.image_canvas.variables.config.pan_pixel_threshold
 
@@ -675,13 +731,26 @@ class SelectTool(ImageCanvasTool):
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.anchor = (0, 0)
-        self.shape_id = self.image_canvas.variables.select_rect.uid
+        self.shape_id = -1
         self.vector_object = None
         self.mouse_moved = False
 
-    def initialize_tool(self):
+    def initialize_tool(self, **kwargs):
+        def make_select_rect():
+            from .image_canvas import VectorObject
+            opts = {'width': 3, 'fill': ''}
+            vector = VectorObject(
+                ShapeTypeConstants.RECT, name='SELECT', is_tool=True, color='red',
+                regular_args=opts, highlight_args=opts)
+            self.shape_id = self.image_canvas.create_shape_from_vector_object(
+                vector, (0, 0, 0, 0), make_current=False)
+
+        try:
+            self.shape_id = self.image_canvas.variables.get_tool_shape_id_by_name('SELECT')
+        except KeyError:
+            make_select_rect()
+
         self.mode = "normal"
-        self.shape_id = self.image_canvas.variables.select_rect.uid
         self.image_canvas.show_shape(self.shape_id)
         self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
         self.size_threshold = self.image_canvas.variables.config.select_size_threshold
@@ -799,29 +868,69 @@ class ShapeSelectTool(ViewTool):
 
 class ShiftShapeTool(ImageCanvasTool):
     """
-    The tool for applying a constant shift to a given polygon.
+    The tool for applying a constant shift to a collection of geometry objects
+    on the canvas
     """
+
     _name = 'SHIFT_SHAPE'
     _mode_values = {"normal", "shift"}
 
     def __init__(self, image_canvas):
         ImageCanvasTool.__init__(self, image_canvas)
-        self.shape_id = -1
+        self.shape_ids = []
         self.anchor = (0, 0)
         self.mouse_moved = False
 
-    def initialize_tool(self):
-        self.shape_id = self.image_canvas.current_shape_id
+    def initialize_tool(self, shape_ids=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        shape_ids : None|int|List
+        kwargs
+        """
+
+        if shape_ids is None:
+            shape_ids = self.image_canvas.current_shape_id
+        if shape_ids is None:
+            shape_ids = []
+        elif isinstance(shape_ids, int):
+            shape_ids = [shape_ids, ]
+        elif isinstance(shape_ids, list):
+            self.shape_ids = shape_ids
+        else:
+            raise TypeError('Got unsupported shape_ids type')
+        self.shape_ids = shape_ids
         self.anchor = (0, 0)
         self.mode = "normal"
         self.mouse_moved = False
+        _default_shape_select(self.image_canvas, self.image_canvas.current_shape_id, self.shape_ids)
 
     def finalize_tool(self):
-        pass
+        _default_shape_select(self.image_canvas, self.shape_ids, self.image_canvas.current_shape_id)
+        self.shape_ids = []
+
+    def set_current_shape(self, old_shape_id, new_shape_id):
+        if new_shape_id is None:
+            self.finalize_tool()
+            _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
+            return
+        if new_shape_id not in self.shape_ids:
+            self.finalize_tool()
+            _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
+            self.initialize_tool([new_shape_id, ])
+            return
+
+        # we know that new_shape_id in the shape_ids collection
+        if old_shape_id is None or old_shape_id in self.shape_ids:
+            return  # nothing important has changed
+        else:
+            _default_shape_select(self.image_canvas, old_shape_id, None)
+            return
 
     def on_left_mouse_click(self, event):
         self.mouse_moved = False
-        if self.shape_id is None:
+        if len(self.shape_ids) == 0:
             self.image_canvas.select_closest_shape(event, set_as_current=True)
             self.initialize_tool()
         else:
@@ -831,7 +940,8 @@ class ShiftShapeTool(ImageCanvasTool):
     def on_left_mouse_motion(self, event):
         self.mouse_moved = True
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=True)
+        for entry in self.shape_ids:
+            _perform_shape_shift(self.image_canvas, entry, canvas_event, self.anchor, emit=True)
         self.anchor = canvas_event
 
     def on_left_mouse_release(self, event):
@@ -839,8 +949,10 @@ class ShiftShapeTool(ImageCanvasTool):
             return
 
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=False)
-        self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
+        for entry in self.shape_ids:
+            _perform_shape_shift(self.image_canvas, entry, canvas_event, self.anchor, emit=False)
+            self.image_canvas.emit_shape_coords_finalized(the_id=entry)
+
         self.mode = "normal"
         self.mouse_moved = False
 
@@ -900,8 +1012,21 @@ class EditShapeTool(ImageCanvasTool):
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self._rect_cursors = ["top_left_corner", "top_right_corner", "bottom_right_corner", "bottom_left_corner"]
 
-    def initialize_tool(self):
-        self.shape_id = self.image_canvas.current_shape_id
+    def initialize_tool(self, shape_id=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        shape_id : None|int
+        kwargs
+        """
+
+        if shape_id is None:
+            shape_id = self.image_canvas.current_shape_id
+        if shape_id is None:
+            self.image_canvas.current_tool = 'VIEW'
+
+        self.shape_id = shape_id
         self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
         self.insert_at_index = 0
         self.anchor = (0, 0)
@@ -911,6 +1036,14 @@ class EditShapeTool(ImageCanvasTool):
 
     def finalize_tool(self):
         pass
+
+    def set_current_shape(self, old_shape_id, new_shape_id):
+        _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
+        if self.shape_id == new_shape_id:
+            return
+
+        self.finalize_tool()
+        self.initialize_tool(new_shape_id)
 
     def _update_text_or_point(self, event):
         self.image_canvas.modify_existing_shape_using_canvas_coords(
@@ -946,12 +1079,12 @@ class EditShapeTool(ImageCanvasTool):
         if self.shape_id is None:
             closest_shape_id = self.image_canvas.select_closest_shape(event, set_as_current=True)
             if closest_shape_id is not None:
-                self.image_canvas.current_shape_id = closest_shape_id
                 self.vector_object = self.image_canvas.get_vector_object(closest_shape_id)
                 coord_index, the_distance, coord_x, coord_y = self.image_canvas.find_closest_shape_coord(
                     closest_shape_id, canvas_event[0], canvas_event[1])
                 self.insert_at_index = coord_index
                 self.anchor = (coord_x, coord_y)
+                self.image_canvas.current_shape_id = closest_shape_id
             self.mode = "normal"
             return
         if self.vector_object is None:

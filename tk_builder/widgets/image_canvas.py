@@ -11,7 +11,7 @@ import logging
 from PIL import ImageTk, Image
 import platform
 import tkinter
-import tkinter.colorchooser as colorchooser
+from tkinter.colorchooser import askcolor
 from tkinter.messagebox import showinfo
 from typing import Union, Tuple, List, Dict
 from collections import OrderedDict
@@ -21,17 +21,14 @@ import numpy
 
 from tk_builder.base_elements import BooleanDescriptor, IntegerDescriptor, \
     IntegerTupleDescriptor, StringDescriptor, TypedDescriptor, FloatDescriptor
-
+from tk_builder.widgets.basic_widgets import Canvas
 from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
     ShapeTypeConstants, get_tool_type, get_tool_name, get_tool_enum, \
     normalized_rectangle_coordinates
 
 from tk_builder.image_reader import CanvasImageReader
-from tk_builder.utils.color_utils.color_cycler import ColorCycler
-from tk_builder.utils.color_utils.hex_color_palettes import SeabornHexPalettes
-from tk_builder.widgets import basic_widgets
+from tk_builder.utils.color_utils import ColorCycler
 
-from sarpy.compliance import string_types, integer_types
 from sarpy.io.general.base import BaseReader
 from sarpy.geometry.geometry_elements import GeometryObject, LinearRing, LineString, Point
 from sarpy.visualization.remap import get_registered_remap, get_remap_list, RemapFunction
@@ -515,52 +512,129 @@ class VectorObject(object):
     The vector object - for shapes rendered on the image canvas.
     """
 
-    # noinspection PyUnusedLocal
-    def __init__(self,
-                 uid, vector_type, image_coords=None, point_size=None,
-                 image_drag_limits=None, outline=None, fill=None, color=None, **kwargs):
+    def __init__(
+            self, vector_type, uid=None, name=None, is_tool=False, image_coords=None, image_drag_limits=None,
+            color=None, text=None, point_size=6, regular_args=None, highlight_args=None):
         """
 
         Parameters
         ----------
-        uid : int
         vector_type : str|int
+        uid : None|int
+        name : None|str
+            A name for the shape - this is required if `is_tool=True` and uniqueness
+            will be checked on registration.
+        is_tool : bool
+            Is this for the purposes of creating a tool?
         image_coords : Tuple
-        point_size : int
         image_drag_limits : None|Tuple|List
-        outline
-        fill
+        color : None|str
+        text : None|str
+            Only really applies to TEXT type.
+        point_size : int
+            Only applicable to points
+        regular_args : None|dict
+            Keyword styling arguments applicable for canvas line/rectangle/oval/polygon
+            in regular state
+        highlight_args : None|dict
+            Keyword styling arguments applicable for canvas line/rectangle/oval/polygon
+            in highlight state
         """
 
-        self._uid = uid
-        v_type = ShapeTypeConstants.validate(vector_type)
-        if v_type is None:
-            raise ValueError('Unable to validate vector type {}'.format(vector_type))
-
-        self._type = v_type
         self._color = None
+        self._uid = None
+        self._name = name
+        self._text = None
+
+        vector_type = ShapeTypeConstants.validate(vector_type)
+        if vector_type is None:
+            raise ValueError('Unable to validate vector type {}'.format(vector_type))
+        self._type = vector_type
+
+        if uid is not None:
+            self.uid = uid
+
+        self._is_tool = is_tool
+        if is_tool and self._name is None:
+            raise ValueError('name must be provided when the object is for a tool')
+
+        self.text = text
         self.image_coords = image_coords
-        self.point_size = point_size
         self.image_drag_limits = image_drag_limits
+        self.point_size = point_size
         if color is not None:
             self.color = color
-        else:
-            if v_type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE, ShapeTypeConstants.POINT]:
-                self.color = outline
-            elif v_type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
-                self.color = fill
-            # TODO: text?
 
-        if self._color is None:
-            self._color = 'cyan'
+        if regular_args is None:
+            self._regular_args = {}
+        elif isinstance(regular_args, dict):
+            self._regular_args = regular_args
+        else:
+            raise TypeError(
+                'regular_args must be a dict instance, got type `{}`'.format(type(regular_args)))
+
+        if highlight_args is None:
+            self._highlight_args = {}
+        elif isinstance(highlight_args, dict):
+            self._highlight_args = highlight_args
+        else:
+            raise TypeError(
+                'highlight_args must be a dict instance, got type `{}`'.format(type(highlight_args)))
+
+        self._validate_kwargs()
+
+    def _validate_kwargs(self):
+        if self._type == ShapeTypeConstants.ARROW:
+            if 'arrow' not in self.regular_args:
+                self.regular_args['arrow'] = tkinter.LAST
+            if 'arrow' not in self.highlight_args:
+                self.highlight_args['arrow'] = self.regular_args['arrow']
+
+        # check the "size"
+        if self._type == ShapeTypeConstants.POINT:
+            if self.point_size is None:
+                self.point_size = 5
+        elif self._type != ShapeTypeConstants.TEXT:
+            if 'width' not in self.regular_args:
+                self.regular_args['width'] = 4
+            if 'width' not in self.highlight_args:
+                self.highlight_args['width'] = self.regular_args['width'] + 2
+
+        # perform color validation
+        if self._type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW, ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
+            attr = 'fill'
+        elif self._type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE]:
+            attr = 'outline'
+        else:
+            attr = None
+
+        if attr is not None:
+            if attr in self.regular_args:
+                self.color = self.regular_args[attr]
+            elif self._color is not None:
+                self.regular_args[attr] = self._color
+            else:
+                self.regular_args[attr] = 'cyan'
+                self.color = 'cyan'
 
     @property
     def uid(self):
         """
-        int: The vector object id.
+        int: The vector object id. The value -1 indicates that it has not yet been assigned.
+        Once assigned, it is immutable.
         """
 
-        return self._uid
+        return self._uid if self._uid is not None else -1
+
+    @uid.setter
+    def uid(self, value):
+        if self._uid is not None:
+            raise ValueError('VectorObject.uid is not in a settable state')
+
+        value = int(value)
+        if value < 0:
+            raise ValueError('VectorObject.uid must be non-negative')
+        self._uid = value
 
     @property
     def type(self):
@@ -569,6 +643,22 @@ class VectorObject(object):
         """
 
         return self._type
+
+    @property
+    def name(self):
+        """
+        str: A name for the vector object. Must be unique for objects associated with tools.
+        """
+
+        return self._name
+
+    @property
+    def is_tool(self):
+        """
+        bool: Is this object associated with a tool?
+        """
+
+        return self._is_tool
 
     @property
     def color(self):
@@ -590,36 +680,64 @@ class VectorObject(object):
         if value is None:
             self._color = 'cyan'
             return
-        if not isinstance(value, string_types):
+        if not isinstance(value, str):
             raise TypeError('Requires a string.')
         self._color = value
+
+    @property
+    def text(self):
+        """
+        str: The text, which should only apply to TEXT type
+        """
+        return '<text>' if self._text is None else self._text
+
+    @text.setter
+    def text(self, value):
+        if value is None or isinstance(value, str):
+            self._text = value
+        else:
+            self._text = str(value)
+
+    @property
+    def regular_args(self):
+        """
+        dict: config arguments to be passed through to the tkinter config/shape constructor
+        """
+
+        return self._regular_args
+
+    @property
+    def highlight_args(self):
+        """
+        dict: config arguments to be passed through to the tkinter config
+        """
+
+        return self._highlight_args
+
+
+    def replicate(self):
+        """
+        Replicate the vector object, leaving the name and id unassigned.
+
+        Returns
+        -------
+        VectorObject
+        """
+
+        the_type = self.__class__
+        return the_type(
+            self._type, is_tool=self.is_tool, image_coords=self.image_coords,
+            image_drag_limits=self.image_drag_limits, color=self.color,
+            text=self.text, point_size=self.point_size,
+            regular_args=self.regular_args.copy(), highlight_args=self.highlight_args.copy())
 
 
 ########
 # component variables containers
 
+
 class RectangleTool(object):
-    rect_id = IntegerDescriptor(
-        'uid',
-        docstring='The rectangle id.')  # type: int
-    rect_color = StringDescriptor(
-        'color', default_value='cyan',
-        docstring='The rectangle color (named or hexidecimal).')  # type: str
-    border_width = IntegerDescriptor(
-        'border_width', default_value=2,
-        docstring='The rectangle border width, in pixels.')  # type: int
-
     def __init__(self, uid, color='cyan', border_width=2):
-        """
-        Rectangle tool properties.
-
-        Parameters
-        ----------
-        uid
-        color
-        border_width
-        """
-
         self.uid = uid
         self.color = color
         self.border_width = border_width
@@ -679,17 +797,17 @@ class CanvasState(object):
         'min_width', default_value=100,
         docstring='The minimum canvas width, in pixels.')  # type: int
     rect_border_width = IntegerDescriptor(
-        'rect_border_width', default_value=2,
+        'rect_border_width', default_value=3,
         docstring='The (margin) rectangular border width, in pixels.')  # type: int
     line_width = IntegerDescriptor(
         'line_width', default_value=3,
         docstring='The line width, in pixels.')  # type: int
+    highlight_line_width = IntegerDescriptor(
+        'highlight_line_width', default_value=5,
+        docstring='The highlighted line width, in pixels.')  # type: int
     point_size = IntegerDescriptor(
-        'point_size', default_value=5,
+        'point_size', default_value=7,
         docstring='The point size, in pixels.')  # type: int
-    poly_border_width = IntegerDescriptor(
-        'poly_border_width', default_value=3,
-        docstring='The polygon border width, in pixels.')  # type: int
     foreground_color = StringDescriptor(
         'foreground_color', default_value='red',
         docstring='The foreground color (named or hexidecimal string).')  # type: str
@@ -719,14 +837,6 @@ class AppVariables(object):
     config = TypedDescriptor(
         'config', CanvasConfig,
         docstring='Some basic configuration properties for the image canvas.')  # type: CanvasConfig
-    # zoom rectangle properties
-    zoom_rect = TypedDescriptor(
-        'zoom_rect', RectangleTool,
-        docstring='The zoom rectangle properties.')  # type: RectangleTool
-    # selection rectangle properties
-    select_rect = TypedDescriptor(
-        'select_rect', RectangleTool,
-        docstring='The select rectangle properties.')  # type: RectangleTool
     # some state properties
     state = TypedDescriptor(
         'state', CanvasState,
@@ -739,14 +849,13 @@ class AppVariables(object):
     def __init__(self):
         self.config = CanvasConfig()
         self.state = CanvasState()
-        self.zoom_rect = RectangleTool(-1, color='blue', border_width=3)
-        self.select_rect = RectangleTool(-1, color='red', border_width=3)
 
-        self._shape_ids = []
+        self._shape_ids = []  # non-tool associated shape ids
+        self._tool_shape_ids = []  # tool associated shape ids
+        self._tool_shape_ids_by_name = {}
         self._vector_objects = OrderedDict()
         self._remap_function = get_remap_list()[0][1]
         self._tools = {}
-        self.highlight_color_palette = SeabornHexPalettes.blues  # type: List[str]
 
     @property
     def shape_ids(self):
@@ -756,6 +865,16 @@ class AppVariables(object):
         """
 
         return self._shape_ids
+
+    @property
+    def tool_shape_ids(self):
+        # type: () -> List[int]
+        """
+        List[int]: The list of shape ids associated with tools. This should not
+        be manipulated directly.
+        """
+
+        return self._tool_shape_ids
 
     @property
     def vector_objects(self):
@@ -779,8 +898,79 @@ class AppVariables(object):
         None
         """
 
-        self._shape_ids.append(vector_object.uid)
         self._vector_objects[vector_object.uid] = vector_object
+        if vector_object.is_tool:
+            if vector_object.name in self._tool_shape_ids_by_name:
+                raise ValueError(
+                    'tool name must be unique, the name `{}` is already registered'.format(
+                        vector_object.name))
+            self._tool_shape_ids_by_name[vector_object.name] = vector_object.uid
+            self._tool_shape_ids.append(vector_object.uid)
+        else:
+            if vector_object.uid not in self._shape_ids:
+                self._shape_ids.append(vector_object.uid)
+
+    def remove_shape_from_tracking(self, the_id):
+        """
+        Removes the given shape from tracking.
+
+        Parameters
+        ----------
+        the_id : int
+
+        Returns
+        -------
+        None|VectorObject
+            If `None` there was no object in tracking, otherwise it is the
+            removed object.
+        """
+
+        if the_id not in self._vector_objects:
+            return None # nothing to be done
+
+        vector_object = self._vector_objects[the_id]
+        if vector_object.is_tool:
+            self._tool_shape_ids.remove(vector_object.uid)
+            del self._tool_shape_ids_by_name[vector_object.name]
+        else:
+            try:
+                self._shape_ids.remove(vector_object.uid)
+            except ValueError:
+                logger.error(
+                    'The regular shape id `{}` is not registered,\n\t'
+                    'there may be inconsistent shape state on the image canvas'.format(vector_object.uid))
+        del self._vector_objects[the_id]
+        return vector_object
+
+    def get_tool_shape_id_by_name(self, name):
+        """
+        Gets the id of the vector object associated with the given name.
+
+        Parameters
+        ----------
+        name : str
+
+        Returns
+        -------
+        int
+        """
+
+        return self._tool_shape_ids_by_name[name]
+
+    def get_tool_shape_by_name(self, name):
+        """
+        Gets the vector object associated with the given name.
+
+        Parameters
+        ----------
+        name : str
+
+        Returns
+        -------
+        VectorObject
+        """
+
+        return self._vector_objects[self._tool_shape_ids_by_name[name]]
 
     @property
     def remap_function(self):
@@ -797,7 +987,7 @@ class AppVariables(object):
             self._remap_function = get_registered_remap(remap_type)
         else:
             default = _get_default_remap()
-            logger.error('Got unexpected value for remap {}. Using ``.'.format(default.name))
+            logger.error('Got unexpected value for remap. Using `{}`.'.format(default.name))
             self._remap_function = default
 
     def add_tool_instance(self, tool, override=False):
@@ -854,9 +1044,9 @@ class AppVariables(object):
         int
         """
 
-        if isinstance(tool_value, integer_types):
+        if isinstance(tool_value, int):
             return tool_value
-        elif isinstance(tool_value, string_types):
+        elif isinstance(tool_value, str):
             return get_tool_enum(tool_value)
         elif isinstance(tool_value, ImageCanvasTool):
             return get_tool_enum(tool_value.name)
@@ -867,7 +1057,7 @@ class AppVariables(object):
 ######
 # image canvas widget
 
-class ImageCanvas(basic_widgets.Canvas):
+class ImageCanvas(Canvas):
     def __init__(self, master):
         """
 
@@ -887,22 +1077,11 @@ class ImageCanvas(basic_widgets.Canvas):
         self._new_shape_type = ShapeTypeConstants.POLYGON
         self._current_shape_id = None
 
-        basic_widgets.Canvas.__init__(self, master, highlightthickness=0)
+        Canvas.__init__(self, master, highlightthickness=0)
         self.pack(fill=tkinter.BOTH, expand=tkinter.NO)
 
         self.variables = AppVariables()
         self._current_tool = self.variables.get_tool_instance('VIEW', self)
-
-        self.variables.zoom_rect.uid = self.create_new_rect(
-            (0, 0, 0, 0), make_current=False, is_tool=True, increment_color=False,
-            outline=self.variables.zoom_rect.color, width=self.variables.zoom_rect.border_width)
-        self.variables.select_rect.uid = self.create_new_rect(
-            (0, 0, 0, 0), make_current=False, is_tool=True, increment_color=False,
-            outline=self.variables.select_rect.color, width=self.variables.select_rect.border_width)
-
-        # hide the shapes we initialize
-        self.hide_shape(self.variables.select_rect.uid)
-        self.hide_shape(self.variables.zoom_rect.uid)
 
         self.on_resize(self.callback_handle_resize)
 
@@ -919,8 +1098,7 @@ class ImageCanvas(basic_widgets.Canvas):
         self.on_mouse_enter(self.callback_handle_mouse_enter)
         self.on_mouse_leave(self.callback_handle_mouse_leave)
 
-        # todo color cycler?
-        self._color_cycler = ColorCycler(n_colors=10)
+        self._color_cycler = ColorCycler(n_colors=20)
 
     @property
     def color_cycler(self):
@@ -937,27 +1115,41 @@ class ImageCanvas(basic_widgets.Canvas):
 
         return self._current_tool
 
-    @current_tool.setter
-    def current_tool(self, value):
+    def set_current_tool(self, value, **kwargs):
+        """
+        Sets the current tool.
+
+        Parameters
+        ----------
+        value : int|str|ImageCanvasTool
+        kwargs
+            keyword arguments for the tool :func:`initialize_tool`
+        """
+
         old_tool = self._current_tool
 
         if isinstance(value, ImageCanvasTool):
             self.variables.add_tool_instance(value, override=True)
         if isinstance(value, int):
             value = get_tool_name(value)
-        if isinstance(value, string_types):
+        if isinstance(value, str):
             value = self.variables.get_tool_instance(value, self)
 
         if not isinstance(value, ImageCanvasTool):
             logger.error('Got unhandled tool, setting to VIEW.'.format(value))
             value = self.variables.get_tool_instance('VIEW', self)
 
-        if old_tool != value:
-            if old_tool is not None:
-                old_tool.finalize_tool()
-            self._current_tool = value
-            value.initialize_tool()
+        tool_change = (old_tool != value)
+        if tool_change and old_tool is not None:
+            old_tool.finalize_tool()
+        self._current_tool = value
+        value.initialize_tool(**kwargs)
+        if tool_change:
             self.emit_current_tool_changed()
+
+    @current_tool.setter
+    def current_tool(self, value):
+        self.set_current_tool(value)
 
     @property
     def new_shape_type(self):
@@ -1013,30 +1205,27 @@ class ImageCanvas(basic_widgets.Canvas):
             old_id = old_vector_obj.uid
             old_type = old_vector_obj.type
 
-
         if (old_id is None and shape_id is None) or (old_id == shape_id):
             return  # nothing to be done
 
-        self.lowlight_existing_shape(old_id)
         self._current_shape_id = shape_id
-        self.highlight_existing_shape(shape_id)
+        self.current_tool.set_current_shape(old_id, shape_id)
         self.emit_shape_deselect(old_id, old_type)
-        self.show_shape(shape_id)
         if shape_id is not None:
             self.emit_shape_select(shape_id, new_vector_obj.type)
 
     def activate_color_selector(self):
         """
         The activate color selector callback function.
-
-        Returns
-        -------
-        None
         """
 
-        color = colorchooser.askcolor()[1]
-        self.variables.state.foreground_color = color
-        self.change_shape_color(self._current_shape_id, color)
+        if self.current_shape_id is None:
+            _, color = askcolor(color=self.variables.state.foreground_color, title='Choose Color')
+            self.variables.state.foreground_color = color
+        else:
+            vector_object = self.get_vector_object(self.current_shape_id)
+            _, color = askcolor(color=vector_object.color, title='Choose Color')
+            self.change_shape_color(vector_object.uid, color)
 
     def _increment_color(self):
         """
@@ -1048,9 +1237,6 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.state.foreground_color = self.color_cycler.next_color
-
-    def do_nothing(self, event):
-        pass
 
     def _reinitialize_reader(self):
         """
@@ -1067,10 +1253,9 @@ class ImageCanvas(basic_widgets.Canvas):
         self.zoom_to_full_image_selection([0, 0, full_ny, full_nx])
         self.current_tool = 'VIEW'
         # update drag limits for the tools
-        zoom_object = self.get_vector_object(self.variables.zoom_rect.uid)
-        zoom_object.image_drag_limits = (0, 0, full_ny, full_nx)
-        select_object = self.get_vector_object(self.variables.select_rect.uid)
-        select_object.image_drag_limits = (0, 0, full_ny, full_nx)
+        for tool_id in self.variables.tool_shape_ids:
+            vect_obj = self.get_vector_object(tool_id)
+            vect_obj.image_drag_limits = (0, 0, full_ny, full_nx)
 
     def set_image_reader(self, image_reader):
         """
@@ -1130,9 +1315,10 @@ class ImageCanvas(basic_widgets.Canvas):
 
         current_value = self.variables.canvas_image_object.image_reader.index
         if the_value == current_value:
-            return # nothing to be done
+            return  # nothing to be done
 
         try:
+            self.emit_image_index_prechange()  # indicate that we are about to change the index
             self.variables.canvas_image_object.image_reader.index = the_value
             self._reinitialize_reader()
             self.emit_image_index_changed()
@@ -1189,7 +1375,9 @@ class ImageCanvas(basic_widgets.Canvas):
 
         # the basics about the canvas object
         the_origin = self.variables.canvas_image_object.canvas_full_image_upper_left_yx
-        the_decimation = self.variables.canvas_image_object.decimation_factor/self.variables.canvas_image_object.display_rescaling_factor
+        the_decimation = self.variables.canvas_image_object.decimation_factor / \
+            self.variables.canvas_image_object.display_rescaling_factor
+
         # the canvas size
         the_height = self.variables.canvas_image_object.canvas_ny
         the_width = self.variables.canvas_image_object.canvas_nx
@@ -1242,27 +1430,26 @@ class ImageCanvas(basic_widgets.Canvas):
 
     def get_non_tool_shape_ids(self):
         """
-        Gets the shape ids for the everything except shapes assigned to tools,
-        such as the zoom and selection shapes.
+        Gets the shape ids for the everything except shapes assigned to tools.
 
         Returns
         -------
         List[int]
         """
 
-        all_shape_ids = set(self.variables.shape_ids)
-        return list(all_shape_ids.difference(self.get_tool_shape_ids()))
+        return self.variables.shape_ids
 
     def get_tool_shape_ids(self):
         """
-        Gets the shape ids for the zoom rectangle and select rectangle.
+        Gets the shape ids for the shapes assigned to tools, such as the zoom
+        and selection shapes.
 
         Returns
         -------
         List[int]
         """
 
-        return [self.variables.zoom_rect.uid, self.variables.select_rect.uid]
+        return self.variables.tool_shape_ids
 
     def callback_handle_resize(self, event):
         """
@@ -1601,7 +1788,9 @@ class ImageCanvas(basic_widgets.Canvas):
             tmp_image_coords[3] = image_coords[1]
         if decimation is None:
             decimation = self.variables.canvas_image_object.get_decimation_factor_from_full_image_rect(tmp_image_coords)
-        tmp_image_coords = (int(tmp_image_coords[0]), int(tmp_image_coords[1]), int(tmp_image_coords[2]), int(tmp_image_coords[3]))
+        tmp_image_coords = (
+            int(tmp_image_coords[0]), int(tmp_image_coords[1]),
+            int(tmp_image_coords[2]), int(tmp_image_coords[3]))
         image_data_in_rect = self.variables.canvas_image_object.get_decimated_image_data_in_full_image_rect(
             tmp_image_coords, decimation)
         return image_data_in_rect
@@ -1674,11 +1863,15 @@ class ImageCanvas(basic_widgets.Canvas):
         if zoom_ratio >= window_ratio:
             # the zoom rectangle is taller than the window rectangle.
             # Keep the height, and extend the width
-            image_rect = [image_rect[0], image_rect[1], image_rect[2], image_rect[1] + zoom_width*zoom_ratio/window_ratio]
+            image_rect = [
+                image_rect[0], image_rect[1],
+                image_rect[2], image_rect[1] + zoom_width*zoom_ratio/window_ratio]
         else:
             # the zoom rectangle is longer than the window rectangle
             # Keep the width, and expand the height
-            image_rect = [image_rect[0], image_rect[1], image_rect[0] + zoom_height*window_ratio/zoom_ratio, image_rect[3]]
+            image_rect = [
+                image_rect[0], image_rect[1],
+                image_rect[0] + zoom_height*window_ratio/zoom_ratio, image_rect[3]]
 
         # ensure that sensible limits apply
         if image_rect[0] < 0:
@@ -1690,7 +1883,8 @@ class ImageCanvas(basic_widgets.Canvas):
         if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
             image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
 
-        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(image_rect, decimation=decimation)
+        self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(
+            image_rect, decimation=decimation)
         self.set_image_from_numpy_array(self.variables.canvas_image_object.display_image)
         self.redraw_all_shapes()
         self.emit_image_extent_changed()
@@ -1755,14 +1949,14 @@ class ImageCanvas(basic_widgets.Canvas):
             # zooming in
             if pixel_row <= self.variables.config.zoom_pixel_threshold or \
                     pixel_col <= self.variables.config.zoom_pixel_threshold:
-                return # no need to zoom in any further
+                return  # no need to zoom in any further
 
             fraction = 1/ratio
         elif event.num == 4 or event.delta > 0:
             # zooming out
             if pixel_row >= self.variables.canvas_image_object.image_reader.full_image_ny or \
                     pixel_col >= self.variables.canvas_image_object.image_reader.full_image_nx:
-                return   # no need to zoom out any further
+                return  # no need to zoom out any further
 
             fraction = ratio
         else:
@@ -1991,21 +2185,12 @@ class ImageCanvas(basic_widgets.Canvas):
         if self.variables.canvas_image_object is None:
             return  # nothing to be done
 
-        shape_ids = copy.deepcopy(self.variables.shape_ids)
-        tool_shapes = self.get_tool_shape_ids()
-        for shape_id in shape_ids:
-            if shape_id in tool_shapes:
-                self.hide_shape(shape_id)
-            else:
-                # noinspection PyBroadException
-                try:
-                    self.delete_shape(shape_id)
-                except Exception:
-                    continue
+        for tool_id in self.get_tool_shape_ids():
+            self.hide_shape(tool_id)
+
+        for shape_id in copy.deepcopy(self.variables.shape_ids):
+            self.delete_shape(shape_id)  # this handles all tracking issues
         self.redraw_all_shapes()
-        # reset the initial coordinates for zoom and select rectangles.
-        self.modify_existing_shape_using_image_coords(self.variables.zoom_rect.uid, (0, 0, 0, 0))
-        self.modify_existing_shape_using_image_coords(self.variables.select_rect.uid, (0, 0, 0, 0))
 
     def redraw_all_shapes(self):
         """
@@ -2016,18 +2201,24 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        def do_shape(the_id):
+            vector_object = self.get_vector_object(the_id)
+            if vector_object is None:
+                return
+            pixel_coords = vector_object.image_coords
+            if pixel_coords is None:
+                return
+            new_canvas_coords = self.shape_image_coords_to_canvas_coords(the_id)
+            self.modify_existing_shape_using_canvas_coords(the_id, new_canvas_coords, update_pixel_coords=False)
+
         if self.variables.canvas_image_object is None:
             return  # nothing to be done
 
         for shape_id in self.variables.shape_ids:
-            vector_object = self.get_vector_object(shape_id)
-            if vector_object is None:
-                continue
-            pixel_coords = vector_object.image_coords
-            if pixel_coords is None:
-                continue
-            new_canvas_coords = self.shape_image_coords_to_canvas_coords(shape_id)
-            self.modify_existing_shape_using_canvas_coords(shape_id, new_canvas_coords, update_pixel_coords=False)
+            do_shape(shape_id)
+
+        for tool_id in self.variables.tool_shape_ids:
+            do_shape(tool_id)
 
     def hide_shape(self, shape_id):
         """
@@ -2081,22 +2272,25 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
+        if shape_id in self.get_tool_shape_ids():
+            return
+
         vector_object = self.get_vector_object(shape_id)
         if vector_object is None:
             return
-        shape_type = vector_object.type
-        if shape_type in ShapeTypeConstants.geometric_shapes() and \
-                shape_id not in self.get_tool_shape_ids():
-            self.itemconfigure(shape_id, dash=(5, 5))
+        if len(vector_object.highlight_args) > 0:
+            self.itemconfigure(shape_id, **vector_object.highlight_args)
 
     def lowlight_existing_shape(self, shape_id):
+        if shape_id in self.get_tool_shape_ids():
+            return
+
         vector_object = self.get_vector_object(shape_id)
         if vector_object is None:
             return
-        shape_type = vector_object.type
-        if shape_type in ShapeTypeConstants.geometric_shapes() and \
-                shape_id not in self.get_tool_shape_ids():
-            self.itemconfigure(shape_id, dash=())
+
+        if len(vector_object.regular_args) > 0:
+            self.itemconfigure(shape_id, **vector_object.regular_args)
 
     def _set_shape_pixel_coords_from_canvas_coords(self, shape_id, coords, emit=True):
         """
@@ -2224,13 +2418,13 @@ class ImageCanvas(basic_widgets.Canvas):
 
         vector_object = self.get_vector_object(shape_id)
         vector_object.color = color
-        if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON]:
+        if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE, ShapeTypeConstants.POLYGON]:
             self.itemconfigure(shape_id, outline=color)
         else:
             self.itemconfigure(shape_id, fill=color)
 
     # shape creation/deletion methods
-    def _track_shape(self, vector_object, make_current=True, is_tool=False):
+    def _track_shape(self, vector_object, make_current=True):
         """
         Track the new shape.
 
@@ -2242,7 +2436,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.variables.track_shape(vector_object)
-        if not is_tool:
+        if not vector_object.is_tool:
             self.emit_shape_create(vector_object.uid, vector_object.type)
         if make_current:
             self.current_shape_id = vector_object.uid
@@ -2260,23 +2454,123 @@ class ImageCanvas(basic_widgets.Canvas):
         None
         """
 
-        if shape_id in self.get_tool_shape_ids():
-            logger.error('Cannot delete shape {}, because it is associated with a tool'.format(shape_id))
-            return
-
         the_vector = self.get_vector_object(shape_id)
         if the_vector is None:
-            return # nothing to be done
+            return  # nothing to be done
 
-        the_type = the_vector.type
-        self.variables.shape_ids.remove(shape_id)
-        del self.variables.vector_objects[shape_id]
-        self.delete(shape_id)
+        # ensure it is not the current shape
         if shape_id == self.current_shape_id:
             self.current_shape_id = None
-        self.emit_shape_delete(shape_id, the_type)
 
-    def create_new_point(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
+        # emit the signal that we are preparing to delete the shape
+        self.emit_shape_predelete(shape_id, the_vector.type)
+        # remove from tracking
+        the_vector = self.variables.remove_shape_from_tracking(shape_id)
+        # delete the shape
+        self.delete(shape_id)
+        # mit the message that we have deleted the shape
+        self.emit_shape_delete(shape_id, the_vector.type)
+
+    def _validate_input_shape_color(self, color, increment_color):
+        # type: (Union[None, str], bool) -> str
+        use_color = self.variables.state.foreground_color if color is None else color
+        if color is None and increment_color:
+            self._increment_color()
+        return use_color
+
+    def create_shape_from_vector_object(self, vector_object, coords, make_current=True):
+        """
+        Creates a new shape from a pre-initialized vector object. The uid must not have been set.
+
+        Parameters
+        ----------
+        vector_object : VectorObject
+        coords : Tuple|List
+        make_current : bool
+            Make this the current shape?
+
+        Returns
+        -------
+        int
+            The newly created shape id
+        """
+
+        if vector_object.uid != -1:
+            raise ValueError('vector object must not have been previously assigned a id')
+
+        if vector_object.type == ShapeTypeConstants.POINT:
+            point_size = vector_object.point_size
+            x1, y1 = (coords[0] - point_size), (coords[1] - point_size)
+            x2, y2 = (coords[0] + point_size), (coords[1] + point_size)
+            shape_id = self.create_oval(x1, y1, x2, y2, **vector_object.regular_args)
+        elif vector_object.type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW]:
+            shape_id = self.create_line(*coords, **vector_object.regular_args)
+        elif vector_object.type == ShapeTypeConstants.RECT:
+            shape_id = self.create_rectangle(*coords, **vector_object.regular_args)
+        elif vector_object.type == ShapeTypeConstants.ELLIPSE:
+            shape_id = self.create_oval(*coords, **vector_object.regular_args)
+        elif vector_object.type == ShapeTypeConstants.POLYGON:
+            shape_id = self.create_polygon(*coords, **vector_object.regular_args)
+        elif vector_object.type == ShapeTypeConstants.TEXT:
+            shape_id = self.create_text(*coords, text=vector_object.text, **vector_object.regular_args)
+        else:
+            raise ValueError(
+                'Got unhandled vector object type `{}`'.format(ShapeTypeConstants.get_name(vector_object.type)))
+
+        if vector_object.image_drag_limits is None:
+            full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
+            full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
+            vector_object.image_drag_limits = (0, 0, full_ny, full_nx)
+
+        vector_object.uid = shape_id
+        vector_object.image_coords = self.canvas_coords_to_image_coords(coords)
+        self._track_shape(vector_object, make_current=make_current)
+        return shape_id
+
+    def create_new_text(self, coords, text, make_current=True, increment_color=True, is_tool=False,
+                        color=None, regular_options=None, highlight_options=None):
+        """
+        Create text with coordinates x1,y1.
+
+        Parameters
+        ----------
+        coords : Tuple|List
+            The coordinates
+        text : str
+            The text
+        make_current : bool
+            Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
+        regular_options : None|dict
+            The regular state options
+        highlight_options : None|dict
+            The highlight options
+
+        Returns
+        -------
+        int
+        """
+
+        use_color = self._validate_input_shape_color(color, increment_color)
+
+        if regular_options is None:
+            regular_options = {}
+        if highlight_options is None:
+            highlight_options = {}
+
+        vector_obj = VectorObject(
+            ShapeTypeConstants.TEXT, is_tool=is_tool, text=text, color=use_color,
+            regular_args=regular_options, highlight_args=highlight_options)
+
+        return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
+
+    def create_new_point(self, coords, make_current=True, increment_color=True, is_tool=False,
+                         point_size=None, color=None, regular_options=None, highlight_options=None):
         """
         Create a new point.
 
@@ -2289,142 +2583,37 @@ class ImageCanvas(basic_widgets.Canvas):
             Increment the color after creating this object?
         is_tool : bool
             Is this a tool? No signal emitted, in that case.
+        point_size : None|int
         color : None|str
             The color.
-        options
-            Optional keyword arguments.
+        regular_options : None|dict
+            The regular state options
+        highlight_options : None|dict
+            The highlight options
 
         Returns
         -------
         int
         """
 
-        if 'fill' not in options:
-            options['fill'] = self.variables.state.foreground_color
+        if point_size is None:
+            point_size = self.variables.state.point_size
 
-        x1, y1 = (coords[0] - self.variables.state.point_size), (coords[1] - self.variables.state.point_size)
-        x2, y2 = (coords[0] + self.variables.state.point_size), (coords[1] + self.variables.state.point_size)
-        shape_id = self.create_oval(x1, y1, x2, y2, **options)
-        image_coords = self.canvas_coords_to_image_coords(coords)
+        use_color = self._validate_input_shape_color(color, increment_color)
+
+        if regular_options is None:
+            regular_options = {'width': 0, 'outline': None}
+        if highlight_options is None:
+            highlight_options = {'width': 2, 'outline': 'white'}
+
         vector_obj = VectorObject(
-            shape_id, ShapeTypeConstants.POINT,
-            image_coords=image_coords, point_size=self.variables.state.point_size, color=color, **options)
-        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
+            ShapeTypeConstants.POINT, is_tool=is_tool, point_size=point_size, color=use_color,
+            regular_args=regular_options, highlight_args=highlight_options)
 
-        if color is None and increment_color:
-            self._increment_color()
-        return shape_id
+        return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
 
-    def create_new_text(self, args, make_current=True, increment_color=True, is_tool=False, color=None, **kwargs):
-        """
-        Create text with coordinates x1,y1.
-
-        Parameters
-        ----------
-        args
-        make_current : bool
-            Should the new shape be set as the current shape?
-        increment_color : bool
-            Increment the foreground color?
-        is_tool : bool
-            Is this a tool? No signal emitted, in that case.
-        color : None|str
-            The color.
-        kwargs
-            The keyword arguments
-
-        Returns
-        -------
-        int
-        """
-
-        shape_id = self._create('text', args, kwargs)
-        self.variables.shape_ids.append(shape_id)
-        coords = args
-        image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.TEXT, image_coords=image_coords, color=color)
-        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
-        if make_current:
-            self.current_shape_id = shape_id
-        if color is None and increment_color:
-            self._increment_color()
-        return shape_id
-
-    def create_new_rect(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
-        """
-        Create a new rectangle.
-
-        Parameters
-        ----------
-        coords : Tuple|List
-        make_current : bool
-            Should the new shape be set as the current shape?
-        increment_color : bool
-            Increment the foreground color?
-        is_tool : bool
-            Is this a tool? No signal emitted, in that case.
-        color : None|str
-            The color.
-        options
-            Optional Keyword arguments.
-
-        Returns
-        -------
-        int
-        """
-
-        if 'outline' not in options:
-            options['outline'] = self.variables.state.foreground_color
-        if 'width' not in options:
-            options['width'] = self.variables.state.rect_border_width
-        shape_id = self.create_rectangle(*coords, **options)
-        image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.RECT, image_coords=image_coords, color=color, **options)
-        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
-        if make_current:
-            self.current_shape_id = shape_id
-        if color is None and increment_color:
-            self._increment_color()
-        return shape_id
-
-    def create_new_ellipse(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
-        """
-        Create a new rectangle.
-
-        Parameters
-        ----------
-        coords : Tuple|List
-        make_current : bool
-            Should the new shape be set as the current shape?
-        increment_color : bool
-            Increment the foreground color?
-        is_tool : bool
-            Is this a tool? No signal emitted, in that case.
-        color : None|str
-            The color.
-        options
-            Optional Keyword arguments.
-
-        Returns
-        -------
-        int
-        """
-
-        if 'outline' not in options:
-            options['outline'] = self.variables.state.foreground_color
-        if 'width' not in options:
-            options['width'] = self.variables.state.rect_border_width
-        shape_id = self.create_oval(*coords, **options)
-        image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ELLIPSE, image_coords=image_coords, color=color, **options)
-        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
-        if make_current:
-            self.current_shape_id = shape_id
-        if color is None and increment_color:
-            self._increment_color()
-        return shape_id
-
-    def create_new_line(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
+    def create_new_line(self, coords, make_current=True, increment_color=True, is_tool=False,
+                        color=None, regular_options=None, highlight_options=None):
         """
         Create a new line.
 
@@ -2439,30 +2628,33 @@ class ImageCanvas(basic_widgets.Canvas):
             Is this a tool? No signal emitted, in that case.
         color : None|str
             The color.
-        options
-            Optional keyword arguments.
+        regular_options : None|dict
+            The regular state options
+        highlight_options : None|dict
+            The highlight options
 
         Returns
         -------
         int
         """
 
-        if 'fill' not in options:
-            options['fill'] = self.variables.state.foreground_color
-        if 'width' not in options:
-            options['width'] = self.variables.state.line_width
+        use_color = self._validate_input_shape_color(color, increment_color)
 
-        shape_id = self.create_line(*coords, **options)
-        image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.LINE, image_coords=image_coords, color=color, **options)
-        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
-        if make_current:
-            self.current_shape_id = shape_id
-        if color is None and increment_color:
-            self._increment_color()
-        return shape_id
+        if regular_options is None:
+            regular_options = {'width': self.variables.state.line_width, 'dash': ()}
+        if highlight_options is None:
+            highlight_options = {'width': self.variables.state.highlight_line_width, 'dash': (3, 3)}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
 
-    def create_new_arrow(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
+        vector_obj = VectorObject(
+            ShapeTypeConstants.LINE, is_tool=is_tool, color=use_color,
+            regular_args=regular_options, highlight_args=highlight_options)
+
+        return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
+
+    def create_new_arrow(self, coords, make_current=True, increment_color=True, is_tool=False,
+                         color=None, regular_options=None, highlight_options=None):
         """
         Create a new arrow.
 
@@ -2477,32 +2669,119 @@ class ImageCanvas(basic_widgets.Canvas):
             Is this a tool? No signal emitted, in that case.
         color : None|str
             The color.
-        options
-            Optional keyword arguments.
+        regular_options : None|dict
+            The regular state options
+        highlight_options : None|dict
+            The highlight options
 
         Returns
         -------
         int
         """
 
-        if 'fill' not in options:
-            options['fill'] = self.variables.state.foreground_color
-        if 'width' not in options:
-            options['width'] = self.variables.state.line_width
-        if 'arrow' not in options:
-            options['arrow'] = tkinter.LAST
+        use_color = self._validate_input_shape_color(color, increment_color)
 
-        shape_id = self.create_line(*coords, **options)
-        image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.ARROW, image_coords=image_coords, color=color, **options)
-        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
-        if make_current:
-            self.current_shape_id = shape_id
-        if color is None and increment_color:
-            self._increment_color()
-        return shape_id
+        if regular_options is None:
+            regular_options = {'width': self.variables.state.line_width, 'dash': ()}
+        if highlight_options is None:
+            highlight_options = {'width': self.variables.state.highlight_line_width, 'dash': (3, 3)}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
 
-    def create_new_polygon(self, coords, make_current=True, increment_color=True, is_tool=False, color=None, **options):
+        vector_obj = VectorObject(
+            ShapeTypeConstants.ARROW, is_tool=is_tool, color=use_color,
+            regular_args=regular_options, highlight_args=highlight_options)
+
+        return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
+
+    def create_new_rect(self, coords, make_current=True, increment_color=True, is_tool=False,
+                        color=None, regular_options=None, highlight_options=None):
+        """
+        Create a new rectangle.
+
+        Parameters
+        ----------
+        coords : Tuple|List
+        make_current : bool
+            Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
+        regular_options : None|dict
+            The regular state options
+        highlight_options : None|dict
+            The highlight options
+
+        Returns
+        -------
+        int
+        """
+
+        use_color = self._validate_input_shape_color(color, increment_color)
+
+        if regular_options is None:
+            regular_options = {
+                'width': self.variables.state.line_width, 'dash': (), 'fill': None}
+        if highlight_options is None:
+            highlight_options = {
+                'width': self.variables.state.highlight_line_width, 'fill': None, 'dash': (3, 3)}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
+
+        vector_obj = VectorObject(
+            ShapeTypeConstants.RECT, is_tool=is_tool, color=use_color,
+            regular_args=regular_options, highlight_args=highlight_options)
+
+        return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
+
+    def create_new_ellipse(self, coords, make_current=True, increment_color=True, is_tool=False,
+                           color=None, regular_options=None, highlight_options=None):
+        """
+        Create a new ellipse.
+
+        Parameters
+        ----------
+        coords : Tuple|List
+        make_current : bool
+            Should the new shape be set as the current shape?
+        increment_color : bool
+            Increment the foreground color?
+        is_tool : bool
+            Is this a tool? No signal emitted, in that case.
+        color : None|str
+            The color.
+        regular_options : None|dict
+            The regular state options
+        highlight_options : None|dict
+            The highlight options
+
+        Returns
+        -------
+        int
+        """
+
+        use_color = self._validate_input_shape_color(color, increment_color)
+
+        if regular_options is None:
+            regular_options = {
+                'width': self.variables.state.line_width, 'dash': (), 'fill': None}
+        if highlight_options is None:
+            highlight_options = {
+                'width': self.variables.state.highlight_line_width, 'dash': (3, 3), 'fill': None}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
+
+        vector_obj = VectorObject(
+            ShapeTypeConstants.ELLIPSE, is_tool=is_tool, color=use_color,
+            regular_args=regular_options, highlight_args=highlight_options)
+
+        return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
+
+    def create_new_polygon(self, coords, make_current=True, increment_color=True, is_tool=False,
+                           color=None, regular_options=None, highlight_options=None):
         """
         Create a new polygon.
 
@@ -2517,30 +2796,32 @@ class ImageCanvas(basic_widgets.Canvas):
             Is this a tool? No signal emitted, in that case.
         color : None|str
             The color.
-        options
-            Optional keyword arguments.
+        regular_options : None|dict
+            The regular state options
+        highlight_options : None|dict
+            The highlight options
 
         Returns
         -------
         int
         """
 
-        if 'outline' not in options:
-            options['outline'] = self.variables.state.foreground_color
-        if 'width' not in options:
-            options['width'] = self.variables.state.poly_border_width
-        if 'fill' not in options:
-            options['fill'] = ''
+        use_color = self._validate_input_shape_color(color, increment_color)
 
-        shape_id = self.create_polygon(*coords, **options)
-        image_coords = self.canvas_coords_to_image_coords(coords)
-        vector_obj = VectorObject(shape_id, ShapeTypeConstants.POLYGON, image_coords=image_coords, color=color, **options)
-        self._track_shape(vector_obj, make_current=make_current, is_tool=is_tool)
-        if make_current:
-            self.current_shape_id = shape_id
-        if color is None and increment_color:
-            self._increment_color()
-        return shape_id
+        if regular_options is None:
+            regular_options = {
+                'width': self.variables.state.line_width, 'dash': (), 'fill': ''}
+        if highlight_options is None:
+            highlight_options = {
+                'width': self.variables.state.highlight_line_width, 'dash': (3, 3), 'fill': ''}
+            if 'dash' not in regular_options:
+                regular_options['dash'] = ()
+
+        vector_obj = VectorObject(
+            ShapeTypeConstants.POLYGON, is_tool=is_tool, color=use_color,
+            regular_args=regular_options, highlight_args=highlight_options)
+
+        return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
 
     # shape as geometry methods
     def get_geometry_for_shape(self, shape_id, coordinate_type='image'):
@@ -2592,7 +2873,9 @@ class ImageCanvas(basic_widgets.Canvas):
         elif vector_object.type == ShapeTypeConstants.POLYGON:
             return LinearRing(coordinates=coords_array)
         else:
-            raise ValueError('Unhandled geometry type {} for conversion from tkinter to sarpy geometry type')
+            raise ValueError(
+                'Unhandled geometry type {} for conversion from tkinter to sarpy geometry type'.format(
+                    ShapeTypeConstants.get_name(vector_object.type)))
 
     # shape coordinate methods
     def canvas_coords_to_image_coords(self, canvas_coords):
@@ -2675,6 +2958,10 @@ class ImageCanvas(basic_widgets.Canvas):
         return self.variables.canvas_image_object.full_image_yx_to_canvas_coords(image_coords)
 
     # set tool methods
+    def set_current_tool_to_shift_shape(self, shape_ids=None):
+        self.current_tool = 'SHIFT_SHAPE'
+        self.current_tool.set_current_shape(None, shape_ids)
+
     def set_current_tool_to_draw_point(self, point_id=None):
         """
         Sets the current tool to draw point.
@@ -2810,6 +3097,7 @@ class ImageCanvas(basic_widgets.Canvas):
         """
         Emits the <<CoordinateChanged>> event. This passes through the x and y
         canvas coordinates.
+
         Parameters
         ----------
         event
@@ -2830,6 +3118,21 @@ class ImageCanvas(basic_widgets.Canvas):
         if shape_id is None:
             return
         self.event_generate('<<ShapeCreate>>', x=shape_id, y=shape_type)
+
+    def emit_shape_predelete(self, shape_id, shape_type):
+        """
+        Emit the <<ShapePreDelete>> event. This will be emitted just before the
+        shape is deleted.
+
+        Parameters
+        ----------
+        shape_id : int
+        shape_type : int
+        """
+
+        if shape_id is None:
+            return
+        self.event_generate('<<ShapePreDelete>>', x=shape_id, y=shape_type)
 
     def emit_shape_delete(self, shape_id, shape_type):
         """
@@ -2944,6 +3247,15 @@ class ImageCanvas(basic_widgets.Canvas):
         """
 
         self.event_generate('<<RemapChanged>>')
+
+    def emit_image_index_prechange(self):
+        """
+        Emits the <<ImageIndexPreChanged>> event, indicating that the index value
+        is about to change. Note that the current image index can be determined
+        from the `get_image_index()` method.
+        """
+
+        self.event_generate('<<ImageIndexPreChange>>')
 
     def emit_image_index_changed(self):
         """

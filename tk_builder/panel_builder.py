@@ -7,7 +7,7 @@ import numpy
 import tkinter
 from tkinter import ttk
 
-from tk_builder.widgets import basic_widgets
+from tk_builder.widgets.basic_widgets import LabelFrame, Frame
 
 
 class _BaseWidgetPanel(object):
@@ -38,7 +38,7 @@ class _BaseWidgetPanel(object):
 
     def __init__(self, master):
         self.master = master
-        self._rows = []  # type: List[basic_widgets.Frame]
+        self._rows = []  # type: List[Frame]
 
     def _widget_objects(self, subtype_filter=None):
         """
@@ -183,7 +183,7 @@ class _BaseWidgetPanel(object):
                 'Argument mismatch for class {}. The number of rows must match the '
                 'length of the provided list.'.format(self.__class__))
 
-        self._rows = [basic_widgets.Frame(self) for _ in range(n_rows)]
+        self._rows = [Frame(self) for _ in range(n_rows)]
         for row in self._rows:
             row.config(borderwidth=2)
             row.pack(fill=tkinter.BOTH, expand=tkinter.YES)
@@ -266,20 +266,20 @@ class _BaseWidgetPanel(object):
         self._rows[row_value].pack()
 
 
-class WidgetPanel(basic_widgets.LabelFrame, _BaseWidgetPanel):
-    def __init__(self, master):
+class WidgetPanel(LabelFrame, _BaseWidgetPanel):
+    def __init__(self, master, **kwargs):
         _BaseWidgetPanel.__init__(self, master)
-        basic_widgets.LabelFrame.__init__(self, master)
+        LabelFrame.__init__(self, master, **kwargs)
         self.config(borderwidth=2)
 
     def close_window(self):
         self.master.withdraw()
 
 
-class WidgetPanelNoLabel(basic_widgets.Frame, _BaseWidgetPanel):
-    def __init__(self, master):
+class WidgetPanelNoLabel(Frame, _BaseWidgetPanel):
+    def __init__(self, master, **kwargs):
         _BaseWidgetPanel.__init__(self, master)
-        basic_widgets.Frame.__init__(self, master)
+        Frame.__init__(self, master, **kwargs)
         self.config(borderwidth=2)
 
     def close_window(self):
@@ -293,9 +293,9 @@ class RadioButtonPanel(WidgetPanel):
     custom panel of radiobuttons.
     """
 
-    def __init__(self, master):
+    def __init__(self, master, **kwargs):
         self._selection_dict = {}
-        WidgetPanel.__init__(self, master)
+        WidgetPanel.__init__(self, master, **kwargs)
         self._selected_value = tkinter.IntVar()
 
     def init_w_vertical_layout(self):

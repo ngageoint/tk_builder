@@ -10,8 +10,11 @@ from tkinter.messagebox import askokcancel
 import PIL.Image
 from typing import List
 
-from tk_builder.panel_builder import WidgetPanel, WidgetPanelNoLabel
-from tk_builder.widgets import basic_widgets, widget_descriptors
+from tk_builder.panel_builder import WidgetPanelNoLabel
+from tk_builder.widgets.basic_widgets import Frame, Label, RadioButton, Button, Combobox
+from tk_builder.widgets.widget_descriptors import LabelDescriptor, \
+    RadioButtonDescriptor, ButtonDescriptor, ComboboxDescriptor
+
 from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
     ShapeTypeConstants, get_tool_enum
@@ -35,80 +38,80 @@ class Toolbar(WidgetPanelNoLabel):
     _widget_list = (tool_controls, shape_controls, other_controls)
 
     # create the tool descriptors
-    tool_label = widget_descriptors.LabelDescriptor(
+    tool_label = LabelDescriptor(
         'tool_label', default_text='tool:',
-        docstring='The label for the tool series of radiobuttons.')  # type: basic_widgets.Label
-    zoom_in = widget_descriptors.RadioButtonDescriptor(
+        docstring='The label for the tool series of radiobuttons.')  # type: Label
+    zoom_in = RadioButtonDescriptor(
         'zoom_in', default_text='Zoom In',
-        docstring='Zoom in selector.')  # type: basic_widgets.RadioButton
-    zoom_out = widget_descriptors.RadioButtonDescriptor(
+        docstring='Zoom in selector.')  # type: RadioButton
+    zoom_out = RadioButtonDescriptor(
         'zoom_out', default_text='Zoom Out',
-        docstring='Zoom out selector.')  # type: basic_widgets.RadioButton
-    pan = widget_descriptors.RadioButtonDescriptor(
+        docstring='Zoom out selector.')  # type: RadioButton
+    pan = RadioButtonDescriptor(
         'pan', default_text='Pan',
-        docstring='Pan selector.')  # type: basic_widgets.RadioButton
-    select = widget_descriptors.RadioButtonDescriptor(
+        docstring='Pan selector.')  # type: RadioButton
+    select = RadioButtonDescriptor(
         'select', default_text='Select',
-        docstring='Select selector.')  # type: basic_widgets.RadioButton
-    view = widget_descriptors.RadioButtonDescriptor(
+        docstring='Select selector.')  # type: RadioButton
+    view = RadioButtonDescriptor(
         'view', default_text='View',
-        docstring='View selector.')  # type: basic_widgets.RadioButton
-    select_closest_shape = widget_descriptors.RadioButtonDescriptor(
+        docstring='View selector.')  # type: RadioButton
+    select_closest_shape = RadioButtonDescriptor(
         'select_closest_shape', default_text='Choose\nShape',
-        docstring='Select closest shape selector.')  # type: basic_widgets.RadioButton
-    edit_shape = widget_descriptors.RadioButtonDescriptor(
+        docstring='Select closest shape selector.')  # type: RadioButton
+    edit_shape = RadioButtonDescriptor(
         'edit_shape', default_text='Edit\nShape',
-        docstring='Edit shape selector.')  # type: basic_widgets.RadioButton
-    shift_shape = widget_descriptors.RadioButtonDescriptor(
+        docstring='Edit shape selector.')  # type: RadioButton
+    shift_shape = RadioButtonDescriptor(
         'shift_shape', default_text='Shift\nShape',
-        docstring='Shift shape selector.')  # type: basic_widgets.RadioButton
-    new_shape = widget_descriptors.RadioButtonDescriptor(
+        docstring='Shift shape selector.')  # type: RadioButton
+    new_shape = RadioButtonDescriptor(
         'new_shape', default_text='New\nShape',
-        docstring='New shape selector.')  # type: basic_widgets.RadioButton
+        docstring='New shape selector.')  # type: RadioButton
     # create the shape descriptors
-    shape_label = widget_descriptors.LabelDescriptor(
+    shape_label = LabelDescriptor(
         'shape_label', default_text='shape type:',
-        docstring='The label for the shape series of radiobuttons.')  # type: basic_widgets.Label
-    point = widget_descriptors.RadioButtonDescriptor(
+        docstring='The label for the shape series of radiobuttons.')  # type: Label
+    point = RadioButtonDescriptor(
         'point', default_text='point',
-        docstring='point selector.')  # type: basic_widgets.RadioButton
-    line = widget_descriptors.RadioButtonDescriptor(
+        docstring='point selector.')  # type: RadioButton
+    line = RadioButtonDescriptor(
         'line', default_text='line',
-        docstring='line selector.')  # type: basic_widgets.RadioButton
-    arrow = widget_descriptors.RadioButtonDescriptor(
+        docstring='line selector.')  # type: RadioButton
+    arrow = RadioButtonDescriptor(
         'arrow', default_text='arrow',
-        docstring='arrow selector.')  # type: basic_widgets.RadioButton
-    rect = widget_descriptors.RadioButtonDescriptor(
+        docstring='arrow selector.')  # type: RadioButton
+    rect = RadioButtonDescriptor(
         'rect', default_text='rect',
-        docstring='rect selector.')  # type: basic_widgets.RadioButton
-    ellipse = widget_descriptors.RadioButtonDescriptor(
+        docstring='rect selector.')  # type: RadioButton
+    ellipse = RadioButtonDescriptor(
         'ellipse', default_text='ellipse',
-        docstring='ellipse selector.')  # type: basic_widgets.RadioButton
-    polygon = widget_descriptors.RadioButtonDescriptor(
+        docstring='ellipse selector.')  # type: RadioButton
+    polygon = RadioButtonDescriptor(
         'polygon', default_text='polygon',
-        docstring='polygon selector.')  # type: basic_widgets.RadioButton
-    text = widget_descriptors.RadioButtonDescriptor(
+        docstring='polygon selector.')  # type: RadioButton
+    text = RadioButtonDescriptor(
         'text', default_text='text',
-        docstring='text selector.')  # type: basic_widgets.RadioButton
+        docstring='text selector.')  # type: RadioButton
     # the remaining element descriptors
-    save_canvas = widget_descriptors.ButtonDescriptor(
+    save_canvas = ButtonDescriptor(
         'save_canvas', default_text='save canvas',
-        docstring='Save the present canvas and contents to image file.')  # type: basic_widgets.Button
-    save_image = widget_descriptors.ButtonDescriptor(
+        docstring='Save the present canvas and contents to image file.')  # type: Button
+    save_image = ButtonDescriptor(
         'save_image', default_text='save image',
-        docstring='Save the present canvas to image file.')  # type: basic_widgets.Button
-    remap_label = widget_descriptors.LabelDescriptor(
+        docstring='Save the present canvas to image file.')  # type: Button
+    remap_label = LabelDescriptor(
         'remap_label', default_text='remap:',
-        docstring='The remap label.')  # type: basic_widgets.Label
-    remap_combo = widget_descriptors.ComboboxDescriptor(
+        docstring='The remap label.')  # type: Label
+    remap_combo = ComboboxDescriptor(
         'remap_combo', default_text='',
-        docstring='The remap value')  # type: basic_widgets.Combobox
-    select_index_label = widget_descriptors.LabelDescriptor(
+        docstring='The remap value')  # type: Combobox
+    select_index_label = LabelDescriptor(
         'select_index_label', default_text='image\nindex:',
-        docstring='The image index selection label.')  # type: basic_widgets.Label
-    select_index_combo = widget_descriptors.ComboboxDescriptor(
+        docstring='The image index selection label.')  # type: Label
+    select_index_combo = ComboboxDescriptor(
         'select_index_combo', default_text='',
-        docstring='The image index selection')  # type: basic_widgets.Combobox
+        docstring='The image index selection')  # type: Combobox
 
     def __init__(self, parent):
         """
@@ -122,7 +125,7 @@ class Toolbar(WidgetPanelNoLabel):
         self.init_w_rows()
 
 
-class ImagePanel(WidgetPanel):
+class ImagePanel(Frame):
     """
     The main base widget on which to base most apps where image viewing is central
     to operation.
@@ -133,14 +136,27 @@ class ImagePanel(WidgetPanel):
     of the presently displayed image to an image file.
     """
 
-    def __init__(self, parent):
-        self.parent = parent
-        WidgetPanel.__init__(self, parent)
+    def __init__(self, master, image_reader=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        master
+            The parent widget
+        image_reader : None|CanvasImageReader
+        kwargs
+            keyword arguments passed through to Frame.
+        """
+
+        self.root = master
+        Frame.__init__(self, master, **kwargs)
         self._the_tool = tkinter.IntVar(self, value=get_tool_enum('VIEW'))
         self._the_shape = tkinter.IntVar(self, value=ShapeTypeConstants.POLYGON)
         self._image_save_directory = os.path.expanduser('~')
+
         self.canvas = ImageCanvas(self)
         self.toolbar = Toolbar(self)
+
         self.toolbar.config(relief=tkinter.RIDGE)
         self._set_toolbar_callbacks()
 
@@ -148,16 +164,17 @@ class ImagePanel(WidgetPanel):
         self.canvas.bind('<<CurrentToolChanged>>', self.callback_update_tool)
         self.canvas.bind('<<ShapeTypeChanged>>', self.callback_update_shape)
 
-        self.pack()
         # handle the appearance of several toolbar labels
         self.toolbar.tool_label.configure(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
         self.toolbar.shape_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
         self.toolbar.remap_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
         self.toolbar.select_index_label.config(anchor=tkinter.CENTER, relief=tkinter.RIDGE, justify=tkinter.RIGHT)
-        self.toolbar.pack(side='top', expand=tkinter.NO, fill=tkinter.BOTH)
-        self.canvas.pack(side='bottom', fill=tkinter.BOTH, expand=1)
+        self.toolbar.pack(side=tkinter.TOP, expand=tkinter.NO, fill=tkinter.X)
+        self.canvas.pack(side=tkinter.BOTTOM, expand=tkinter.TRUE, fill=tkinter.BOTH)
 
         self.set_max_canvas_size(1920, 1080)
+        if image_reader is not None:
+            self.set_image_reader(image_reader)
 
     def _set_toolbar_callbacks(self):
         # set the toolbar tool callbacks
@@ -336,17 +353,20 @@ class ImagePanel(WidgetPanel):
             self.toolbar.select_index_combo.current(current_value)
             self.toolbar.select_index_combo.config(state='readonly')
 
-    def _populate_remap_combo(self):
+    def _populate_remap_combo(self, image_reader):
         """
         Populate the remap combobox state. This should be called when a new reader is
         selected.
+
+        Parameters
+        ----------
+        image_reader : CanvasImageReader
         """
 
-        if self.canvas.variables.canvas_image_object is None or \
-                self.canvas.variables.canvas_image_object.image_reader is None:
+        if image_reader is None:
             remapable = False
         else:
-            remapable = self.canvas.variables.canvas_image_object.image_reader.remapable
+            remapable = image_reader.remapable
 
         if remapable:
             # get the old value
@@ -636,16 +656,12 @@ class ImagePanel(WidgetPanel):
         Parameters
         ----------
         image_reader : CanvasImageReader
-
-        Returns
-        -------
-        None
         """
 
+        self._populate_remap_combo(image_reader)
         self.canvas.set_image_reader(image_reader)
         self._update_image_save_directory(image_reader.file_name)
         self._populate_select_index_combo()
-        self._populate_remap_combo()
 
     def do_nothing(self, event):
         """

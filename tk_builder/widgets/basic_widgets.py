@@ -6,8 +6,6 @@ Wrapping tkinter widgets to ensure simply and consistent event definitions and b
 __classification__ = "UNCLASSIFIED"
 __author__ = ("Jason Casey", "Thomas McCullough")
 
-from typing import Callable
-
 import tkinter
 from tkinter import ttk
 
@@ -152,7 +150,8 @@ class Combobox(ttk.Combobox, WidgetEvents):
 
     def update_combobox_values(self, val_list):
         self['values'] = val_list
-        self.current(0)
+        if len(val_list) > 0:
+            self.current(0)
 
 
 class Notebook(ttk.Notebook, WidgetEvents):
