@@ -60,10 +60,12 @@ class ToolConstants(object):
     ZOOM_OUT = 2  # tool for defining zoom rectangle, for zooming out
     SELECT = 3  # tool for defining selection rectangle, for a region
     PAN = 4  # tool for defining pan behavior
-    NEW_SHAPE = 5  # tool for starting to draw a new shape
-    EDIT_SHAPE = 6  # tool for editing a shape
-    SELECT_CLOSEST_SHAPE = 7  # tool for selecting a shape, and setting to current
-    SHIFT_SHAPE = 8  # tool for moving a shape via affine shift
+    COORDS = 5  # tool for showing coordinate details
+    MEASURE = 6  # tool for measuring
+    SHIFT_SHAPE = 7  # tool for moving a shape via affine shift
+    EDIT_SHAPE = 8  # tool for editing a shape
+    SELECT_CLOSEST_SHAPE = 9  # tool for selecting a shape, and setting to current
+    NEW_SHAPE = 10  # tool for starting to draw a new shape
 
     _names_to_values = OrderedDict([
         ('VIEW', VIEW),
@@ -71,10 +73,13 @@ class ToolConstants(object):
         ('ZOOM_OUT', ZOOM_OUT),
         ('SELECT', SELECT),
         ('PAN', PAN),
-        ('NEW_SHAPE', NEW_SHAPE),
+        ('COORDS', COORDS),
+        ('MEASURE', MEASURE),
+        ('SHIFT_SHAPE', SHIFT_SHAPE),
         ('EDIT_SHAPE', EDIT_SHAPE),
         ('SELECT_CLOSEST_SHAPE', SELECT_CLOSEST_SHAPE),
-        ('SHIFT_SHAPE', SHIFT_SHAPE)])
+        ('NEW_SHAPE', NEW_SHAPE)
+    ])
     _values_to_names = OrderedDict([(value, key) for key, value in _names_to_values.items()])
 
     @classmethod

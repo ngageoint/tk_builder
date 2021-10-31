@@ -9,7 +9,8 @@ __author__ = "Thomas McCullough"
 import logging
 from collections import OrderedDict
 import numpy
-from typing import Tuple, List
+from typing import Tuple, List, Union
+from tkinter.messagebox import showinfo
 
 from sarpy.compliance import string_types
 from sarpy.geometry.geometry_elements import LinearRing
@@ -1034,9 +1035,6 @@ class EditShapeTool(ImageCanvasTool):
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
         self.mode = "normal"
 
-    def finalize_tool(self):
-        pass
-
     def set_current_shape(self, old_shape_id, new_shape_id):
         _default_shape_select(self.image_canvas, old_shape_id, new_shape_id)
         if self.shape_id == new_shape_id:
@@ -1269,6 +1267,199 @@ class EditShapeTool(ImageCanvasTool):
     def on_mouse_wheel(self, event):
         if self.mode in ['normal', ]:
             self.image_canvas.zoom_on_mouse(event)
+
+
+class CoordinateTool(ImageCanvasTool):
+    """
+    Coordinate inspection tool
+    """
+    _name = "COORDS"
+
+    def __init__(self, image_canvas):
+        ImageCanvasTool.__init__(self, image_canvas)
+        self.shape_id = -1
+        self.image_coords = (0, 0)
+        self.coordinate_string = None
+
+    def initialize_tool(self, **kwargs):
+        def make_coords_point():
+            from .image_canvas import VectorObject
+            opts = {'width': 1, 'outline': 'red'}
+            vector = VectorObject(
+                ShapeTypeConstants.RECT, name='COORDS', is_tool=True, point_size=4,
+                color='yellow', regular_args=opts, highlight_args=opts)
+            self.shape_id = self.image_canvas.create_shape_from_vector_object(
+                vector, (0, 0), make_current=False)
+
+        try:
+            self.shape_id = self.image_canvas.variables.get_tool_shape_id_by_name('COORDS')
+        except KeyError:
+            make_coords_point()
+
+        self.coordinate_string = None
+        self.image_coords = (0, 0)
+        self.image_canvas.config(cursor='crosshair')
+
+    def finalize_tool(self):
+        self.coordinate_string = None
+        self.image_canvas.config(cursor='arrow')
+        self.image_canvas.hide_shape(self.shape_id)
+        self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, (0, 0))
+
+    def on_mouse_wheel(self, event):
+        self.image_canvas.zoom_on_mouse(event)
+
+    def on_left_mouse_click(self, event):
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        self.image_canvas.modify_existing_shape_using_canvas_coords(
+            self.shape_id, canvas_event + canvas_event)
+        self.image_canvas.show_shape(self.shape_id)
+        vector_object = self.image_canvas.get_vector_object(self.shape_id)
+        self.image_coords = vector_object.image_coords
+        self.show_coordinate_details()
+
+    def show_coordinate_details(self):
+        self.coordinate_string_formatting_function()
+        if self.coordinate_string is not None:
+            showinfo('Coordinate Details', message=self.coordinate_string)
+
+    def coordinate_string_formatting_function(self):
+        self.coordinate_string = 'Row: {}, Column: {}'.format(*self.image_coords)
+
+
+class MeasureTool(ImageCanvasTool):
+    """
+    Coordinate Measuring Tool
+    """
+    _name = "MEASURE"
+
+    def __init__(self, image_canvas):
+        ImageCanvasTool.__init__(self, image_canvas)
+        self.shape_id = -1
+        self.anchor = (0, 0)
+        self.image_coords = (0, 0, 0, 0)
+        self.coordinate_string = None
+        self.mouse_moved = False
+        self.vector_object = None
+        self.insert_at_index = 0
+        self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
+
+    def initialize_tool(self, **kwargs):
+        def make_meas_arrow():
+            from .image_canvas import VectorObject
+            opts = {'width': 3, 'dash': ()}
+            vector = VectorObject(
+                ShapeTypeConstants.ARROW, name='MEASURE', is_tool=True,
+                color='yellow', regular_args=opts, highlight_args=opts)
+            self.shape_id = self.image_canvas.create_shape_from_vector_object(
+                vector, (0, 0, 0, 0), make_current=False)
+
+        try:
+            self.shape_id = self.image_canvas.variables.get_tool_shape_id_by_name('MEASURE')
+        except KeyError:
+            make_meas_arrow()
+
+        self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
+        self.insert_at_index = 0
+        self.coordinate_string = None
+        self.mode = 'normal'
+        self.anchor = (0, 0)
+        self.image_coords = (0, 0, 0, 0)
+        self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
+
+    def finalize_tool(self):
+        self.mode = 'normal'
+        self.coordinate_string = None
+        self.image_canvas.config(cursor='arrow')
+        self.image_canvas.hide_shape(self.shape_id)
+        self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, (0, 0, 0, 0))
+
+    def on_left_mouse_click(self, event):
+        self.mouse_moved = False
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+
+        if self.mode == "shift":
+            self.anchor = canvas_event
+            return
+
+        if self.insert_at_index > 1:
+            self.insert_at_index = 1
+        if self.insert_at_index < 0:
+            self.insert_at_index = 0
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        old_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
+        new_coords, _ = _modify_coords(
+            self.image_canvas, self.shape_id, old_coords,
+            canvas_event[0], canvas_event[1],
+            self.insert_at_index, insert=False)
+        self.image_canvas.modify_existing_shape_using_canvas_coords(
+            self.shape_id, new_coords, update_pixel_coords=True)
+
+    def on_left_mouse_motion(self, event):
+        self.mouse_moved = True
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        if self.mode == "normal":
+            previous_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
+            new_coords, _ = _modify_coords(
+                self.image_canvas, self.shape_id, previous_coords,
+                canvas_event[0], canvas_event[1],
+                self.insert_at_index, insert=False)
+            self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords)
+        elif self.mode == "shift":
+            _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=True)
+            self.anchor = canvas_event
+
+    def on_left_mouse_release(self, event):
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        if self.mode == "normal":
+            if self.mouse_moved:
+                previous_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
+                new_coords, _ = _modify_coords(
+                    self.image_canvas, self.shape_id, previous_coords,
+                    canvas_event[0], canvas_event[1],
+                    self.insert_at_index, insert=False)
+                self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords, emit=False)
+                self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
+        elif self.mode == "shift":
+            if self.mouse_moved:
+                _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=False)
+                self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
+                self.mode = "normal"
+        self.mouse_moved = False
+
+    def on_mouse_motion(self, event):
+        canvas_event = _get_canvas_event_coords(self.image_canvas, event)
+        the_dist = self.image_canvas.find_distance_from_shape(
+            self.vector_object.uid, canvas_event[0], canvas_event[1])
+        the_vertex, vertex_distance, _, _ = self.image_canvas.find_closest_shape_coord(
+            self.vector_object.uid, canvas_event[0], canvas_event[1])
+
+        if vertex_distance < self.vertex_threshold:
+            self.image_canvas.config(cursor='cross')
+            self.mode = "normal"
+        elif the_dist < self.vertex_threshold:
+            self.image_canvas.config(cursor='fleur')
+            self.mode = "shift"
+        else:
+            self.mode = "normal"
+            self.image_canvas.config(cursor='arrow')
+
+    def on_mouse_wheel(self, event):
+        if self.mode in ['normal', ]:
+            self.image_canvas.zoom_on_mouse(event)
+
+    def show_measurement_details(self):
+        self.image_coords = self.vector_object.image_coords
+        self.coordinate_string_formatting_function()
+        showinfo('Measurement Details', message=self.coordinate_string)
+
+    def coordinate_string_formatting_function(self):
+        crd = self.image_coords
+        dist = numpy.sqrt((crd[2] - crd[0])**2 + (crd[3] - crd[1])**2)
+        self.coordinate_string = 'Start - row: {}, column: {}\n'.format(*self.image_coords[:2])
+        self.coordinate_string += 'End - row: {}, column: {}\n'.format(*self.image_coords[2:4])
+        self.coordinate_string += '\n-----------------\n' \
+                                  'Distance: {0:0.1f} pixels'.format(dist)
 
 
 #########
