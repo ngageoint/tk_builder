@@ -14,6 +14,7 @@ from tkinter.messagebox import showinfo
 
 from sarpy.compliance import string_types
 from sarpy.geometry.geometry_elements import LinearRing
+from sarpy.geometry.geocoords import geodetic_to_ecf, ecf_to_ned
 
 
 logger = logging.getLogger(__name__)
@@ -1325,6 +1326,11 @@ class CoordinateTool(ImageCanvasTool):
 
     def coordinate_string_formatting_function(self):
         self.coordinate_string = 'Row: {}, Column: {}'.format(*self.image_coords)
+        trans_coords, trans_string = self.image_canvas.variables.image_reader.transform_coordinates(self.image_coords)
+        if trans_coords is None:
+            return
+        self.coordinate_string += '\n' + trans_string + ': ' \
+                                  + ' ,'.join(['{0:0.8G}'.format(crd) for crd in trans_coords])
 
 
 class MeasureTool(ImageCanvasTool):
@@ -1456,10 +1462,25 @@ class MeasureTool(ImageCanvasTool):
     def coordinate_string_formatting_function(self):
         crd = self.image_coords
         dist = numpy.sqrt((crd[2] - crd[0])**2 + (crd[3] - crd[1])**2)
-        self.coordinate_string = 'Start - row: {}, column: {}\n'.format(*self.image_coords[:2])
-        self.coordinate_string += 'End - row: {}, column: {}\n'.format(*self.image_coords[2:4])
-        self.coordinate_string += '\n-----------------\n' \
-                                  'Distance: {0:0.1f} pixels'.format(dist)
+        self.coordinate_string = 'Row/Column: ({}, {}) -> ({}, {})\n'.format(*crd)
+        self.coordinate_string += 'Pixel Distance: {0:0.1f} pixels'.format(dist)
+        transformed_coords, trans_string = self.image_canvas.variables.image_reader.transform_coordinates(
+            numpy.array(crd, dtype='float64').reshape((2, 2)))
+        if transformed_coords is None:
+            return
+
+        self.coordinate_string += '\n{}: '.format(trans_string)
+        self.coordinate_string += '(' + ', '.join(
+            ['{0:0.9G}'.format(tcrd) for tcrd in transformed_coords[0, :]]) + ') ->'
+        self.coordinate_string += '(' + ', '.join(
+            ['{0:0.9G}'.format(tcrd) for tcrd in transformed_coords[1, :]]) + ')'
+
+        if trans_string.startswith('LLH'):
+            ecf_coords = geodetic_to_ecf(transformed_coords)
+            bearing_vector_ned = ecf_to_ned(ecf_coords[1, :] - ecf_coords[0, :], ecf_coords[0, :], absolute_coords=False)
+            bearing = numpy.rad2deg(numpy.arctan2(bearing_vector_ned[1], bearing_vector_ned[0]))
+            self.coordinate_string += 'Distance [m]: {0:0.1f}, Bearing [deg]: {0.0.1f}'.format(
+                numpy.linalg.norm(bearing_vector_ned), bearing)
 
 
 #########

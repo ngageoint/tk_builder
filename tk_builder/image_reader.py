@@ -137,6 +137,33 @@ class CanvasImageReader(object):
 
         pass
 
+    def transform_coordinates(self, image_coordinates):
+        """
+        Transforms the image coordinate points to some other desired reference
+        frame (e.g. WGS Lat/Lon/HAE).
+        **This is generally expected to be implemented in concrete extensions**
+
+        Parameters
+        ----------
+        image_coordinates : numpy.ndarray|list|tuple
+            Something equivalent to an array of image coordinates with final dimension
+            size `2`
+
+        Returns
+        -------
+        transformed_coordinates : None|numpy.ndarray
+            `None` if not specifically provided, otherwise the transformed coordinates.
+            The shape of the output array is as expected from the input and the nature
+            of the transform.
+        coordinate_name : str
+            A name for the meaning of the output coordinates. This is not standardized,
+            but possible expected values could be `'LLH_HAE'` or `'LLH_DEM'` for
+            sicd or sidd image coordinates transformed to a constant HAE surface or
+            using a DEM.
+        """
+
+        return None, 'NONE'
+
 
 class NumpyCanvasImageReader(CanvasImageReader):
     """

@@ -863,6 +863,14 @@ class AppVariables(object):
         self._tools = {}
 
     @property
+    def image_reader(self):
+        # type: () -> Union[None, CanvasImageReader]
+        if self.canvas_image_object is None:
+            return None
+        else:
+            return self.canvas_image_object.image_reader
+
+    @property
     def shape_ids(self):
         # type: () -> List[int]
         """
