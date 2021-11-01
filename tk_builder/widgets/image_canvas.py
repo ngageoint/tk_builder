@@ -2141,15 +2141,18 @@ class ImageCanvas(Canvas):
 
         Returns
         -------
-        Tuple[int, float, int, int]
+        the_index : int
             The index of the nearest coordinate.
+        canvas_distance : float
             The distance in canvas pixel units.
+        y_canvas_coord : int
             The integer y canvas coordinate of the nearest vertex.
+        x_canvas_coord : int
             The integer x canvas coordinate of the nearest vertex.
         """
 
         the_point = numpy.array([canvas_x, canvas_y])
-        vector_object = self.get_vector_object(self.current_shape_id)
+        vector_object = self.get_vector_object(shape_id)
         coords = self.get_shape_canvas_coords(shape_id)
         if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
             # we may have to reformat the shape for the selection to make sense
@@ -2169,13 +2172,13 @@ class ImageCanvas(Canvas):
                 ll = the_coords[3, :].tolist()
 
                 if the_index == 0:  # upper left
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ul+lr)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ul+lr)
                 elif the_index == 1:  # upper right
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ur+ll)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ur+ll)
                 elif the_index == 2:  # lower right
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ul+lr)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ul+lr)
                 else:  # lower left
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ll+ur)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ll+ur)
                 coords = self.get_shape_canvas_coords(shape_id)
 
         the_coords = numpy.array(coords).reshape((-1, 2))

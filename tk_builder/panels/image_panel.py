@@ -28,6 +28,7 @@ from sarpy.visualization.remap import get_remap_list
 class Toolbar(WidgetPanelNoLabel):
     tool_controls = (
         'tool_label', 'zoom_in', 'zoom_out', 'pan', 'select', 'view',
+        'coords', 'measure',
         'select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape')
     shape_controls = (
         'shape_label', 'point', 'line', 'arrow', 'rect', 'ellipse',
@@ -53,6 +54,12 @@ class Toolbar(WidgetPanelNoLabel):
     select = RadioButtonDescriptor(
         'select', default_text='Select',
         docstring='Select selector.')  # type: RadioButton
+    coords = RadioButtonDescriptor(
+        'coords', default_text='Coords',
+        docstring='Coordinate selector.')  # type: RadioButton
+    measure = RadioButtonDescriptor(
+        'measure', default_text='Measure',
+        docstring='Measure tool selector.')  # type: RadioButton
     view = RadioButtonDescriptor(
         'view', default_text='View',
         docstring='View selector.')  # type: RadioButton
@@ -188,6 +195,10 @@ class ImagePanel(Frame):
             variable=self._the_tool, value=get_tool_enum('SELECT'), command=self.callback_set_tool)
         self.toolbar.view.config(
             variable=self._the_tool, value=get_tool_enum('VIEW'), command=self.callback_set_tool)
+        self.toolbar.coords.config(
+            variable=self._the_tool, value=get_tool_enum('COORDS'), command=self.callback_set_tool)
+        self.toolbar.measure.config(
+            variable=self._the_tool, value=get_tool_enum('MEASURE'), command=self.callback_set_tool)
         self.toolbar.select_closest_shape.config(
             variable=self._the_tool, value=get_tool_enum('SHAPE_SELECT'), command=self.callback_set_tool)
         self.toolbar.edit_shape.config(

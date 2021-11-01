@@ -9,7 +9,7 @@ __author__ = "Thomas McCullough"
 import logging
 from collections import OrderedDict
 import numpy
-from typing import Tuple, List, Union
+from typing import Tuple, List
 from tkinter.messagebox import showinfo
 
 from sarpy.compliance import string_types
@@ -1287,7 +1287,7 @@ class CoordinateTool(ImageCanvasTool):
             from .image_canvas import VectorObject
             opts = {'width': 1, 'outline': 'red'}
             vector = VectorObject(
-                ShapeTypeConstants.RECT, name='COORDS', is_tool=True, point_size=4,
+                ShapeTypeConstants.POINT, name='COORDS', is_tool=True, point_size=4,
                 color='yellow', regular_args=opts, highlight_args=opts)
             self.shape_id = self.image_canvas.create_shape_from_vector_object(
                 vector, (0, 0), make_current=False)
@@ -1316,7 +1316,7 @@ class CoordinateTool(ImageCanvasTool):
             self.shape_id, canvas_event + canvas_event)
         self.image_canvas.show_shape(self.shape_id)
         vector_object = self.image_canvas.get_vector_object(self.shape_id)
-        self.image_coords = vector_object.image_coords
+        self.image_coords = vector_object.image_coords[:2]
         self.show_coordinate_details()
 
     def show_coordinate_details(self):
@@ -1325,12 +1325,16 @@ class CoordinateTool(ImageCanvasTool):
             showinfo('Coordinate Details', message=self.coordinate_string)
 
     def coordinate_string_formatting_function(self):
-        self.coordinate_string = 'Row: {}, Column: {}'.format(*self.image_coords)
+        self.coordinate_string = 'Row/Column: ({0:0.1f}, {1:0.1f})'.format(*self.image_coords)
         trans_coords, trans_string = self.image_canvas.variables.image_reader.transform_coordinates(self.image_coords)
         if trans_coords is None:
             return
-        self.coordinate_string += '\n' + trans_string + ': ' \
-                                  + ' ,'.join(['{0:0.8G}'.format(crd) for crd in trans_coords])
+        if trans_string.startswith('LLH'):
+            self.coordinate_string += '\n' + trans_string + \
+                                      ': (' + '({0:0.8f}, {1:0.8f}, {2:0.2f})'.format(*trans_coords) + ')'
+        else:
+            self.coordinate_string += '\n' + trans_string + \
+                                      ': (' + ' ,'.join(['{0:0.8G}'.format(crd) for crd in trans_coords]) + ')'
 
 
 class MeasureTool(ImageCanvasTool):
@@ -1338,6 +1342,7 @@ class MeasureTool(ImageCanvasTool):
     Coordinate Measuring Tool
     """
     _name = "MEASURE"
+    _mode_values = {"init", "normal", "shift"}
 
     def __init__(self, image_canvas):
         ImageCanvasTool.__init__(self, image_canvas)
@@ -1349,6 +1354,7 @@ class MeasureTool(ImageCanvasTool):
         self.vector_object = None
         self.insert_at_index = 0
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
+        self.image_canvas.bind('<<MeasurementCoordsFinalized>>', self.show_measurement_details)
 
     def initialize_tool(self, **kwargs):
         def make_meas_arrow():
@@ -1368,13 +1374,15 @@ class MeasureTool(ImageCanvasTool):
         self.vector_object = self.image_canvas.get_vector_object(self.shape_id)
         self.insert_at_index = 0
         self.coordinate_string = None
-        self.mode = 'normal'
+        self.mode = 'init'
         self.anchor = (0, 0)
         self.image_coords = (0, 0, 0, 0)
+        self.insert_at_index = 1
         self.vertex_threshold = self.image_canvas.variables.config.vertex_selector_pixel_threshold
+        self.image_canvas.show_shape(self.shape_id)
 
     def finalize_tool(self):
-        self.mode = 'normal'
+        self.mode = 'init'
         self.coordinate_string = None
         self.image_canvas.config(cursor='arrow')
         self.image_canvas.hide_shape(self.shape_id)
@@ -1383,23 +1391,29 @@ class MeasureTool(ImageCanvasTool):
     def on_left_mouse_click(self, event):
         self.mouse_moved = False
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-
         if self.mode == "shift":
             self.anchor = canvas_event
             return
 
-        if self.insert_at_index > 1:
-            self.insert_at_index = 1
-        if self.insert_at_index < 0:
-            self.insert_at_index = 0
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        old_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
-        new_coords, _ = _modify_coords(
-            self.image_canvas, self.shape_id, old_coords,
-            canvas_event[0], canvas_event[1],
-            self.insert_at_index, insert=False)
-        self.image_canvas.modify_existing_shape_using_canvas_coords(
-            self.shape_id, new_coords, update_pixel_coords=True)
+        if self.mode == "init":
+            new_coords = (canvas_event[0], canvas_event[1], canvas_event[0], canvas_event[1])
+            self.image_canvas.modify_existing_shape_using_canvas_coords(
+                self.shape_id, new_coords, update_pixel_coords=True)
+            self.mode = "normal"
+            self.insert_at_index = 1
+        else:
+            if self.insert_at_index > 1:
+                self.insert_at_index = 1
+            if self.insert_at_index < 0:
+                self.insert_at_index = 0
+            old_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
+            new_coords, _ = _modify_coords(
+                self.image_canvas, self.shape_id, old_coords,
+                canvas_event[0], canvas_event[1],
+                self.insert_at_index, insert=False)
+            self.image_canvas.modify_existing_shape_using_canvas_coords(
+                self.shape_id, new_coords, update_pixel_coords=True)
 
     def on_left_mouse_motion(self, event):
         self.mouse_moved = True
@@ -1425,15 +1439,18 @@ class MeasureTool(ImageCanvasTool):
                     canvas_event[0], canvas_event[1],
                     self.insert_at_index, insert=False)
                 self.image_canvas.modify_existing_shape_using_canvas_coords(self.shape_id, new_coords, emit=False)
-                self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
+                self.image_canvas.event_generate('<<MeasurementCoordsFinalized>>')
         elif self.mode == "shift":
             if self.mouse_moved:
                 _perform_shape_shift(self.image_canvas, self.shape_id, canvas_event, self.anchor, emit=False)
-                self.image_canvas.emit_shape_coords_finalized(the_id=self.shape_id)
+                self.image_canvas.event_generate('<<MeasurementCoordsFinalized>>')
                 self.mode = "normal"
         self.mouse_moved = False
 
     def on_mouse_motion(self, event):
+        if self.mode == 'init':
+            return
+
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
         the_dist = self.image_canvas.find_distance_from_shape(
             self.vector_object.uid, canvas_event[0], canvas_event[1])
@@ -1454,7 +1471,8 @@ class MeasureTool(ImageCanvasTool):
         if self.mode in ['normal', ]:
             self.image_canvas.zoom_on_mouse(event)
 
-    def show_measurement_details(self):
+    # noinspection PyUnusedLocal
+    def show_measurement_details(self, event):
         self.image_coords = self.vector_object.image_coords
         self.coordinate_string_formatting_function()
         showinfo('Measurement Details', message=self.coordinate_string)
@@ -1462,25 +1480,28 @@ class MeasureTool(ImageCanvasTool):
     def coordinate_string_formatting_function(self):
         crd = self.image_coords
         dist = numpy.sqrt((crd[2] - crd[0])**2 + (crd[3] - crd[1])**2)
-        self.coordinate_string = 'Row/Column: ({}, {}) -> ({}, {})\n'.format(*crd)
+        self.coordinate_string = 'Row/Column: ({0:0.1f}, {1:0.1f}) -> ({2:0.1f}, {3:0.1f})\n'.format(*crd)
         self.coordinate_string += 'Pixel Distance: {0:0.1f} pixels'.format(dist)
         transformed_coords, trans_string = self.image_canvas.variables.image_reader.transform_coordinates(
             numpy.array(crd, dtype='float64').reshape((2, 2)))
         if transformed_coords is None:
             return
 
-        self.coordinate_string += '\n{}: '.format(trans_string)
-        self.coordinate_string += '(' + ', '.join(
-            ['{0:0.9G}'.format(tcrd) for tcrd in transformed_coords[0, :]]) + ') ->'
-        self.coordinate_string += '(' + ', '.join(
-            ['{0:0.9G}'.format(tcrd) for tcrd in transformed_coords[1, :]]) + ')'
+        self.coordinate_string += '\n-----------------\n{}: '.format(trans_string)
 
         if trans_string.startswith('LLH'):
+            self.coordinate_string += '({0:0.8f}, {1:0.8f}, {2:0.2f}) ->\n  '.format(*transformed_coords[0, :])
+            self.coordinate_string += '({0:0.8f}, {1:0.8f}, {2:0.2f})\n'.format(*transformed_coords[1, :])
             ecf_coords = geodetic_to_ecf(transformed_coords)
             bearing_vector_ned = ecf_to_ned(ecf_coords[1, :] - ecf_coords[0, :], ecf_coords[0, :], absolute_coords=False)
             bearing = numpy.rad2deg(numpy.arctan2(bearing_vector_ned[1], bearing_vector_ned[0]))
-            self.coordinate_string += 'Distance [m]: {0:0.1f}, Bearing [deg]: {0.0.1f}'.format(
+            self.coordinate_string += 'Distance [m]: {0:0.1f}, Bearing [deg]: {1:0.1f}'.format(
                 numpy.linalg.norm(bearing_vector_ned), bearing)
+        else:
+            self.coordinate_string += '(' + ', '.join(
+                ['{0:0.9G}'.format(tcrd) for tcrd in transformed_coords[0, :]]) + ') ->\n  '
+            self.coordinate_string += '(' + ', '.join(
+                ['{0:0.9G}'.format(tcrd) for tcrd in transformed_coords[1, :]]) + ')'
 
 
 #########
@@ -1523,8 +1544,8 @@ def _register_defaults():
     if _DEFAULTS_REGISTERED:
         return
     for tool in [
-            ViewTool, ZoomInTool, ZoomOutTool, PanTool, SelectTool,
-            ShapeSelectTool, ShiftShapeTool, NewShapeTool, EditShapeTool]:
+            ViewTool, ZoomInTool, ZoomOutTool, PanTool, SelectTool, CoordinateTool,
+            MeasureTool, ShapeSelectTool, ShiftShapeTool, NewShapeTool, EditShapeTool]:
         register_tool(tool, overwrite=False)
     _DEFAULTS_REGISTERED = True
 
