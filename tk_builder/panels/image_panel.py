@@ -21,13 +21,13 @@ from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder import file_filters
 
-from sarpy.compliance import string_types, integer_types
 from sarpy.visualization.remap import get_remap_list
 
 
 class Toolbar(WidgetPanelNoLabel):
     tool_controls = (
         'tool_label', 'zoom_in', 'zoom_out', 'pan', 'select', 'view',
+        'coords', 'measure',
         'select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape')
     shape_controls = (
         'shape_label', 'point', 'line', 'arrow', 'rect', 'ellipse',
@@ -53,6 +53,12 @@ class Toolbar(WidgetPanelNoLabel):
     select = RadioButtonDescriptor(
         'select', default_text='Select',
         docstring='Select selector.')  # type: RadioButton
+    coords = RadioButtonDescriptor(
+        'coords', default_text='Coords',
+        docstring='Coordinate selector.')  # type: RadioButton
+    measure = RadioButtonDescriptor(
+        'measure', default_text='Measure',
+        docstring='Measure tool selector.')  # type: RadioButton
     view = RadioButtonDescriptor(
         'view', default_text='View',
         docstring='View selector.')  # type: RadioButton
@@ -188,6 +194,10 @@ class ImagePanel(Frame):
             variable=self._the_tool, value=get_tool_enum('SELECT'), command=self.callback_set_tool)
         self.toolbar.view.config(
             variable=self._the_tool, value=get_tool_enum('VIEW'), command=self.callback_set_tool)
+        self.toolbar.coords.config(
+            variable=self._the_tool, value=get_tool_enum('COORDS'), command=self.callback_set_tool)
+        self.toolbar.measure.config(
+            variable=self._the_tool, value=get_tool_enum('MEASURE'), command=self.callback_set_tool)
         self.toolbar.select_closest_shape.config(
             variable=self._the_tool, value=get_tool_enum('SHAPE_SELECT'), command=self.callback_set_tool)
         self.toolbar.edit_shape.config(
@@ -225,9 +235,9 @@ class ImagePanel(Frame):
 
     @the_tool.setter
     def the_tool(self, value):
-        if isinstance(value, integer_types):
+        if isinstance(value, int):
             self._the_tool.set(value)
-        elif isinstance(value, string_types):
+        elif isinstance(value, str):
             self._the_tool.set(get_tool_enum(value))
         else:
             raise ValueError('Unhandled tool value {}'.format(value))
@@ -266,7 +276,7 @@ class ImagePanel(Frame):
         None
         """
 
-        if isinstance(value, integer_types) or isinstance(value, string_types):
+        if isinstance(value, (int, str)):
             self.canvas.current_tool = value
         else:
             raise TypeError('Expected an integer or string value')
@@ -408,7 +418,7 @@ class ImagePanel(Frame):
         SHAPE_DRAWING = ['select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape']
 
         def check_entry(temp_list, the_entry):
-            if isinstance(the_entry, string_types):
+            if isinstance(the_entry, str):
                 temp = the_entry.lower()
                 if temp == 'shape_drawing':
                     for temp_tool in SHAPE_DRAWING:
@@ -449,7 +459,7 @@ class ImagePanel(Frame):
         """
 
         def check_entry(temp_list, the_entry):
-            if isinstance(the_entry, string_types):
+            if isinstance(the_entry, str):
                 temp = the_entry.lower()
                 if temp not in self.toolbar.shape_controls:
                     raise ValueError("Can't hide unknown shape element {}".format(the_entry))

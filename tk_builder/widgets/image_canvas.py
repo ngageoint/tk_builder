@@ -60,10 +60,12 @@ class ToolConstants(object):
     ZOOM_OUT = 2  # tool for defining zoom rectangle, for zooming out
     SELECT = 3  # tool for defining selection rectangle, for a region
     PAN = 4  # tool for defining pan behavior
-    NEW_SHAPE = 5  # tool for starting to draw a new shape
-    EDIT_SHAPE = 6  # tool for editing a shape
-    SELECT_CLOSEST_SHAPE = 7  # tool for selecting a shape, and setting to current
-    SHIFT_SHAPE = 8  # tool for moving a shape via affine shift
+    COORDS = 5  # tool for showing coordinate details
+    MEASURE = 6  # tool for measuring
+    SHIFT_SHAPE = 7  # tool for moving a shape via affine shift
+    EDIT_SHAPE = 8  # tool for editing a shape
+    SELECT_CLOSEST_SHAPE = 9  # tool for selecting a shape, and setting to current
+    NEW_SHAPE = 10  # tool for starting to draw a new shape
 
     _names_to_values = OrderedDict([
         ('VIEW', VIEW),
@@ -71,10 +73,13 @@ class ToolConstants(object):
         ('ZOOM_OUT', ZOOM_OUT),
         ('SELECT', SELECT),
         ('PAN', PAN),
-        ('NEW_SHAPE', NEW_SHAPE),
+        ('COORDS', COORDS),
+        ('MEASURE', MEASURE),
+        ('SHIFT_SHAPE', SHIFT_SHAPE),
         ('EDIT_SHAPE', EDIT_SHAPE),
         ('SELECT_CLOSEST_SHAPE', SELECT_CLOSEST_SHAPE),
-        ('SHIFT_SHAPE', SHIFT_SHAPE)])
+        ('NEW_SHAPE', NEW_SHAPE)
+    ])
     _values_to_names = OrderedDict([(value, key) for key, value in _names_to_values.items()])
 
     @classmethod
@@ -856,6 +861,14 @@ class AppVariables(object):
         self._vector_objects = OrderedDict()
         self._remap_function = get_remap_list()[0][1]
         self._tools = {}
+
+    @property
+    def image_reader(self):
+        # type: () -> Union[None, CanvasImageReader]
+        if self.canvas_image_object is None:
+            return None
+        else:
+            return self.canvas_image_object.image_reader
 
     @property
     def shape_ids(self):
@@ -2128,15 +2141,18 @@ class ImageCanvas(Canvas):
 
         Returns
         -------
-        Tuple[int, float, int, int]
+        the_index : int
             The index of the nearest coordinate.
+        canvas_distance : float
             The distance in canvas pixel units.
+        y_canvas_coord : int
             The integer y canvas coordinate of the nearest vertex.
+        x_canvas_coord : int
             The integer x canvas coordinate of the nearest vertex.
         """
 
         the_point = numpy.array([canvas_x, canvas_y])
-        vector_object = self.get_vector_object(self.current_shape_id)
+        vector_object = self.get_vector_object(shape_id)
         coords = self.get_shape_canvas_coords(shape_id)
         if vector_object.type in [ShapeTypeConstants.RECT, ShapeTypeConstants.ELLIPSE]:
             # we may have to reformat the shape for the selection to make sense
@@ -2156,13 +2172,13 @@ class ImageCanvas(Canvas):
                 ll = the_coords[3, :].tolist()
 
                 if the_index == 0:  # upper left
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ul+lr)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ul+lr)
                 elif the_index == 1:  # upper right
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ur+ll)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ur+ll)
                 elif the_index == 2:  # lower right
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ul+lr)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ul+lr)
                 else:  # lower left
-                    self.modify_existing_shape_using_canvas_coords(self.current_shape_id, ll+ur)
+                    self.modify_existing_shape_using_canvas_coords(shape_id, ll+ur)
                 coords = self.get_shape_canvas_coords(shape_id)
 
         the_coords = numpy.array(coords).reshape((-1, 2))
