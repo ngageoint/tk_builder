@@ -5,8 +5,6 @@ __author__ = "Jason Casey"
 import logging
 from weakref import WeakKeyDictionary
 
-from sarpy.compliance import integer_types, int_func, string_types
-
 
 def _verify_bool(val, default, name, instance):
     """
@@ -64,7 +62,7 @@ def _verify_int(val, default, name, instance):
         return default
     else:
         try:
-            return int_func(val)
+            return int(val)
         except Exception:
             logging.error(
                 'Tried to convert value {} to an integer value for attribute {} '
@@ -126,7 +124,7 @@ def _verify_str(val, default, name, instance):
 
     if val is None:
         return default
-    elif isinstance(val, string_types):
+    elif isinstance(val, str):
         return val
     else:
         try:
@@ -196,7 +194,7 @@ def _validate_tuple_length(tup_length, length, name, instance):
 
     if length is None:
         return True
-    elif isinstance(length, integer_types):
+    elif isinstance(length, int):
         if tup_length != length:
             logging.error(
                 "The value for attribute {} of class {} must be a tuple of length {}, and we got "
@@ -251,7 +249,7 @@ def _verify_int_tuple(val, default, name, instance, length=None):
     try:
         temp = []
         for entry in val:
-            temp.append(int_func(entry))
+            temp.append(int(entry))
     except Exception:
         raise
 
@@ -746,5 +744,5 @@ class TypedTupleDescriptor(BasicDescriptor):
         if super(TypedTupleDescriptor, self).__set__(instance, value):
             return
 
-        iv = _verify_typed_tuple(value, self._default_value, self.name, instance, the_type, length=self._length)
+        iv = _verify_typed_tuple(value, self._default_value, self.name, instance, self.the_type, length=self._length)
         self.data[instance] = iv

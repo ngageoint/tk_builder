@@ -12,7 +12,6 @@ import numpy
 from typing import Tuple, List
 from tkinter.messagebox import showinfo
 
-from sarpy.compliance import string_types
 from sarpy.geometry.geometry_elements import LinearRing
 from sarpy.geometry.geocoords import geodetic_to_ecf, ecf_to_ned
 
@@ -363,7 +362,7 @@ class ImageCanvasTool(object):
         if self._mode == value:
             return
 
-        if not isinstance(value, string_types):
+        if not isinstance(value, str):
             raise TypeError('string value required')
         value = value.lower()
 
@@ -1563,7 +1562,7 @@ def get_tool_type(the_type):
     type
     """
 
-    if isinstance(the_type, string_types):
+    if isinstance(the_type, str):
         return _TOOL_DICT[the_type]
     elif issubclass(the_type, ImageCanvasTool):
         return the_type

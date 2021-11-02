@@ -21,7 +21,6 @@ from tk_builder.widgets.image_canvas_tool import ImageCanvasTool, \
 from tk_builder.image_reader import CanvasImageReader
 from tk_builder import file_filters
 
-from sarpy.compliance import string_types, integer_types
 from sarpy.visualization.remap import get_remap_list
 
 
@@ -236,9 +235,9 @@ class ImagePanel(Frame):
 
     @the_tool.setter
     def the_tool(self, value):
-        if isinstance(value, integer_types):
+        if isinstance(value, int):
             self._the_tool.set(value)
-        elif isinstance(value, string_types):
+        elif isinstance(value, str):
             self._the_tool.set(get_tool_enum(value))
         else:
             raise ValueError('Unhandled tool value {}'.format(value))
@@ -277,7 +276,7 @@ class ImagePanel(Frame):
         None
         """
 
-        if isinstance(value, integer_types) or isinstance(value, string_types):
+        if isinstance(value, (int, str)):
             self.canvas.current_tool = value
         else:
             raise TypeError('Expected an integer or string value')
@@ -419,7 +418,7 @@ class ImagePanel(Frame):
         SHAPE_DRAWING = ['select_closest_shape', 'edit_shape', 'shift_shape', 'new_shape']
 
         def check_entry(temp_list, the_entry):
-            if isinstance(the_entry, string_types):
+            if isinstance(the_entry, str):
                 temp = the_entry.lower()
                 if temp == 'shape_drawing':
                     for temp_tool in SHAPE_DRAWING:
@@ -460,7 +459,7 @@ class ImagePanel(Frame):
         """
 
         def check_entry(temp_list, the_entry):
-            if isinstance(the_entry, string_types):
+            if isinstance(the_entry, str):
                 temp = the_entry.lower()
                 if temp not in self.toolbar.shape_controls:
                     raise ValueError("Can't hide unknown shape element {}".format(the_entry))
