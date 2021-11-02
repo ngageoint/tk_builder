@@ -33,14 +33,6 @@ The core library functionality depends only on `tkinter`, `numpy`, `pillow`,
 can be installed using conda or pip. Note that `tkinter` is part of the standard distribution 
 on some platforms, and has to be installed separately on others.
 
-Python 2.7
-----------
-The development here has been geared towards Python 3.6 and above, but efforts have
-been made towards remaining compatible with Python 2.7. If you are using the library
-from Python 2.7, there is an additional dependencies for the `typing` and `future` 
-(not to be confused with the more widely known `futures`) packages, easily installed using 
-conda or pip.
-
 Installation
 ------------
 From PyPI, install using pip (may require escalated privileges e.g. sudo):
