@@ -10,7 +10,8 @@ import logging
 from collections import OrderedDict
 import numpy
 from typing import Tuple, List
-from tkinter.messagebox import showinfo
+
+from tk_builder.widgets.derived_widgets import CopyableMessageBox
 
 from sarpy.geometry.geometry_elements import LinearRing
 from sarpy.geometry.geocoords import geodetic_to_ecf, ecf_to_ned
@@ -1321,7 +1322,7 @@ class CoordinateTool(ImageCanvasTool):
     def show_coordinate_details(self):
         self.coordinate_string_formatting_function()
         if self.coordinate_string is not None:
-            showinfo('Coordinate Details', message=self.coordinate_string)
+            CopyableMessageBox('Coordinate Details', message=self.coordinate_string)
 
     def coordinate_string_formatting_function(self):
         self.coordinate_string = 'Row/Column: ({0:0.1f}, {1:0.1f})'.format(*self.image_coords)
@@ -1474,7 +1475,7 @@ class MeasureTool(ImageCanvasTool):
     def show_measurement_details(self, event):
         self.image_coords = self.vector_object.image_coords
         self.coordinate_string_formatting_function()
-        showinfo('Measurement Details', message=self.coordinate_string)
+        CopyableMessageBox('Measurement Details', message=self.coordinate_string)
 
     def coordinate_string_formatting_function(self):
         crd = self.image_coords
