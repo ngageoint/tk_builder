@@ -1322,7 +1322,7 @@ class CoordinateTool(ImageCanvasTool):
     def show_coordinate_details(self):
         self.coordinate_string_formatting_function()
         if self.coordinate_string is not None:
-            CopyableMessageBox('Coordinate Details', message=self.coordinate_string)
+            CopyableMessageBox('Coordinate Details', message=self.coordinate_string, width=60, height=8)
 
     def coordinate_string_formatting_function(self):
         self.coordinate_string = 'Row/Column: ({0:0.1f}, {1:0.1f})'.format(*self.image_coords)
@@ -1396,24 +1396,11 @@ class MeasureTool(ImageCanvasTool):
             return
 
         canvas_event = _get_canvas_event_coords(self.image_canvas, event)
-        if self.mode == "init":
-            new_coords = (canvas_event[0], canvas_event[1], canvas_event[0], canvas_event[1])
-            self.image_canvas.modify_existing_shape_using_canvas_coords(
-                self.shape_id, new_coords, update_pixel_coords=True)
-            self.mode = "normal"
-            self.insert_at_index = 1
-        else:
-            if self.insert_at_index > 1:
-                self.insert_at_index = 1
-            if self.insert_at_index < 0:
-                self.insert_at_index = 0
-            old_coords = self.image_canvas.get_shape_canvas_coords(self.shape_id)
-            new_coords, _ = _modify_coords(
-                self.image_canvas, self.shape_id, old_coords,
-                canvas_event[0], canvas_event[1],
-                self.insert_at_index, insert=False)
-            self.image_canvas.modify_existing_shape_using_canvas_coords(
-                self.shape_id, new_coords, update_pixel_coords=True)
+        new_coords = (canvas_event[0], canvas_event[1], canvas_event[0], canvas_event[1])
+        self.image_canvas.modify_existing_shape_using_canvas_coords(
+            self.shape_id, new_coords, update_pixel_coords=True)
+        self.mode = "normal"
+        self.insert_at_index = 1
 
     def on_left_mouse_motion(self, event):
         self.mouse_moved = True
@@ -1475,7 +1462,7 @@ class MeasureTool(ImageCanvasTool):
     def show_measurement_details(self, event):
         self.image_coords = self.vector_object.image_coords
         self.coordinate_string_formatting_function()
-        CopyableMessageBox('Measurement Details', message=self.coordinate_string)
+        CopyableMessageBox('Measurement Details', message=self.coordinate_string, width=90, height=10)
 
     def coordinate_string_formatting_function(self):
         crd = self.image_coords
@@ -1490,7 +1477,7 @@ class MeasureTool(ImageCanvasTool):
         self.coordinate_string += '\n-----------------\n{}: '.format(trans_string)
 
         if trans_string.startswith('LLH'):
-            self.coordinate_string += '({0:0.8f}, {1:0.8f}, {2:0.2f}) ->\n  '.format(*transformed_coords[0, :])
+            self.coordinate_string += '({0:0.8f}, {1:0.8f}, {2:0.2f}) -> '.format(*transformed_coords[0, :])
             self.coordinate_string += '({0:0.8f}, {1:0.8f}, {2:0.2f})\n'.format(*transformed_coords[1, :])
             ecf_coords = geodetic_to_ecf(transformed_coords)
             bearing_vector_ned = ecf_to_ned(ecf_coords[1, :] - ecf_coords[0, :], ecf_coords[0, :], absolute_coords=False)
