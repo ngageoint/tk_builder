@@ -124,15 +124,18 @@ class CopyableMessageBox(Dialog):
     A messagebox with copyable text
     """
 
-    def __init__(self, title, message=None, parent=None):
+    def __init__(self, title, message=None, width=60, height=10, parent=None):
         self.message = message
+        self.width = width
+        self.height = height
+        self.text = None
         if parent is None:
             # noinspection PyProtectedMember
             parent = tkinter._default_root
         Dialog.__init__(self, parent, title=title)
 
     def body(self, parent):
-        self.text = Text(self, width=40, height=4)
+        self.text = Text(self, width=self.width, height=self.height)
         self.text.pack(fill="both", expand=True)
         self.text.insert("1.0", self.message)
         self.text.configure(state='disabled')
