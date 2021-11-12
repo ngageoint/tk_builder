@@ -606,9 +606,13 @@ class VectorObject(object):
                 self.highlight_args['width'] = self.regular_args['width'] + 2
 
         # perform color validation
-        if self._type in [ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW, ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
+        if self._type in [
+                ShapeTypeConstants.LINE, ShapeTypeConstants.ARROW,
+                ShapeTypeConstants.POINT, ShapeTypeConstants.TEXT]:
             attr = 'fill'
-        elif self._type in [ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON, ShapeTypeConstants.ELLIPSE]:
+        elif self._type in [
+                ShapeTypeConstants.RECT, ShapeTypeConstants.POLYGON,
+                ShapeTypeConstants.ELLIPSE]:
             attr = 'outline'
         else:
             attr = None
@@ -718,7 +722,6 @@ class VectorObject(object):
         """
 
         return self._highlight_args
-
 
     def replicate(self):
         """
@@ -939,7 +942,7 @@ class AppVariables(object):
         """
 
         if the_id not in self._vector_objects:
-            return None # nothing to be done
+            return None  # nothing to be done
 
         vector_object = self._vector_objects[the_id]
         if vector_object.is_tool:
@@ -2838,6 +2841,29 @@ class ImageCanvas(Canvas):
             regular_args=regular_options, highlight_args=highlight_options)
 
         return self.create_shape_from_vector_object(vector_obj, coords, make_current=make_current)
+
+    def show_valid_data(self, valid_data_coordinates):
+        """
+        Create or edit the valid data polygon.
+
+        Parameters
+        ----------
+        valid_data_coordinates : numpy.ndarray
+            Of the form [[row, col]].
+        """
+
+        try:
+            valid_data_id = self.variables.get_tool_shape_id_by_name('VALID_DATA')
+        except KeyError:
+            valid_data_id = None
+        image_coords = valid_data_coordinates.flatten()
+        if valid_data_id is None:
+            vector_object = VectorObject(
+                ShapeTypeConstants.POLYGON, name='VALID_DATA', is_tool=True, color='darkred',
+                regular_args={'dash': (), 'fill': ''}, highlight_args={'dash': (), 'fill': ''})
+            valid_data_id = self.create_shape_from_vector_object(vector_object, (0, 0, 0, 0), make_current=False)
+        self.modify_existing_shape_using_image_coords(valid_data_id, image_coords)
+        self.show_shape(valid_data_id)
 
     # shape as geometry methods
     def get_geometry_for_shape(self, shape_id, coordinate_type='image'):
