@@ -2856,6 +2856,7 @@ class ImageCanvas(Canvas):
             valid_data_id = self.variables.get_tool_shape_id_by_name('VALID_DATA')
         except KeyError:
             valid_data_id = None
+
         image_coords = valid_data_coordinates.flatten()
         if valid_data_id is None:
             vector_object = VectorObject(
