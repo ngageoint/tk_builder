@@ -6,7 +6,9 @@ __classification__ = 'UNCLASSIFIED'
 __author__ = "Thomas McCullough"
 
 import tkinter
-from tk_builder.widgets.basic_widgets import Frame, Scrollbar, Treeview, Text
+from tkinter.simpledialog import Dialog
+
+from tk_builder.widgets.basic_widgets import Frame, Scrollbar, Treeview, Text, Button
 from tk_builder.widgets.widget_descriptors import TypedDescriptor
 
 
@@ -115,3 +117,35 @@ class TextWithScrolling(Text):
 
     def __str__(self):
         return str(self.frame)
+
+
+class CopyableMessageBox(Dialog):
+    """
+    A messagebox with copyable text
+    """
+
+    def __init__(self, title, message=None, width=60, height=10, parent=None):
+        self.message = message
+        self.width = width
+        self.height = height
+        self.text = None
+        if parent is None:
+            # noinspection PyProtectedMember
+            parent = tkinter._default_root
+        Dialog.__init__(self, parent, title=title)
+
+    def body(self, parent):
+        self.text = Text(self, width=self.width, height=self.height)
+        self.text.pack(fill="both", expand=True)
+        self.text.insert("1.0", self.message)
+        self.text.configure(state='disabled')
+        return self.text
+
+    def buttonbox(self):
+        box = Frame(self)
+
+        w = Button(box, text="OK", width=10, command=self.cancel, default=tkinter.ACTIVE)
+        w.pack(side=tkinter.LEFT, padx=5, pady=5)
+        self.bind("<Return>", self.cancel)
+        self.bind("<Escape>", self.cancel)
+        box.pack()

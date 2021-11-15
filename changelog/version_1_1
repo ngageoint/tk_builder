@@ -1,6 +1,7 @@
 # This details the important differences introduced in tk_builder 1.1
 # NB: bump the version number in __about__.py to reflect the below.
 
+* .8 - Adding a messagebox which allows copying of text
 * .7 - Adding image canvas tools for coordinate inspection and measurement
 * .6 - Allowing initialization parameters for image canvas tools
        Enable shift tool to simultaneously handle multiple geometries on the image canvas
