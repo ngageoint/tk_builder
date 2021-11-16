@@ -666,6 +666,10 @@ class PanTool(ImageCanvasTool):
     def initialize_tool(self, **kwargs):
         self.anchor = (0, 0)
         self.threshold = self.image_canvas.variables.config.pan_pixel_threshold
+        self.image_canvas.config(cursor='arrow')
+
+    def finalize_tool(self):
+        self.image_canvas.config(cursor='arrow')
 
     def on_left_mouse_click(self, event):
         self.anchor = _get_canvas_event_coords(self.image_canvas, event)
@@ -718,9 +722,11 @@ class PanTool(ImageCanvasTool):
 
     def on_left_mouse_motion(self, event):
         self.pan(event, check_distance=True)
+        self.image_canvas.config(cursor='fleur')
 
     def on_left_mouse_release(self, event):
         self.pan(event, check_distance=False)
+        self.image_canvas.config(cursor='arrow')
 
 
 class SelectTool(ImageCanvasTool):
@@ -938,6 +944,7 @@ class ShiftShapeTool(ImageCanvasTool):
         else:
             self.anchor = _get_canvas_event_coords(self.image_canvas, event)
             self.mode = "shift"
+            self.image_canvas.config(cursor='fleur')
 
     def on_left_mouse_motion(self, event):
         self.mouse_moved = True
@@ -956,6 +963,7 @@ class ShiftShapeTool(ImageCanvasTool):
             self.image_canvas.emit_shape_coords_finalized(the_id=entry)
 
         self.mode = "normal"
+        self.image_canvas.config(cursor='arrow')
         self.mouse_moved = False
 
     def on_mouse_wheel(self, event):
