@@ -6,7 +6,7 @@ import tkinter
 from tk_builder.widgets.basic_widgets import Frame
 
 try:
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 except ImportError:
     logging.error(
         'Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
@@ -27,7 +27,7 @@ class PyplotImagePanel(Frame):
     Provides a widget that allows users to embed pyplot images into an application.
     """
 
-    def __init__(self, parent, cmap_name=DEFAULT_CMAP):
+    def __init__(self, parent, cmap_name=DEFAULT_CMAP, navigation=False):
         self._cmap_name = DEFAULT_CMAP
         Frame.__init__(self, parent)
         self.config(borderwidth=5)
@@ -37,7 +37,14 @@ class PyplotImagePanel(Frame):
         self.title = None
         self.fig, self.ax = pyplot.subplots(dpi=100, nrows=1, ncols=1)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
-        self.canvas.get_tk_widget().pack(expand=tkinter.YES, fill=tkinter.BOTH)
+        self.canvas.get_tk_widget().pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
+        if navigation:
+            self.toolbar = NavigationToolbar2Tk(self.canvas, parent)
+            self.toolbar.update()
+            self.canvas.get_tk_widget().pack(side=tkinter.TOP, expand=tkinter.YES, fill=tkinter.BOTH)
+        else:
+            self.toolbar = None
+
         self.make_blank()
         self.set_title('detailed view')
         self.set_ylabel('row')
