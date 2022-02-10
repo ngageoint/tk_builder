@@ -29,8 +29,8 @@ The software use, modification, and distribution rights are stipulated within th
 Dependencies
 ------------
 The core library functionality depends only on `tkinter`, `numpy`, `pillow`,
-`matplotlib`, `scipy`, `ghostscript`, and minor dependence on `sarpy`, all of which 
-can be installed using conda or pip. Note that `tkinter` is part of the standard distribution 
+`matplotlib`, `scipy`, and minor dependence on `sarpy`, all of which can be 
+installed using conda or pip. Note that `tkinter` is part of the standard distribution 
 on some platforms, and has to be installed separately on others.
 
 Installation
