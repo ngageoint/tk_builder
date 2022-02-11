@@ -16,8 +16,8 @@ to be on overhead imaging applications.
 The `ImagePanel` and `ImageCanvas` classes contain functionality to save figures to numpy arrays
 and to disk.  For many user facing applications this would be accomplished by using the `save canvas`
 button provided in an `ImagePanel`.  This features saved all image and vector data displayed within
-an image panel.  If a user wishes to save figures this way, then it will be saved as a `ghostscript` 
-or `.gs` file, which will probably be sort of useless without the `ghostscript` application.
+an image panel.  If a user wishes to save figures this way, then it will be saved as a `postscript` 
+or `.ps` file, which will probably be sort of useless without the `ghostscript` application.
 
 Origins
 -------
