@@ -1117,6 +1117,13 @@ class ImageCanvas(Canvas):
         self._color_cycler = ColorCycler(n_colors=20)
 
     @property
+    def image_reader(self):
+        # type: () -> Union[None, CanvasImageReader]
+        if self.variables.canvas_image_object is None:
+            return None
+        return self.variables.canvas_image_object.image_reader
+
+    @property
     def color_cycler(self):
         return self._color_cycler
 
@@ -1264,8 +1271,8 @@ class ImageCanvas(Canvas):
         """
 
         self.reinitialize_shapes()
-        full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
-        full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
+        full_ny = self.image_reader.full_image_ny
+        full_nx = self.image_reader.full_image_nx
         self.zoom_to_full_image_selection([0, 0, full_ny, full_nx])
         self.current_tool = 'VIEW'
         # update drag limits for the tools
@@ -1289,20 +1296,9 @@ class ImageCanvas(Canvas):
         self.variables.canvas_image_object = CanvasImage(
             image_reader, self.variables.state.canvas_width, self.variables.state.canvas_height)
         # set the remap
-        self.variables.canvas_image_object.image_reader.set_remap_type(self.variables.remap_function)
+        self.image_reader.set_remap_type(self.variables.remap_function)
         # update the canvas elements
         self._reinitialize_reader()
-
-    def get_image_reader(self):
-        """
-        Gets the underlying image reader.
-
-        Returns
-        -------
-        None|CanvasImageReader
-        """
-
-        return self.variables.canvas_image_object.image_reader
 
     def get_base_reader(self):
         """
@@ -1313,7 +1309,7 @@ class ImageCanvas(Canvas):
         None|BaseReader
         """
 
-        return getattr(self.variables.canvas_image_object.image_reader, 'base_reader', None)
+        return getattr(self.image_reader, 'base_reader', None)
 
     def set_image_index(self, the_value):
         """
@@ -1325,17 +1321,16 @@ class ImageCanvas(Canvas):
         the_value : int
         """
 
-        if self.variables.canvas_image_object is None or \
-                self.variables.canvas_image_object.image_reader is None:
+        if self.image_reader is None:
             return
 
-        current_value = self.variables.canvas_image_object.image_reader.index
+        current_value = self.image_reader.index
         if the_value == current_value:
             return  # nothing to be done
 
         try:
             self.emit_image_index_prechange()  # indicate that we are about to change the index
-            self.variables.canvas_image_object.image_reader.index = the_value
+            self.image_reader.index = the_value
             self._reinitialize_reader()
             self.emit_image_index_changed()
         except AttributeError:
@@ -1350,10 +1345,9 @@ class ImageCanvas(Canvas):
         None|int
         """
 
-        if self.variables.canvas_image_object is None or \
-                self.variables.canvas_image_object.image_reader is None:
+        if self.image_reader is None:
             return None
-        return self.variables.canvas_image_object.image_reader.index
+        return self.image_reader.index
 
     def get_image_remap(self):
         """
@@ -1364,10 +1358,9 @@ class ImageCanvas(Canvas):
         None|Callable
         """
 
-        if self.variables.canvas_image_object is None or \
-                self.variables.canvas_image_object.image_reader is None:
+        if self.image_reader is None:
             return None
-        return self.variables.canvas_image_object.image_reader.remap_function
+        return self.image_reader.remap_function
 
     def get_image_extent(self):
         """
@@ -1381,13 +1374,13 @@ class ImageCanvas(Canvas):
             the decimation factor. In the SICD convention `y = row` and `x = column`.
         """
 
-        if self.variables.canvas_image_object is None or \
-                self.variables.canvas_image_object.image_reader is None:
+        image_reader = self.image_reader
+        if image_reader is None:
             return None
 
         # the actual image bounds
-        y_limit = self.variables.canvas_image_object.image_reader.full_image_ny
-        x_limit = self.variables.canvas_image_object.image_reader.full_image_nx
+        y_limit = image_reader.full_image_ny
+        x_limit = image_reader.full_image_nx
 
         # the basics about the canvas object
         the_origin = self.variables.canvas_image_object.canvas_full_image_upper_left_yx
@@ -1493,15 +1486,13 @@ class ImageCanvas(Canvas):
 
         self.variables.state.canvas_width = width
         self.variables.state.canvas_height = height
+        image_reader = self.image_reader
 
-        if self.variables.canvas_image_object is None:
-            return
+        if image_reader is None:
+            return  # nothing more to be done
 
         self.variables.canvas_image_object.canvas_nx = width
         self.variables.canvas_image_object.canvas_ny = height
-
-        if self.variables.canvas_image_object.image_reader is None:
-            return  # nothing more to be done
 
         decimation = self.variables.canvas_image_object.decimation_factor
         the_height = height*decimation  # in image pixels
@@ -1511,8 +1502,8 @@ class ImageCanvas(Canvas):
         y_lower, x_lower = self.variables.canvas_image_object.canvas_full_image_upper_left_yx
 
         # what are the image limits?
-        y_limit = self.variables.canvas_image_object.image_reader.full_image_ny  # row
-        x_limit = self.variables.canvas_image_object.image_reader.full_image_nx  # column
+        y_limit = image_reader.full_image_ny  # row
+        x_limit = image_reader.full_image_nx  # column
 
         y_upper = y_lower + the_height
         if y_upper > y_limit:
@@ -1535,10 +1526,9 @@ class ImageCanvas(Canvas):
         """
 
         self.variables.set_remap_type(remap_value)
-        if self.variables.canvas_image_object is None or \
-                self.variables.canvas_image_object.image_reader is None:
+        if self.image_reader is None:
             return
-        self.variables.canvas_image_object.image_reader.set_remap_type(remap_value)
+        self.image_reader.set_remap_type(remap_value)
         self.update_current_image()
         self.emit_remap_changed()
 
@@ -1894,10 +1884,10 @@ class ImageCanvas(Canvas):
             image_rect[0] = 0
         if image_rect[1] < 0:
             image_rect[1] = 0
-        if image_rect[2] > self.variables.canvas_image_object.image_reader.full_image_ny:
-            image_rect[2] = self.variables.canvas_image_object.image_reader.full_image_ny
-        if image_rect[3] > self.variables.canvas_image_object.image_reader.full_image_nx:
-            image_rect[3] = self.variables.canvas_image_object.image_reader.full_image_nx
+        if image_rect[2] > self.image_reader.full_image_ny:
+            image_rect[2] = self.image_reader.full_image_ny
+        if image_rect[3] > self.image_reader.full_image_nx:
+            image_rect[3] = self.image_reader.full_image_nx
 
         self.variables.canvas_image_object.update_canvas_display_image_from_full_image_rect(
             image_rect, decimation=decimation)
@@ -1970,8 +1960,8 @@ class ImageCanvas(Canvas):
             fraction = 1/ratio
         elif event.num == 4 or event.delta > 0:
             # zooming out
-            if pixel_row >= self.variables.canvas_image_object.image_reader.full_image_ny or \
-                    pixel_col >= self.variables.canvas_image_object.image_reader.full_image_nx:
+            if pixel_row >= self.image_reader.full_image_ny or \
+                    pixel_col >= self.image_reader.full_image_nx:
                 return  # no need to zoom out any further
 
             fraction = ratio
@@ -2537,8 +2527,8 @@ class ImageCanvas(Canvas):
                 'Got unhandled vector object type `{}`'.format(ShapeTypeConstants.get_name(vector_object.type)))
 
         if vector_object.image_drag_limits is None:
-            full_ny = self.variables.canvas_image_object.image_reader.full_image_ny
-            full_nx = self.variables.canvas_image_object.image_reader.full_image_nx
+            full_ny = self.image_reader.full_image_ny
+            full_nx = self.image_reader.full_image_nx
             vector_object.image_drag_limits = (0, 0, full_ny, full_nx)
 
         vector_object.uid = shape_id
