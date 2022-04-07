@@ -230,6 +230,11 @@ class ImagePanel(Frame):
         self.toolbar.select_index_combo.on_selection(self.callback_select_index)
 
     @property
+    def image_reader(self):
+        # type: () -> CanvasImageReader
+        return self.canvas.image_reader
+
+    @property
     def the_tool(self):
         return self._the_tool.get()
 
@@ -346,20 +351,19 @@ class ImagePanel(Frame):
         reader is selected.
         """
 
-        if self.canvas.variables.canvas_image_object is None or \
-                self.canvas.variables.canvas_image_object.image_reader is None:
+        if self.image_reader is None:
             index_values = []
         else:
             index_values = [
                 str(entry) for entry in
-                range(self.canvas.variables.canvas_image_object.image_reader.image_count)]
+                range(self.image_reader.image_count)]
 
         self.toolbar.select_index_combo.update_combobox_values(index_values)
         if len(index_values) == 0:
             self.toolbar.select_index_combo.set('')
             self.toolbar.select_index_combo.config(state='disabled')
         else:
-            current_value = self.canvas.variables.canvas_image_object.image_reader.index
+            current_value = self.image_reader.index
             self.toolbar.select_index_combo.current(current_value)
             self.toolbar.select_index_combo.config(state='readonly')
 
@@ -498,6 +502,13 @@ class ImagePanel(Frame):
         self.toolbar.select_index_label.pack_forget()
         self.toolbar.select_index_combo.pack_forget()
 
+    def hide_save_image(self):
+        """
+        Hides the save image button.
+        """
+
+        self.toolbar.save_image.pack_forget()
+
     def disable_shapes(self):
         """
         Disable the shapes selection.
@@ -544,7 +555,7 @@ class ImagePanel(Frame):
             return
 
         the_index = int(the_index)
-        if self.canvas.variables.canvas_image_object.image_reader.index == the_index:
+        if self.image_reader.index == the_index:
             return  # nothing has changed, so nothing to be done
 
         self.canvas.set_image_index(the_index)
@@ -661,7 +672,8 @@ class ImagePanel(Frame):
 
     def set_image_reader(self, image_reader):
         """
-        Sets the image reader.  The image reader should be a subclass of the "ImageReader" class.
+        Sets the image reader.  The image reader should be a subclass of the
+        "CanvasImageReader" class.
 
         Parameters
         ----------

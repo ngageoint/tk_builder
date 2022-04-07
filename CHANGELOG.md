@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.1.10] - 2022-04-07
+### Added
+Added a widget for maintaining an image canvas detail popup
+### Changed
+There are some minor simplifications for the ImagePanel and ImageCanvas objects
 
 ## [1.1.9] - 2021-11-23
 Modifying some mouse behavior and adding toolbar option for pyplot panel
