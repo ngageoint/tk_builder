@@ -5,15 +5,7 @@ import tkinter
 
 from tk_builder.widgets.basic_widgets import Frame
 
-try:
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-except ImportError:
-    logging.error(
-        'Failed importing FigureCanvasTkAgg from matplotlib. This is likely '
-        'because the matplotlib in your environment was not built with tkinter '
-        'backend support enabled. No functionality for the pyplot panel '
-        'will be functional.')
-    FigureCanvasTkAgg = None
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 
 __classification__ = "UNCLASSIFIED"
