@@ -239,6 +239,36 @@ class PyplotImagePanel(PyplotFigure):
         self.draw()
 
 
+class PlotPopup(object):
+    """
+    Plot popup window manager.
+    """
+
+    def __init__(self, master):
+        """
+
+        Parameters
+        ----------
+        master : tkinter.Tk|tkinter.Toplevel
+        """
+
+        self.detail_popup = tkinter.Toplevel(master)
+        self.plot_window = PyplotFigure(self.detail_popup, navigation=True)  # type: PyplotFigure
+        self.detail_popup.protocol("WM_DELETE_WINDOW", self.detail_popup.withdraw)
+        self.detail_popup.withdraw()
+
+    def set_focus_on_detail_popup(self):
+        self.detail_popup.deiconify()
+        self.detail_popup.focus_set()
+        self.detail_popup.lift()
+
+    def detail_popup_callback(self):
+        self.detail_popup.deiconify()
+
+    def draw(self):
+        self.plot_window.draw()
+
+
 class ImagePanelDetail(object):
     """
     Standard popup detail pane for image canvas.
