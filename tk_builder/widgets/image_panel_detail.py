@@ -8,7 +8,7 @@ __classification__ = "UNCLASSIFIED"
 import tkinter
 
 from tk_builder.widgets.image_canvas import ImageCanvas
-from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
+from tk_builder.widgets.pyplot_frame import PyplotImagePanel
 
 
 class ImagePanelDetail(object):
