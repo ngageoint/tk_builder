@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.1.11] - 2022-04-12
+### Changed
+Simplified popup window construction. Clarified pyplot image panel and added 
+simplistic pass-through matplotlib functionality
+
 ## [1.1.10] - 2022-04-07
 ### Added
 Added a widget for maintaining an image canvas detail popup

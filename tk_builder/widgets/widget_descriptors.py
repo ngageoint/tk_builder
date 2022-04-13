@@ -200,20 +200,6 @@ class ImageCanvasDescriptor(BaseWidgetDescriptor):
                                                     docstring=docstring)
 
 
-class PyplotImagePanelDescriptor(BaseWidgetDescriptor):
-    """
-    A descriptor for a PyplotPanel type.
-    """
-
-    def __init__(self, name, default_text=None, docstring=None):
-        from tk_builder.panels.pyplot_image_panel import PyplotImagePanel
-
-        super(PyplotImagePanelDescriptor, self).__init__(name,
-                                                         PyplotImagePanel,
-                                                         default_text=default_text,
-                                                         docstring=docstring)
-
-
 class TreeviewDescriptor(BaseWidgetDescriptor):
     """
     A descriptor for a tree view type.

@@ -149,3 +149,30 @@ class CopyableMessageBox(Dialog):
         self.bind("<Return>", self.cancel)
         self.bind("<Escape>", self.cancel)
         box.pack()
+
+
+class PopupWindow(tkinter.Toplevel):
+    """
+    Simplified construction of a Toplevel widget intended to be used as part of
+    an application
+    """
+
+    def __init__(self, master, **kwargs):
+        """
+
+        Parameters
+        ----------
+        master : tkinter.Toplevel
+        """
+
+        tkinter.Toplevel.__init__(self, master, **kwargs)
+        self.protocol("WM_DELETE_WINDOW", self.withdraw)
+        self.withdraw()
+
+    def set_focus_on_popup(self):
+        self.deiconify()
+        self.focus_set()
+        self.lift()
+
+    def popup_callback(self):
+        self.deiconify()
