@@ -10,6 +10,7 @@ import numpy
 
 from tk_builder.widgets.image_canvas import ImageCanvas
 from tk_builder.widgets.basic_widgets import Frame
+from tk_builder.widgets.derived_widgets import PopupWindow
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, \
     NavigationToolbar2Tk
@@ -239,7 +240,7 @@ class PyplotImagePanel(PyplotFigure):
         self.draw()
 
 
-class PlotPopup(object):
+class PlotPopup(PopupWindow):
     """
     Plot popup window manager.
     """
@@ -249,27 +250,16 @@ class PlotPopup(object):
 
         Parameters
         ----------
-        master : tkinter.Tk|tkinter.Toplevel
+        master : tkinter.Toplevel
         """
-
-        self.detail_popup = tkinter.Toplevel(master)
-        self.plot_window = PyplotFigure(self.detail_popup, navigation=True)  # type: PyplotFigure
-        self.detail_popup.protocol("WM_DELETE_WINDOW", self.detail_popup.withdraw)
-        self.detail_popup.withdraw()
-
-    def set_focus_on_detail_popup(self):
-        self.detail_popup.deiconify()
-        self.detail_popup.focus_set()
-        self.detail_popup.lift()
-
-    def detail_popup_callback(self):
-        self.detail_popup.deiconify()
+        PopupWindow.__init__(self, master)
+        self.plot_window = PyplotFigure(self, navigation=True)  # type: PyplotFigure
 
     def draw(self):
         self.plot_window.draw()
 
 
-class ImagePanelDetail(object):
+class ImagePanelDetail(PopupWindow):
     """
     Standard popup detail pane for image canvas.
 
@@ -288,7 +278,7 @@ class ImagePanelDetail(object):
 
         Parameters
         ----------
-        master : tkinter.Tk|tkinter.Toplevel
+        master : tkinter.Toplevel
         image_canvas : ImageCanvas
             The associated image canvas
         on_selection_changed : bool
@@ -299,12 +289,9 @@ class ImagePanelDetail(object):
             Fetch the selection data at full resolution?
         """
 
-        self.detail_popup = tkinter.Toplevel(master)
-        self.detail_popup.geometry('700x500')
-        self.pyplot_panel = PyplotImagePanel(self.detail_popup, navigation=True)  # type: PyplotImagePanel
+        PopupWindow.__init__(self, master)
+        self.pyplot_panel = PyplotImagePanel(self, navigation=True)  # type: PyplotImagePanel
         self.pyplot_panel.set_title('Detail View')
-        self.detail_popup.protocol("WM_DELETE_WINDOW", self.detail_popup.withdraw)
-        self.detail_popup.withdraw()
 
         self.image_canvas = image_canvas
         self.on_selection_changed = on_selection_changed
@@ -317,14 +304,6 @@ class ImagePanelDetail(object):
 
     def make_blank(self):
         self.pyplot_panel.make_blank()
-
-    def set_focus_on_detail_popup(self):
-        self.detail_popup.deiconify()
-        self.detail_popup.focus_set()
-        self.detail_popup.lift()
-
-    def detail_popup_callback(self):
-        self.detail_popup.deiconify()
 
     def display_canvas_rect_selection_in_pyplot_frame(self):
         def get_extent(coords):
@@ -371,7 +350,7 @@ class ImagePanelDetail(object):
             return
 
         self.display_canvas_rect_selection_in_pyplot_frame()
-        self.detail_popup_callback()
+        self.popup_callback()
 
     # noinspection PyUnusedLocal
     def handle_detail_selection_finalized(self, event):
@@ -388,7 +367,7 @@ class ImagePanelDetail(object):
             return
 
         self.display_canvas_rect_selection_in_pyplot_frame()
-        self.set_focus_on_detail_popup()
+        self.set_focus_on_popup()
 
     # noinspection PyUnusedLocal
     def handle_detail_remap_change(self, event):
