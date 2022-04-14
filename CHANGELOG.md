@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.1.12] - 2022-04-14
+### Changed
+Improved handling of defaults for shape drawing 
+
 ## [1.1.11] - 2022-04-12
 ### Changed
 Simplified popup window construction. Clarified pyplot image panel and added 
