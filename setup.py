@@ -24,7 +24,6 @@ setup(name=parameters['__title__'],
       long_description=long_description,
       long_description_content_type='text/markdown',
       packages=find_packages(exclude=('*tests*', '*example_apps*')),
-      package_data={'tk_builder': ['*.xsd']},  # Schema files for SICD standard(s)
       url=parameters['__url__'],
       author=parameters['__author__'],
       author_email=parameters['__email__'],  # The primary POC
@@ -41,7 +40,8 @@ setup(name=parameters['__title__'],
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',
-          'Programming Language :: Python :: 3.9'
+          'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10'
       ],
       platforms=['any'],
       license='MIT'

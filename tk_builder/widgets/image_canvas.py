@@ -804,21 +804,27 @@ class CanvasState(object):
     min_width = IntegerDescriptor(
         'min_width', default_value=100,
         docstring='The minimum canvas width, in pixels.')  # type: int
-    rect_border_width = IntegerDescriptor(
-        'rect_border_width', default_value=3,
-        docstring='The (margin) rectangular border width, in pixels.')  # type: int
-    line_width = IntegerDescriptor(
-        'line_width', default_value=3,
-        docstring='The line width, in pixels.')  # type: int
-    highlight_line_width = IntegerDescriptor(
-        'highlight_line_width', default_value=5,
-        docstring='The highlighted line width, in pixels.')  # type: int
     point_size = IntegerDescriptor(
-        'point_size', default_value=7,
+        'point_size', default_value=5,
         docstring='The point size, in pixels.')  # type: int
     foreground_color = StringDescriptor(
         'foreground_color', default_value='red',
         docstring='The foreground color (named or hexidecimal string).')  # type: str
+
+    def __init__(self):
+        self.line_options = {'width': 2, 'dash': ()}
+        self.highlight_line_options = {'width': 4, 'dash': (3, 3)}
+
+        self.arrow_options = {
+            'width': 2, 'dash': (), 'arrow': tkinter.LAST, 'arrowshape': '9 10 4'}
+        self.highlight_arrow_options = {
+            'width': 4, 'dash': (3, 3), 'arrow': tkinter.LAST, 'arrowshape': '10 12 6'}
+
+        self.poly_options = {'width': 2, 'dash': (), 'fill': ''}
+        self.highlight_poly_options = {'width': 4, 'fill': '', 'dash': (3, 3)}
+
+        self.point_options = {'width': 0, 'outline': ''}
+        self.highlight_point_options = {'width': 2, 'outline': 'white'}
 
 
 #########
@@ -2611,9 +2617,9 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {'width': 0, 'outline': None}
+            regular_options = copy.deepcopy(self.variables.state.point_options)
         if highlight_options is None:
-            highlight_options = {'width': 2, 'outline': 'white'}
+            highlight_options = copy.deepcopy(self.variables.state.highlight_point_options)
 
         vector_obj = VectorObject(
             ShapeTypeConstants.POINT, is_tool=is_tool, point_size=point_size, color=use_color,
@@ -2650,12 +2656,9 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {'width': self.variables.state.line_width, 'dash': ()}
+            regular_options = copy.deepcopy(self.variables.state.line_options)
         if highlight_options is None:
-            highlight_options = {'width': self.variables.state.highlight_line_width, 'dash': (3, 3)}
-            if 'dash' not in regular_options:
-                regular_options['dash'] = ()
-
+            highlight_options = copy.deepcopy(self.variables.state.highlight_line_options)
         vector_obj = VectorObject(
             ShapeTypeConstants.LINE, is_tool=is_tool, color=use_color,
             regular_args=regular_options, highlight_args=highlight_options)
@@ -2691,11 +2694,9 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {'width': self.variables.state.line_width, 'dash': ()}
+            regular_options = copy.deepcopy(self.variables.state.arrow_options)
         if highlight_options is None:
-            highlight_options = {'width': self.variables.state.highlight_line_width, 'dash': (3, 3)}
-            if 'dash' not in regular_options:
-                regular_options['dash'] = ()
+            highlight_options = copy.deepcopy(self.variables.state.highlight_arrow_options)
 
         vector_obj = VectorObject(
             ShapeTypeConstants.ARROW, is_tool=is_tool, color=use_color,
@@ -2732,13 +2733,9 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {
-                'width': self.variables.state.line_width, 'dash': (), 'fill': None}
+            regular_options = copy.deepcopy(self.variables.state.poly_options)
         if highlight_options is None:
-            highlight_options = {
-                'width': self.variables.state.highlight_line_width, 'fill': None, 'dash': (3, 3)}
-            if 'dash' not in regular_options:
-                regular_options['dash'] = ()
+            highlight_options = copy.deepcopy(self.variables.state.highlight_poly_options)
 
         vector_obj = VectorObject(
             ShapeTypeConstants.RECT, is_tool=is_tool, color=use_color,
@@ -2775,13 +2772,9 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {
-                'width': self.variables.state.line_width, 'dash': (), 'fill': None}
+            regular_options = copy.deepcopy(self.variables.state.poly_options)
         if highlight_options is None:
-            highlight_options = {
-                'width': self.variables.state.highlight_line_width, 'dash': (3, 3), 'fill': None}
-            if 'dash' not in regular_options:
-                regular_options['dash'] = ()
+            highlight_options = copy.deepcopy(self.variables.state.highlight_poly_options)
 
         vector_obj = VectorObject(
             ShapeTypeConstants.ELLIPSE, is_tool=is_tool, color=use_color,
@@ -2818,13 +2811,9 @@ class ImageCanvas(Canvas):
         use_color = self._validate_input_shape_color(color, increment_color)
 
         if regular_options is None:
-            regular_options = {
-                'width': self.variables.state.line_width, 'dash': (), 'fill': ''}
+            regular_options = copy.deepcopy(self.variables.state.poly_options)
         if highlight_options is None:
-            highlight_options = {
-                'width': self.variables.state.highlight_line_width, 'dash': (3, 3), 'fill': ''}
-            if 'dash' not in regular_options:
-                regular_options['dash'] = ()
+            highlight_options = copy.deepcopy(self.variables.state.highlight_poly_options)
 
         vector_obj = VectorObject(
             ShapeTypeConstants.POLYGON, is_tool=is_tool, color=use_color,
